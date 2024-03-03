@@ -1,0 +1,30 @@
+[
+  {
+    "subject": "Networking Fundamentals",
+    "topic":"Chapter 1: Definition of a Network",
+    "subtopic":"Definition and Advantages of Networks",
+    "question":"What is the primary advantage of networking?",
+    "answer_choices": [
+      {
+        "answer":"Reducing personnel requirements",
+        "is_correct": false,
+        "explanation": "While networking can lead to more efficient operations, its primary advantage isn't reducing personnel but rather enhancing collaboration and resource sharing."
+      },
+      {
+        "answer":"Increasing costs",
+        "is_correct": false,
+        "explanation": "Although setting up a network involves initial costs, the primary advantage is improved resource sharing and communication, not increased expenses."
+      },
+      {
+        "answer":"Sharing equipment and data",
+        "is_correct": true,
+        "explanation": "The primary advantage of networking is the ability to share resources such as equipment and data, leading to improved efficiency and collaboration."
+      },
+      {
+        "answer":"Introducing vulnerabilities to cyberattacks",
+        "is_correct": false,
+        "explanation": "While networks can introduce security risks, their primary advantage is resource sharing and communication enhancement, not the introduction of vulnerabilities."
+      }
+    ]
+  }
+]
