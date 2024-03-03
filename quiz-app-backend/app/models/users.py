@@ -1,4 +1,5 @@
 # filename: app/models/users.py
+from app.models.user_responses import UserResponse
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
