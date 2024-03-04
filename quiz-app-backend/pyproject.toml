@@ -1,0 +1,9 @@
+# pyproject.toml
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+testpaths = [
+    "app/tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning"
+]
