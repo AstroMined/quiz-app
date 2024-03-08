@@ -1,4 +1,4 @@
-# filename: app/schemas/question_set.py
+# filename: app/schemas/question_sets.py
 """
 This module defines the Pydantic schemas for the QuestionSet model.
 
@@ -44,4 +44,4 @@ class QuestionSet(QuestionSetBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True

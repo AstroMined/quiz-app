@@ -6,14 +6,14 @@ Fixtures are reusable objects that can be used across multiple test files.
 """
 
 import pytest
+import random
+import string
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
-from main import app
+from main import app  # Import the app object directly from the main module
 from app.schemas.user import UserCreate
 from app.crud.crud_user import create_user, remove_user
 from app.db.session import get_db
-import random
-import string
 from sqlalchemy import create_engine
 from app.db.base_class import Base
 

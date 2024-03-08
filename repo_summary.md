@@ -73,7 +73,7 @@ from app.api.endpoints import (
     users as users_router,
     register as register_router,
     token as token_router,
-    questions as questions_router
+    question_sets as question_sets_router
 )
 # Import models if necessary, but it looks like you might not need to import them here unless you're initializing them
 from app.db.base_class import Base  # This might not be needed here if you're not directly using Base in main.py
@@ -94,7 +94,7 @@ app = FastAPI()
 app.include_router(users_router.router)
 app.include_router(register_router.router)
 app.include_router(token_router.router)
-app.include_router(questions_router.router)
+app.include_router(question_sets_router.router)
 
 @app.get("/")
 def read_root():
@@ -156,6 +156,57 @@ Regularly review and update the schemas as the application evolves to ensure the
 ## File: __init__.py
 ```python
 
+```
+
+## File: question_sets.py
+```python
+# filename: app/schemas/question_set.py
+"""
+This module defines the Pydantic schemas for the QuestionSet model.
+
+The schemas are used for input validation and serialization/deserialization of QuestionSet objects.
+"""
+
+from pydantic import BaseModel
+
+class QuestionSetBase(BaseModel):
+    """
+    The base schema for a QuestionSet.
+
+    Attributes:
+        name (str): The name of the question set.
+    """
+    name: str
+
+class QuestionSetCreate(QuestionSetBase):
+    """
+    The schema for creating a QuestionSet.
+
+    Inherits from QuestionSetBase.
+    """
+    pass
+
+class QuestionSetUpdate(QuestionSetBase):
+    """
+    The schema for updating a QuestionSet.
+
+    Inherits from QuestionSetBase.
+    """
+    pass
+
+class QuestionSet(QuestionSetBase):
+    """
+    The schema representing a stored QuestionSet.
+
+    Inherits from QuestionSetBase and includes additional attributes.
+
+    Attributes:
+        id (int): The unique identifier of the question set.
+    """
+    id: int
+
+    class Config:
+        orm_mode = True
 ```
 
 ## File: questions.py
@@ -323,8 +374,8 @@ It includes functions for creating, retrieving, updating, and deleting question 
 """
 
 from sqlalchemy.orm import Session
-from app.models.questions import QuestionSet
-from app.schemas.question_set import QuestionSetCreate, QuestionSetUpdate
+from app.models.question_sets import QuestionSet
+from app.schemas.question_sets import QuestionSetCreate, QuestionSetUpdate
 from typing import List
 
 def create_question_set(db: Session, question_set: QuestionSetCreate) -> QuestionSet:
@@ -543,14 +594,14 @@ Fixtures are reusable objects that can be used across multiple test files.
 """
 
 import pytest
+import random
+import string
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
-from main import app
+from main import app  # Import the app object directly from the main module
 from app.schemas.user import UserCreate
 from app.crud.crud_user import create_user, remove_user
 from app.db.session import get_db
-import random
-import string
 from sqlalchemy import create_engine
 from app.db.base_class import Base
 
@@ -1100,6 +1151,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app.crud.crud_question_sets import create_question_set, get_question_sets
 from app.db.session import get_db
+from typing import List
+from app.models.question_sets import QuestionSet  # Import the QuestionSet model
 import json
 
 router = APIRouter()
@@ -1341,6 +1394,36 @@ class AnswerChoice(Base):
     question = relationship("Question", back_populates="answer_choices")
 ```
 
+## File: question_sets.py
+```python
+# filename: app/models/question_sets.py
+"""
+This module defines the QuestionSet model.
+
+The QuestionSet model represents a set of questions in the quiz app.
+"""
+
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
+from app.db.base_class import Base
+
+class QuestionSet(Base):
+    """
+    The QuestionSet model.
+
+    Attributes:
+        id (int): The primary key of the question set.
+        name (str): The name of the question set.
+        questions (List[Question]): The relationship to the associated questions.
+    """
+    __tablename__ = "question_sets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    
+    questions = relationship("Question", back_populates="question_set")
+```
+
 ## File: questions.py
 ```python
 # filename: app/models/questions.py
@@ -1362,7 +1445,9 @@ class Question(Base):
         id (int): The primary key of the question.
         text (str): The text of the question.
         subtopic_id (int): The foreign key referencing the associated subtopic.
+        question_set_id (int): The foreign key referencing the associated question set.
         subtopic (Subtopic): The relationship to the associated subtopic.
+        question_set (QuestionSet): The relationship to the associated question set.
         answer_choices (List[AnswerChoice]): The relationship to the associated answer choices.
     """
     __tablename__ = "questions"
@@ -1370,8 +1455,10 @@ class Question(Base):
     id = Column(Integer, primary_key=True, index=True)
     text = Column(String, index=True)
     subtopic_id = Column(Integer, ForeignKey('subtopics.id'))
+    question_set_id = Column(Integer, ForeignKey('question_sets.id'))
     
     subtopic = relationship("Subtopic", back_populates="questions")
+    question_set = relationship("QuestionSet", back_populates="questions")
     answer_choices = relationship("AnswerChoice", back_populates="question")
 ```
 

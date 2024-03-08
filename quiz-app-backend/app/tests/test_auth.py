@@ -8,6 +8,11 @@ The tests cover user authentication success and failure scenarios.
 import pytest
 import random
 import string
+from fastapi.testclient import TestClient
+from main import app
+from app.models.users import User
+
+client = TestClient(app)
 
 def random_lower_string() -> str:
     """
@@ -18,18 +23,22 @@ def random_lower_string() -> str:
     """
     return "".join(random.choices(string.ascii_lowercase, k=8))
 
-def test_authenticate_user_success(test_user, client):
+def test_authenticate_user_success(db_session):
     """
     Test successful user authentication.
 
     This test verifies that a user can successfully authenticate with valid credentials.
 
     Args:
-        test_user (tuple): A tuple containing the user object and password.
-        client (TestClient): The FastAPI test client.
+        db_session: The database session fixture.
     """
-    user, password = test_user  # Unpack the user object and password
-    username = user.username
+    # Create a user in the database
+    username = random_lower_string()
+    password = random_lower_string()
+    user = User(username=username, hashed_password=password)
+    db_session.add(user)
+    db_session.commit()
+
     response = client.post(
         "/token/",
         data={"username": username, "password": password},
@@ -38,32 +47,34 @@ def test_authenticate_user_success(test_user, client):
     assert "access_token" in response.json()
     assert response.json()["token_type"] == "bearer"
 
-def test_authenticate_user_failure(client):
+def test_authenticate_user_failure(db_session):
     """
     Test failed user authentication.
 
     This test verifies that user authentication fails with invalid credentials.
 
     Args:
-        client (TestClient): The FastAPI test client.
+        db_session: The database session fixture.
     """
     username = random_lower_string()
+    password = random_lower_string()
+
     response = client.post(
         "/token/",
-        data={"username": username, "password": "wrong_password"},
+        data={"username": username, "password": password},
     )
     assert response.status_code == 401
     assert "detail" in response.json()
     assert response.json()["detail"] == "Incorrect username or password"
 
-def test_authenticate_user_missing_credentials(client):
+def test_authenticate_user_missing_credentials(db_session):
     """
     Test user authentication with missing credentials.
 
     This test verifies that user authentication returns an error when credentials are missing.
 
     Args:
-        client (TestClient): The FastAPI test client.
+        db_session: The database session fixture.
     """
     response = client.post(
         "/token/",

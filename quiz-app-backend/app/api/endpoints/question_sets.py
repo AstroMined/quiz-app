@@ -5,10 +5,12 @@ This module provides endpoints for managing question sets.
 It defines routes for uploading question sets and retrieving question sets from the database.
 """
 
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app.crud.crud_question_sets import create_question_set, get_question_sets
 from app.db.session import get_db
+from app.schemas.question_sets import QuestionSet
 import json
 
 router = APIRouter()
