@@ -6,8 +6,8 @@ It includes functions for creating, retrieving, updating, and deleting question 
 """
 
 from sqlalchemy.orm import Session
-from app.models.questions import QuestionSet
-from app.schemas.question_set import QuestionSetCreate, QuestionSetUpdate
+from app.models.question_sets import QuestionSet
+from app.schemas.question_sets import QuestionSetCreate, QuestionSetUpdate
 from typing import List
 
 def create_question_set(db: Session, question_set: QuestionSetCreate) -> QuestionSet:
