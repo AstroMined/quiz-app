@@ -1,9 +1,26 @@
 # filename: app/models/users.py
+"""
+This module defines the User model.
+
+The User model represents a user in the quiz app.
+"""
+
 from app.models.user_responses import UserResponse
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
+
 class User(Base):
+    """
+    The User model.
+
+    Attributes:
+        id (int): The primary key of the user.
+        username (str): The username of the user.
+        hashed_password (str): The hashed password of the user.
+        is_active (bool): Indicates whether the user is active.
+        responses (List[UserResponse]): The relationship to the associated user responses.
+    """
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
