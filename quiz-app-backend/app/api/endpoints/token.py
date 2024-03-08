@@ -1,4 +1,10 @@
 # filename: app/api/endpoints/token.py
+"""
+This module provides an endpoint for user authentication and token generation.
+
+It defines a route for authenticating users and issuing access tokens upon successful authentication.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -11,6 +17,19 @@ router = APIRouter()
 
 @router.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """
+    Endpoint to authenticate a user and issue a JWT access token.
+    
+    Args:
+        form_data: An OAuth2PasswordRequestForm object containing the user's login credentials.
+        db: A database session dependency injected by FastAPI.
+        
+    Raises:
+        HTTPException: If the username or password is incorrect, or if an internal server error occurs.
+        
+    Returns:
+        A dictionary containing the access token and the token type.
+    """
     try:
         user = authenticate_user(db, username=form_data.username, password=form_data.password)
         if not user:
