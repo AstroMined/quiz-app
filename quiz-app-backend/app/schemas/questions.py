@@ -22,7 +22,8 @@ class QuestionCreate(QuestionBase):
 
     Inherits from QuestionBase.
     """
-    pass
+    subtopic_id: int  # Add this line to include the subtopic_id field
+    question_set_id: int  # Add this line to include the question_set_id field
 
 class QuestionUpdate(QuestionBase):
     """

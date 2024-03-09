@@ -14,7 +14,7 @@ from app.schemas.user import UserCreate
 
 router = APIRouter()
 
-@router.post("/register/")
+@router.post("/register/", status_code=201)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     """
     Endpoint to register a new user.
@@ -32,5 +32,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = get_user_by_username(db, username=user.username)
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
-    user.password = get_password_hash(user.password)
-    return create_user(db=db, user=user)
+    hashed_password = get_password_hash(user.password)
+    user_create = UserCreate(username=user.username, password=hashed_password)
+    created_user = create_user(db=db, user=user_create)
+    return created_user

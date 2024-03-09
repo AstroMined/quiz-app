@@ -23,10 +23,10 @@ from app.models import (
 app = FastAPI()
 
 # Use the aliased name for the router
-app.include_router(users_router.router)
-app.include_router(register_router.router)
-app.include_router(token_router.router)
-app.include_router(question_sets_router.router)
+app.include_router(users_router.router, tags=["User Management"])
+app.include_router(register_router.router, tags=["Authentication"])
+app.include_router(token_router.router, tags=["Authentication"])
+app.include_router(question_sets_router.router, tags=["Question Sets"])
 app.include_router(questions_router.router, prefix="/questions", tags=["Questions"])
 app.include_router(user_responses_router.router, prefix="/user-responses", tags=["User Responses"])
 

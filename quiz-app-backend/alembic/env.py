@@ -9,7 +9,8 @@ from app.db.base_class import Base
 
 from app.models import (
     answer_choices,
-    questions, subjects,
+    questions,
+    subjects,
     subtopics,
     topics,
     user_responses,

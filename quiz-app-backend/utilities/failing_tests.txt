@@ -1,0 +1,312 @@
+(fastapi_quiz_app) astromined@llm:/code/quiz-app/quiz-app-backend$ pytest
+======================================================================================== test session starts =========================================================================================
+platform linux -- Python 3.11.8, pytest-8.0.2, pluggy-1.4.0
+rootdir: /code/quiz-app/quiz-app-backend
+configfile: pyproject.toml
+testpaths: app/tests
+plugins: anyio-4.3.0
+collected 17 items                                                                                                                                                                                   
+
+app/tests/test_auth.py F..                                                                                                                                                                     [ 17%]
+app/tests/test_question_sets.py .FFF                                                                                                                                                           [ 41%]
+app/tests/test_questions.py FFFF                                                                                                                                                               [ 64%]
+app/tests/test_registration.py ....                                                                                                                                                            [ 88%]
+app/tests/test_user_responses.py FF                                                                                                                                                            [100%]
+
+============================================================================================== FAILURES ==============================================================================================
+___________________________________________________________________________________ test_authenticate_user_success ___________________________________________________________________________________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7f0a0d2d1290>
+
+    def test_authenticate_user_success(db_session):
+        """
+        Test successful user authentication.
+    
+        This test verifies that a user can successfully authenticate with valid credentials.
+    
+        Args:
+            db_session: The database session fixture.
+        """
+        # Create a user in the database
+        username = random_lower_string()
+        password = random_lower_string()
+        hashed_password = get_password_hash(password)  # Hash the password
+        user = User(username=username, hashed_password=hashed_password)  # Store the hashed password
+        db_session.add(user)
+        db_session.commit()
+    
+        response = client.post(
+            "/token",
+            data={"username": username, "password": password},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}  # Set the content type
+        )
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <Response [401 Unauthorized]>.status_code
+
+app/tests/test_auth.py:49: AssertionError
+----------------------------------------------------------------------------------------- Captured log call ------------------------------------------------------------------------------------------
+WARNING  passlib.handlers.bcrypt:bcrypt.py:622 (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+_______________________________________________________________________________________ test_get_question_sets _______________________________________________________________________________________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7f0a0d2d1290>
+
+    def test_get_question_sets(db_session):
+        """
+        Test retrieving question sets.
+    
+        This test checks if the question sets can be retrieved successfully by sending a GET request
+        to the "/question-sets/" endpoint.
+    
+        Args:
+            db_session: The database session fixture.
+        """
+        # Create some question sets in the database
+        question_set1 = QuestionSet(name="Question Set 1")
+        question_set2 = QuestionSet(name="Question Set 2")
+        db_session.add_all([question_set1, question_set2])
+        db_session.commit()
+    
+        response = client.get("/question-sets/")
+        assert response.status_code == 200
+>       assert len(response.json()) == 2
+E       AssertionError: assert 1 == 2
+E        +  where 1 = len([{'id': 1, 'name': 'Test Question Set'}])
+E        +    where [{'id': 1, 'name': 'Test Question Set'}] = <bound method Response.json of <Response [200 OK]>>()
+E        +      where <bound method Response.json of <Response [200 OK]>> = <Response [200 OK]>.json
+
+app/tests/test_question_sets.py:62: AssertionError
+______________________________________________________________________________________ test_update_question_set ______________________________________________________________________________________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7f0a0d2d1290>
+
+    def test_update_question_set(db_session):
+        """
+        Test updating a question set.
+    
+        This test checks if a question set can be updated successfully by sending a PUT request
+        to the "/question-sets/{question_set_id}" endpoint with valid data.
+    
+        Args:
+            db_session: The database session fixture.
+        """
+        # Create a question set in the database
+        question_set = QuestionSet(name="Question Set")
+        db_session.add(question_set)
+        db_session.commit()
+    
+        updated_question_set_data = {
+            "name": "Updated Question Set"
+        }
+    
+        response = client.put(f"/question-sets/{question_set.id}", json=updated_question_set_data)
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+app/tests/test_question_sets.py:84: AssertionError
+______________________________________________________________________________________ test_delete_question_set ______________________________________________________________________________________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7f0a0d2d1290>
+
+    def test_delete_question_set(db_session):
+        """
+        Test deleting a question set.
+    
+        This test checks if a question set can be deleted successfully by sending a DELETE request
+        to the "/question-sets/{question_set_id}" endpoint.
+    
+        Args:
+            db_session: The database session fixture.
+        """
+        # Create a question set in the database
+        question_set = QuestionSet(name="Question Set")
+        db_session.add(question_set)
+        db_session.commit()
+    
+        response = client.delete(f"/question-sets/{question_set.id}")
+>       assert response.status_code == 204
+E       assert 404 == 204
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+app/tests/test_question_sets.py:103: AssertionError
+________________________________________________________________________________________ test_create_question ________________________________________________________________________________________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7f0a0d2d1290>
+
+    def test_create_question(db_session):
+        """
+        Test creating a new question.
+    
+        This test checks if a question can be created successfully by sending a POST request
+        to the "/questions/" endpoint with valid data.
+    
+        Args:
+            db_session: The database session fixture.
+        """
+        question_data = {
+            "text": "What is the capital of France?",
+            "answer_choices": [
+                {"text": "Paris", "is_correct": True},
+                {"text": "London", "is_correct": False},
+                {"text": "Berlin", "is_correct": False},
+                {"text": "Madrid", "is_correct": False}
+            ]
+        }
+    
+        response = client.post("/questions/", json=question_data)
+>       assert response.status_code == 201
+E       assert 404 == 201
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+app/tests/test_questions.py:36: AssertionError
+_________________________________________________________________________________________ test_get_questions _________________________________________________________________________________________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7f0a0d2d1290>
+
+    def test_get_questions(db_session):
+        """
+        Test retrieving questions.
+    
+        This test checks if the questions can be retrieved successfully by sending a GET request
+        to the "/questions/" endpoint.
+    
+        Args:
+            db_session: The database session fixture.
+        """
+        # Create some questions in the database
+        question1 = Question(text="Question 1")
+        question2 = Question(text="Question 2")
+        db_session.add_all([question1, question2])
+        db_session.commit()
+    
+        response = client.get("/questions/")
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+app/tests/test_questions.py:56: AssertionError
+________________________________________________________________________________________ test_update_question ________________________________________________________________________________________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7f0a0d2d1290>
+
+    def test_update_question(db_session):
+        """
+        Test updating a question.
+    
+        This test checks if a question can be updated successfully by sending a PUT request
+        to the "/questions/{question_id}" endpoint with valid data.
+    
+        Args:
+            db_session: The database session fixture.
+        """
+        # Create a question in the database
+        question = Question(text="Question")
+        db_session.add(question)
+        db_session.commit()
+    
+        updated_question_data = {
+            "text": "Updated Question"
+        }
+    
+        response = client.put(f"/questions/{question.id}", json=updated_question_data)
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+app/tests/test_questions.py:79: AssertionError
+________________________________________________________________________________________ test_delete_question ________________________________________________________________________________________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7f0a0d2d1290>
+
+    def test_delete_question(db_session):
+        """
+        Test deleting a question.
+    
+        This test checks if a question can be deleted successfully by sending a DELETE request
+        to the "/questions/{question_id}" endpoint.
+    
+        Args:
+            db_session: The database session fixture.
+        """
+        # Create a question in the database
+        question = Question(text="Question")
+        db_session.add(question)
+        db_session.commit()
+    
+        response = client.delete(f"/questions/{question.id}")
+>       assert response.status_code == 204
+E       assert 404 == 204
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+app/tests/test_questions.py:98: AssertionError
+_____________________________________________________________________________________ test_create_user_response ______________________________________________________________________________________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7f0a0d2d1290>
+
+    def test_create_user_response(db_session):
+        """
+        Test creating a new user response.
+    
+        This test checks if a user response can be created successfully by sending a POST request
+        to the "/user-responses/" endpoint with valid data.
+    
+        Args:
+            db_session: The database session fixture.
+        """
+        user_response_data = {
+            "user_id": 1,
+            "question_id": 1,
+            "answer_choice_id": 1,
+            "is_correct": True
+        }
+    
+        response = client.post("/user-responses/", json=user_response_data)
+>       assert response.status_code == 201
+E       assert 404 == 201
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+app/tests/test_user_responses.py:33: AssertionError
+______________________________________________________________________________________ test_get_user_responses _______________________________________________________________________________________
+
+db_session = <sqlalchemy.orm.session.Session object at 0x7f0a0d2d1290>
+
+    def test_get_user_responses(db_session):
+        """
+        Test retrieving user responses.
+    
+        This test checks if the user responses can be retrieved successfully by sending a GET request
+        to the "/user-responses/" endpoint.
+    
+        Args:
+            db_session: The database session fixture.
+        """
+        # Create some user responses in the database
+        user_response1 = UserResponse(user_id=1, question_id=1, answer_choice_id=1, is_correct=True)
+        user_response2 = UserResponse(user_id=2, question_id=2, answer_choice_id=2, is_correct=False)
+        db_session.add_all([user_response1, user_response2])
+        db_session.commit()
+    
+        response = client.get("/user-responses/")
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+app/tests/test_user_responses.py:54: AssertionError
+====================================================================================== short test summary info =======================================================================================
+FAILED app/tests/test_auth.py::test_authenticate_user_success - assert 401 == 200
+FAILED app/tests/test_question_sets.py::test_get_question_sets - AssertionError: assert 1 == 2
+FAILED app/tests/test_question_sets.py::test_update_question_set - assert 404 == 200
+FAILED app/tests/test_question_sets.py::test_delete_question_set - assert 404 == 204
+FAILED app/tests/test_questions.py::test_create_question - assert 404 == 201
+FAILED app/tests/test_questions.py::test_get_questions - assert 404 == 200
+FAILED app/tests/test_questions.py::test_update_question - assert 404 == 200
+FAILED app/tests/test_questions.py::test_delete_question - assert 404 == 204
+FAILED app/tests/test_user_responses.py::test_create_user_response - assert 404 == 201
+FAILED app/tests/test_user_responses.py::test_get_user_responses - assert 404 == 200
+==================================================================================== 10 failed, 7 passed in 2.79s ====================================================================================

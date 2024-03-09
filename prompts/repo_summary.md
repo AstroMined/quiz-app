@@ -2,7 +2,7 @@
 # Directory: /code/quiz-app/quiz-app-backend
 
 ## File: README.md
-```markdown
+```md
 # Quiz App Backend Development Plan
 
 This document outlines the development plan for completing the backend of the Quiz App project using FastAPI. The project aims to provide a comprehensive system for user account management, question set uploads, and dynamic learning tools.
@@ -64,8 +64,15 @@ Below is a roadmap for the remaining development tasks, organized into checkbox 
 This plan is subject to change as development progresses. It serves as a guideline for completing the backend of the Quiz App project.
 ```
 
+# Directory: /code/quiz-app/quiz-app-backend/app
+
+## File: __init__.py
+```py
+
+```
+
 ## File: main.py
-```python
+```py
 # filename: main.py
 from fastapi import FastAPI
 from app.api.endpoints import (
@@ -91,10 +98,10 @@ from app.models import (
 app = FastAPI()
 
 # Use the aliased name for the router
-app.include_router(users_router.router)
-app.include_router(register_router.router)
-app.include_router(token_router.router)
-app.include_router(question_sets_router.router)
+app.include_router(users_router.router, tags=["User Management"])
+app.include_router(register_router.router, tags=["Authentication"])
+app.include_router(token_router.router, tags=["Authentication"])
+app.include_router(question_sets_router.router, tags=["Question Sets"])
 app.include_router(questions_router.router, prefix="/questions", tags=["Questions"])
 app.include_router(user_responses_router.router, prefix="/user-responses", tags=["User Responses"])
 
@@ -103,17 +110,10 @@ def read_root():
     return {"Hello": "World"}
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app
-
-## File: __init__.py
-```python
-
-```
-
 # Directory: /code/quiz-app/quiz-app-backend/app/schemas
 
 ## File: README.md
-```markdown
+```md
 # Pydantic Schemas
 
 This directory contains the Pydantic schemas for the Quiz App backend.
@@ -156,12 +156,14 @@ Regularly review and update the schemas as the application evolves to ensure the
 ```
 
 ## File: __init__.py
-```python
-
+```py
+from .user import UserCreate, UserLogin
+from .questions import QuestionCreate
+from .question_sets import QuestionSetCreate
 ```
 
 ## File: question_sets.py
-```python
+```py
 # filename: app/schemas/question_sets.py
 """
 This module defines the Pydantic schemas for the QuestionSet model.
@@ -212,7 +214,7 @@ class QuestionSet(QuestionSetBase):
 ```
 
 ## File: questions.py
-```python
+```py
 # filename: app/schemas/questions.py
 """
 This module defines the Pydantic schemas for the Question model.
@@ -237,7 +239,8 @@ class QuestionCreate(QuestionBase):
 
     Inherits from QuestionBase.
     """
-    pass
+    subtopic_id: int  # Add this line to include the subtopic_id field
+    question_set_id: int  # Add this line to include the question_set_id field
 
 class QuestionUpdate(QuestionBase):
     """
@@ -267,7 +270,7 @@ class Question(QuestionBase):
 ```
 
 ## File: token.py
-```python
+```py
 # filename: app/schemas/token.py
 """
 This module defines the Pydantic schema for the Token model.
@@ -289,7 +292,7 @@ class Token(BaseModel):
 ```
 
 ## File: user.py
-```python
+```py
 # filename: app/schemas/user.py
 """
 This module defines the Pydantic schemas for the User model.
@@ -353,7 +356,7 @@ class UserLogin(BaseModel):
 ```
 
 ## File: user_responses.py
-```python
+```py
 # filename: app/schemas/user_responses.py
 """
 This module defines the Pydantic schemas for the UserResponse model.
@@ -407,7 +410,7 @@ class UserResponse(UserResponseBase):
 # Directory: /code/quiz-app/quiz-app-backend/app/crud
 
 ## File: README.md
-```markdown
+```md
 # CRUD Operations
 
 This directory contains modules that provide CRUD (Create, Read, Update, Delete) operations for various entities in the Quiz App backend.
@@ -446,12 +449,12 @@ Remember to keep the CRUD modules simple, focused, and maintainable. They should
 ```
 
 ## File: __init__.py
-```python
+```py
 
 ```
 
 ## File: crud_question_sets.py
-```python
+```py
 # filename: app/crud/crud_questions.py
 """
 This module provides CRUD operations for question sets.
@@ -535,7 +538,7 @@ def delete_question_set(db: Session, question_set_id: int) -> bool:
 ```
 
 ## File: crud_questions.py
-```python
+```py
 # filename: app/crud/crud_questions.py
 """
 This module provides CRUD operations for questions.
@@ -633,7 +636,7 @@ def delete_question(db: Session, question_id: int) -> bool:
 ```
 
 ## File: crud_user.py
-```python
+```py
 # filename: app/crud/crud_user.py
 """
 This module provides CRUD operations for users.
@@ -717,7 +720,7 @@ def remove_user(db: Session, user_id: int) -> User:
 ```
 
 ## File: crud_user_responses.py
-```python
+```py
 # filename: app/crud/crud_user_responses.py
 """
 This module provides CRUD operations for user responses.
@@ -762,627 +765,10 @@ def get_user_responses(db: Session, skip: int = 0, limit: int = 100) -> List[Use
     return db.query(UserResponse).offset(skip).limit(limit).all()
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app/tests
-
-## File: README.md
-```markdown
-# Tests
-
-This directory contains the test files for the Quiz App backend.
-
-## Files
-
-- `__init__.py`: This file is currently empty but serves as a placeholder to make the `tests` directory a Python package.
-
-- `conftest.py`: This module defines pytest fixtures for testing the Quiz App backend. It includes fixtures for creating a test database session, a FastAPI test client, and a test user.
-
-- `test_auth.py`: This module contains tests for user authentication. It covers scenarios such as successful authentication, failed authentication, and authentication with missing credentials.
-
-- `test_registration.py`: This module contains tests for user registration. It covers scenarios such as successful registration, registration with existing username, registration with invalid data, and registration with empty data.
-
-## Suggestions
-
-Given the goals of the Quiz App project outlined in `/code/quiz-app/quiz-app-backend/README.md`, here are some suggestions for additional test files or considerations:
-
-- Create test files for other API endpoints and functionality, such as question management, user responses, filtering, and randomization. These tests should cover various scenarios, including success cases, error handling, and edge cases.
-
-- Consider creating separate test files for different models and CRUD operations. For example, you may have `test_questions.py`, `test_subjects.py`, `test_user_responses.py`, etc., to test the functionality related to each model.
-
-- If the quiz app supports different types of questions (e.g., multiple-choice, true/false, fill-in-the-blank), create test files to cover the specific behavior and validation for each question type.
-
-- Write tests for user authentication and authorization, including token generation, token validation, and access control for protected endpoints.
-
-- Create integration tests to verify the interaction between different components of the backend, such as the API endpoints, database operations, and external services (if any).
-
-- Consider writing tests for edge cases, error scenarios, and input validation to ensure the robustness and reliability of the backend.
-
-- If the quiz app has complex business logic or algorithms (e.g., question randomization, scoring), create separate test files to thoroughly test those components.
-
-- As new features or modifications are introduced to the backend, make sure to update the existing tests and add new tests to cover the changes.
-
-Remember to follow best practices for testing, such as using meaningful test names, maintaining test independence, and covering both positive and negative scenarios.
-
-Regularly run the test suite to ensure that the backend functionality remains intact and to catch any regressions or bugs introduced by code changes.
-
-Consider integrating the tests into your continuous integration and continuous deployment (CI/CD) pipeline to automatically run the tests whenever changes are made to the codebase.
-
-Keep the tests maintainable, readable, and up to date with the evolving requirements of the quiz app backend.
-```
-
-## File: __init__.py
-```python
-
-```
-
-## File: conftest.py
-```python
-# filename: app/tests/conftest.py
-"""
-This module defines pytest fixtures for testing the Quiz App backend.
-
-Fixtures are reusable objects that can be used across multiple test files.
-"""
-
-import os
-import random
-import string
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
-from main import app  # Import the app object directly from the main module
-from app.schemas.user import UserCreate
-from app.crud.crud_user import create_user, remove_user
-from app.db.session import get_db
-from app.db.base_class import Base
-
-TEST_DATABASE_URL = "sqlite:///./test_db.db"
-
-def random_lower_string() -> str:
-    """
-    Generate a random lowercase string of length 8.
-
-    Returns:
-        str: The generated random string.
-    """
-    return "".join(random.choices(string.ascii_lowercase, k=8))
-
-@pytest.fixture(scope="session")
-def db_session():
-    """
-    Fixture for creating a database session for testing.
-
-    This fixture creates a new database session using an in-memory SQLite database.
-    It yields the session object and cleans up the database after the tests are finished.
-
-    Yields:
-        Session: The database session object.
-    """
-    # Delete the existing test database file if it exists
-    if os.path.exists("./test_db.db"):
-        os.remove("./test_db.db")
-
-    # Create a new test database
-    engine = create_engine(TEST_DATABASE_URL)
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
-
-@pytest.fixture(scope="session")
-def test_app(db_session):
-    """
-    Fixture for creating a FastAPI test client.
-
-    This fixture overrides the `get_db` dependency with the test database session.
-    It yields the FastAPI app and cleans up the dependency overrides after the tests are finished.
-
-    Yields:
-        FastAPI: The FastAPI app instance.
-    """
-    app.dependency_overrides[get_db] = lambda: db_session
-    yield app
-    app.dependency_overrides.clear()
-
-@pytest.fixture(scope="session")
-def client(test_app):
-    """
-    Fixture for creating a FastAPI test client.
-
-    This fixture creates a test client using the FastAPI app fixture.
-    It yields the test client object.
-
-    Yields:
-        TestClient: The FastAPI test client.
-    """
-    with TestClient(test_app) as c:
-        yield c
-
-@pytest.fixture(scope="session")
-def test_user(db_session):
-    """
-    Fixture for creating a test user.
-
-    This fixture creates a new user in the test database using random credentials.
-    It yields the user object and password, and removes the user from the database after the tests are finished.
-
-    Yields:
-        tuple: A tuple containing the user object and password.
-    """
-    db = db_session
-    username = random_lower_string()
-    password = random_lower_string()
-    user_in = UserCreate(username=username, password=password)
-    user = create_user(db=db, user=user_in)
-    db.commit()
-    yield user, password
-    remove_user(db=db, user_id=user.id)
-```
-
-## File: test_auth.py
-```python
-# filename: app/tests/test_auth.py
-"""
-This module contains tests for user authentication.
-
-The tests cover user authentication success and failure scenarios.
-"""
-
-import random
-import string
-import pytest
-from fastapi.testclient import TestClient
-from main import app
-from app.models.users import User
-from app.core.security import get_password_hash
-
-client = TestClient(app)
-
-def random_lower_string() -> str:
-    """
-    Generate a random lowercase string of length 8.
-
-    Returns:
-        str: The generated random string.
-    """
-    return "".join(random.choices(string.ascii_lowercase, k=8))
-
-def test_authenticate_user_success(db_session):
-    """
-    Test successful user authentication.
-
-    This test verifies that a user can successfully authenticate with valid credentials.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    # Create a user in the database
-    username = random_lower_string()
-    password = random_lower_string()
-    hashed_password = get_password_hash(password)  # Hash the password
-    user = User(username=username, hashed_password=hashed_password)  # Store the hashed password
-    db_session.add(user)
-    db_session.commit()
-
-    response = client.post(
-        "/token",
-        data={"username": username, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"}  # Set the content type
-    )
-    assert response.status_code == 200
-    assert "access_token" in response.json()
-    assert response.json()["token_type"] == "bearer"
-
-def test_authenticate_user_failure(db_session):
-    """
-    Test failed user authentication.
-
-    This test verifies that user authentication fails with invalid credentials.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    username = random_lower_string()
-    password = random_lower_string()
-
-    response = client.post(
-        "/token/",
-        data={"username": username, "password": password},
-    )
-    assert response.status_code == 401
-    assert "detail" in response.json()
-    assert response.json()["detail"] == "Incorrect username or password"
-
-def test_authenticate_user_missing_credentials(db_session):
-    """
-    Test user authentication with missing credentials.
-
-    This test verifies that user authentication returns an error when credentials are missing.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    response = client.post(
-        "/token/",
-        data={},
-    )
-    assert response.status_code == 422  # Unprocessable Entity for missing fields
-```
-
-## File: test_question_sets.py
-```python
-# filename: app/tests/test_question_sets.py
-"""
-This module contains tests for the question set endpoints.
-
-The tests cover the creation, retrieval, update, and deletion of question sets.
-"""
-
-import json
-from fastapi.testclient import TestClient
-from main import app
-from app.models.question_sets import QuestionSet
-
-client = TestClient(app)
-
-def test_create_question_set(db_session):
-    """
-    Test creating a new question set.
-
-    This test checks if a question set can be created successfully by sending a POST request
-    to the "/question-sets/" endpoint with valid data.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    question_set_data = {
-        "name": "Test Question Set",
-        "questions": [
-            {
-                "text": "What is the capital of France?",
-                "answer_choices": [
-                    {"text": "Paris", "is_correct": True},
-                    {"text": "London", "is_correct": False},
-                    {"text": "Berlin", "is_correct": False},
-                    {"text": "Madrid", "is_correct": False}
-                ]
-            }
-        ]
-    }
-
-    response = client.post("/question-sets/", json=question_set_data)
-    assert response.status_code == 201
-    assert response.json()["name"] == "Test Question Set"
-
-def test_get_question_sets(db_session):
-    """
-    Test retrieving question sets.
-
-    This test checks if the question sets can be retrieved successfully by sending a GET request
-    to the "/question-sets/" endpoint.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    # Create some question sets in the database
-    question_set1 = QuestionSet(name="Question Set 1")
-    question_set2 = QuestionSet(name="Question Set 2")
-    db_session.add_all([question_set1, question_set2])
-    db_session.commit()
-
-    response = client.get("/question-sets/")
-    assert response.status_code == 200
-    assert len(response.json()) == 2
-
-def test_update_question_set(db_session):
-    """
-    Test updating a question set.
-
-    This test checks if a question set can be updated successfully by sending a PUT request
-    to the "/question-sets/{question_set_id}" endpoint with valid data.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    # Create a question set in the database
-    question_set = QuestionSet(name="Question Set")
-    db_session.add(question_set)
-    db_session.commit()
-
-    updated_question_set_data = {
-        "name": "Updated Question Set"
-    }
-
-    response = client.put(f"/question-sets/{question_set.id}", json=updated_question_set_data)
-    assert response.status_code == 200
-    assert response.json()["name"] == "Updated Question Set"
-
-def test_delete_question_set(db_session):
-    """
-    Test deleting a question set.
-
-    This test checks if a question set can be deleted successfully by sending a DELETE request
-    to the "/question-sets/{question_set_id}" endpoint.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    # Create a question set in the database
-    question_set = QuestionSet(name="Question Set")
-    db_session.add(question_set)
-    db_session.commit()
-
-    response = client.delete(f"/question-sets/{question_set.id}")
-    assert response.status_code == 204
-    assert db_session.query(QuestionSet).filter(QuestionSet.id == question_set.id).count() == 0
-    
-```
-
-## File: test_questions.py
-```python
-# filename: app/tests/test_questions.py
-"""
-This module contains tests for the question endpoints.
-
-The tests cover the creation, retrieval, update, and deletion of questions.
-"""
-
-import json
-from fastapi.testclient import TestClient
-from main import app
-from app.models.questions import Question
-
-client = TestClient(app)
-
-def test_create_question(db_session):
-    """
-    Test creating a new question.
-
-    This test checks if a question can be created successfully by sending a POST request
-    to the "/questions/" endpoint with valid data.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    question_data = {
-        "text": "What is the capital of France?",
-        "answer_choices": [
-            {"text": "Paris", "is_correct": True},
-            {"text": "London", "is_correct": False},
-            {"text": "Berlin", "is_correct": False},
-            {"text": "Madrid", "is_correct": False}
-        ]
-    }
-
-    response = client.post("/questions/", json=question_data)
-    assert response.status_code == 201
-    assert response.json()["text"] == "What is the capital of France?"
-
-def test_get_questions(db_session):
-    """
-    Test retrieving questions.
-
-    This test checks if the questions can be retrieved successfully by sending a GET request
-    to the "/questions/" endpoint.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    # Create some questions in the database
-    question1 = Question(text="Question 1")
-    question2 = Question(text="Question 2")
-    db_session.add_all([question1, question2])
-    db_session.commit()
-
-    response = client.get("/questions/")
-    assert response.status_code == 200
-    assert len(response.json()) == 2
-
-def test_update_question(db_session):
-    """
-    Test updating a question.
-
-    This test checks if a question can be updated successfully by sending a PUT request
-    to the "/questions/{question_id}" endpoint with valid data.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    # Create a question in the database
-    question = Question(text="Question")
-    db_session.add(question)
-    db_session.commit()
-
-    updated_question_data = {
-        "text": "Updated Question"
-    }
-
-    response = client.put(f"/questions/{question.id}", json=updated_question_data)
-    assert response.status_code == 200
-    assert response.json()["text"] == "Updated Question"
-
-def test_delete_question(db_session):
-    """
-    Test deleting a question.
-
-    This test checks if a question can be deleted successfully by sending a DELETE request
-    to the "/questions/{question_id}" endpoint.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    # Create a question in the database
-    question = Question(text="Question")
-    db_session.add(question)
-    db_session.commit()
-
-    response = client.delete(f"/questions/{question.id}")
-    assert response.status_code == 204
-    assert db_session.query(Question).count() == 0
-```
-
-## File: test_registration.py
-```python
-# filename: app/tests/test_registration.py
-"""
-This module contains tests for user registration.
-
-The tests cover user registration scenarios, including successful registration,
-registration with existing username, registration with invalid data, and registration with empty data.
-"""
-
-import pytest
-from fastapi.testclient import TestClient
-import random
-import string
-
-def random_lower_string() -> str:
-    """
-    Generate a random lowercase string of length 8.
-
-    Returns:
-        str: The generated random string.
-    """
-    return "".join(random.choices(string.ascii_lowercase, k=8))
-
-def test_user_registration(client):
-    """
-    Test successful user registration.
-
-    This test verifies that a user can successfully register with valid data.
-
-    Args:
-        client (TestClient): The FastAPI test client.
-    """
-    username = random_lower_string()
-    password = random_lower_string()
-    response = client.post(
-        "/register/",
-        json={"username": username, "password": password},
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["username"] == username
-    # Add more assertions as needed
-
-def test_registration_with_existing_username(client):
-    """
-    Test user registration with an existing username.
-
-    This test verifies that user registration fails when using an already registered username.
-
-    Args:
-        client (TestClient): The FastAPI test client.
-    """
-    username = random_lower_string()
-    password = random_lower_string()
-    # Register once
-    client.post("/register/", json={"username": username, "password": password})
-    # Attempt to register again with the same username
-    response = client.post("/register/", json={"username": username, "password": password})
-    assert response.status_code == 400
-    assert "detail" in response.json()
-    assert response.json()["detail"] == "Username already registered"
-
-def test_registration_with_invalid_data(client):
-    """
-    Test user registration with invalid data.
-
-    This test verifies that user registration returns an error when invalid data is provided.
-
-    Args:
-        client (TestClient): The FastAPI test client.
-    """
-    # Example: Test with missing username
-    response = client.post("/register/", json={"password": "somepassword"})
-    assert response.status_code == 422  # Unprocessable Entity
-
-    # Example: Test with short password
-    response = client.post("/register/", json={"username": random_lower_string(), "password": "short"})
-    assert response.status_code == 422
-
-def test_registration_with_empty_data(client):
-    """
-    Test user registration with empty data.
-
-    This test verifies that user registration returns an error when empty data is provided.
-
-    Args:
-        client (TestClient): The FastAPI test client.
-    """
-    response = client.post("/register/", json={})
-    assert response.status_code == 422
-
-# More specific tests can be added as needed to cover all edge cases and validation rules
-```
-
-## File: test_user_responses.py
-```python
-# filename: app/tests/test_user_responses.py
-"""
-This module contains tests for the user response endpoints.
-
-The tests cover the creation and retrieval of user responses.
-"""
-
-import json
-from fastapi.testclient import TestClient
-from main import app
-from app.models.user_responses import UserResponse
-
-client = TestClient(app)
-
-def test_create_user_response(db_session):
-    """
-    Test creating a new user response.
-
-    This test checks if a user response can be created successfully by sending a POST request
-    to the "/user-responses/" endpoint with valid data.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    user_response_data = {
-        "user_id": 1,
-        "question_id": 1,
-        "answer_choice_id": 1,
-        "is_correct": True
-    }
-
-    response = client.post("/user-responses/", json=user_response_data)
-    assert response.status_code == 201
-    assert response.json()["user_id"] == 1
-    assert response.json()["is_correct"] == True
-
-def test_get_user_responses(db_session):
-    """
-    Test retrieving user responses.
-
-    This test checks if the user responses can be retrieved successfully by sending a GET request
-    to the "/user-responses/" endpoint.
-
-    Args:
-        db_session: The database session fixture.
-    """
-    # Create some user responses in the database
-    user_response1 = UserResponse(user_id=1, question_id=1, answer_choice_id=1, is_correct=True)
-    user_response2 = UserResponse(user_id=2, question_id=2, answer_choice_id=2, is_correct=False)
-    db_session.add_all([user_response1, user_response2])
-    db_session.commit()
-
-    response = client.get("/user-responses/")
-    assert response.status_code == 200
-    assert len(response.json()) == 2
-```
-
 # Directory: /code/quiz-app/quiz-app-backend/app/db
 
 ## File: README.md
-```markdown
+```md
 # Database Management
 
 This directory contains modules related to database management and session handling for the Quiz App backend.
@@ -1418,12 +804,12 @@ Remember to keep the database-related modules focused on database management, se
 ```
 
 ## File: __init__.py
-```python
+```py
 
 ```
 
 ## File: base_class.py
-```python
+```py
 # filename: app/db/base_class.py
 """
 This module defines the base class for SQLAlchemy models.
@@ -1437,7 +823,7 @@ Base = declarative_base()
 ```
 
 ## File: session.py
-```python
+```py
 # filename: app/db/session.py
 """
 This module provides database session management.
@@ -1485,7 +871,7 @@ def get_db() -> SessionLocal:
 # Directory: /code/quiz-app/quiz-app-backend/app/api
 
 ## File: README.md
-```markdown
+```md
 # API Package
 
 This directory contains the modules and packages related to the API functionality of the Quiz App backend.
@@ -1519,7 +905,7 @@ This directory contains the modules and packages related to the API functionalit
 ```
 
 ## File: __init__.py
-```python
+```py
 # filename: app/api/__init__.py
 """
 This module serves as the main entry point for the API package.
@@ -1531,7 +917,7 @@ It can be used to perform any necessary initialization or configuration for the 
 # Directory: /code/quiz-app/quiz-app-backend/app/api/endpoints
 
 ## File: README.md
-```markdown
+```md
 # API Endpoints
 
 This directory contains the implementation of various API endpoints for the Quiz App backend.
@@ -1568,7 +954,7 @@ This directory contains the implementation of various API endpoints for the Quiz
 ```
 
 ## File: __init__.py
-```python
+```py
 # filename: app/api/endpoints/__init__.py
 """
 This module serves as a central point to import and organize the various endpoint routers.
@@ -1578,7 +964,7 @@ It imports the router objects from each endpoint file and makes them available f
 ```
 
 ## File: authentication.py
-```python
+```py
 # filename: app/api/endpoints/authentication.py
 """
 This module provides endpoints for user registration and authentication.
@@ -1661,7 +1047,7 @@ def login_for_access_token(form_data: schemas.UserLogin, db: Session = Depends(g
 ```
 
 ## File: question_sets.py
-```python
+```py
 # filename: app/api/endpoints/question_sets.py
 """
 This module provides endpoints for managing question sets.
@@ -1776,7 +1162,7 @@ def delete_question_set_endpoint(question_set_id: int, db: Session = Depends(get
 ```
 
 ## File: questions.py
-```python
+```py
 # filename: app/api/endpoints/questions.py
 """
 This module provides endpoints for managing questions.
@@ -1863,7 +1249,7 @@ def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
 ```
 
 ## File: register.py
-```python
+```py
 # filename: app/api/endpoints/register.py
 """
 This module provides an endpoint for user registration.
@@ -1880,7 +1266,7 @@ from app.schemas.user import UserCreate
 
 router = APIRouter()
 
-@router.post("/register/")
+@router.post("/register/", status_code=201)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     """
     Endpoint to register a new user.
@@ -1898,12 +1284,15 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = get_user_by_username(db, username=user.username)
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
-    user.password = get_password_hash(user.password)
-    return create_user(db=db, user=user)
+    hashed_password = get_password_hash(user.password)
+    user_create = UserCreate(username=user.username, password=hashed_password)
+    created_user = create_user(db=db, user=user_create)
+    return created_user
+
 ```
 
 ## File: token.py
-```python
+```py
 # filename: app/api/endpoints/token.py
 """
 This module provides an endpoint for user authentication and token generation.
@@ -1914,13 +1303,15 @@ It defines a route for authenticating users and issuing access tokens upon succe
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 from app.crud.crud_user import authenticate_user
 from app.core.jwt import create_access_token
 from app.db.session import get_db
-from app.schemas.token import Token  # Import the Token schema
+from app.schemas.token import Token
+from datetime import timedelta
 
 router = APIRouter()
+
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
@@ -1937,18 +1328,17 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     Returns:
         Token: A Token object containing the access token and token type.
     """
-    try:
-        user = authenticate_user(db, username=form_data.username, password=form_data.password)
-        if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
-        access_token = create_access_token(data={"sub": user.username})
-        return {"access_token": access_token, "token_type": "bearer"}
-    except SQLAlchemyError:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
+    return {"access_token": access_token, "token_type": "bearer"}
+
 ```
 
 ## File: user_responses.py
-```python
+```py
 # filename: app/api/endpoints/user_responses.py
 """
 This module provides endpoints for managing user responses.
@@ -1997,7 +1387,7 @@ def get_user_responses_endpoint(skip: int = 0, limit: int = 100, db: Session = D
 ```
 
 ## File: users.py
-```python
+```py
 # filename: app/api/endpoints/users.py
 """
 This module provides a simple endpoint for retrieving user information.
@@ -2023,7 +1413,7 @@ def read_users():
 # Directory: /code/quiz-app/quiz-app-backend/app/models
 
 ## File: README.md
-```markdown
+```md
 # Database Models
 
 This directory contains the database models for the Quiz App backend.
@@ -2070,12 +1460,17 @@ Regularly review and update the models as the application evolves to ensure they
 ```
 
 ## File: __init__.py
-```python
-
+```py
+from .users import User
+from .subjects import Subject
+from .topics import Topic
+from .subtopics import Subtopic
+from .questions import Question
+from .answer_choices import AnswerChoice
 ```
 
 ## File: answer_choices.py
-```python
+```py
 # filename: app/models/answer_choices.py
 """
 This module defines the AnswerChoice model.
@@ -2109,7 +1504,7 @@ class AnswerChoice(Base):
 ```
 
 ## File: question_sets.py
-```python
+```py
 # filename: app/models/question_sets.py
 """
 This module defines the QuestionSet model.
@@ -2139,7 +1534,7 @@ class QuestionSet(Base):
 ```
 
 ## File: questions.py
-```python
+```py
 # filename: app/models/questions.py
 """
 This module defines the Question model.
@@ -2177,7 +1572,7 @@ class Question(Base):
 ```
 
 ## File: subjects.py
-```python
+```py
 # filename: app/models/subjects.py
 """
 This module defines the Subject model.
@@ -2207,7 +1602,7 @@ class Subject(Base):
 ```
 
 ## File: subtopics.py
-```python
+```py
 # filename: app/models/subtopics.py
 """
 This module defines the Subtopic model.
@@ -2241,7 +1636,7 @@ class Subtopic(Base):
 ```
 
 ## File: topics.py
-```python
+```py
 # filename: app/models/topics.py
 """
 This module defines the Topic model.
@@ -2275,7 +1670,7 @@ class Topic(Base):
 ```
 
 ## File: user_responses.py
-```python
+```py
 # filename: app/models/user_responses.py
 """
 This module defines the UserResponse model.
@@ -2320,7 +1715,7 @@ class UserResponse(Base):
 ```
 
 ## File: users.py
-```python
+```py
 # filename: app/models/users.py
 """
 This module defines the User model.
@@ -2357,7 +1752,7 @@ class User(Base):
 # Directory: /code/quiz-app/quiz-app-backend/app/core
 
 ## File: README.md
-```markdown
+```md
 # Core Package
 
 This directory contains the core modules and functionality for the Quiz App backend.
@@ -2394,7 +1789,7 @@ This directory contains the core modules and functionality for the Quiz App back
 ```
 
 ## File: __init__.py
-```python
+```py
 # filename: app/core/__init__.py
 """
 This module serves as the main entry point for the core package.
@@ -2404,7 +1799,7 @@ It can be used to perform any necessary initialization or configuration for the 
 ```
 
 ## File: auth.py
-```python
+```py
 # filename: app/core/auth.py
 """
 This module provides authentication-related functionality for the Quiz App backend.
@@ -2418,7 +1813,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 ```
 
 ## File: config.py
-```python
+```py
 # filename: app/core/config.py
 """
 This module provides configuration settings for the Quiz App backend.
@@ -2428,7 +1823,7 @@ It can be used to define and manage various configuration options, such as datab
 ```
 
 ## File: jwt.py
-```python
+```py
 # filename: app/core/jwt.py
 """
 This module provides JWT (JSON Web Token) related functionality for the Quiz App backend.
@@ -2493,7 +1888,7 @@ def verify_token(token: str, credentials_exception):
 ```
 
 ## File: security.py
-```python
+```py
 # filename: app/core/security.py
 """
 This module provides security-related utilities for the Quiz App backend.
@@ -2534,7 +1929,7 @@ def get_password_hash(password):
 # Directory: /code/quiz-app/quiz-app-backend/.pytest_cache
 
 ## File: README.md
-```markdown
+```md
 # pytest cache directory #
 
 This directory contains data from the pytest's cache plugin,
@@ -2546,357 +1941,180 @@ See [the docs](https://docs.pytest.org/en/stable/how-to/cache.html) for more inf
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/utilities
+# Directory: /code/quiz-app/quiz-app-backend/tests
 
-## File: generate_secret.py
-```python
-import secrets
+## File: conftest.py
+```py
+# filename: tests/conftest.py
+import os
+import sys
 
-def generate_secure_token(nbytes=8):
-    # Generate a secure random base64-encoded string.
-    # The number of bytes specified will determine the randomness.
-    # We adjust nbytes to get closer to a 64-character output, 
-    # but due to base64 encoding, exact length can't be guaranteed.
-    token = secrets.token_urlsafe(nbytes)
-    return token
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Generate a random 64-bit ASCII string
-random_string = generate_secure_token(48)  # Adjusted nbytes for a longer output
-print(random_string)
-
-```
-
-# Directory: /code/quiz-app/quiz-app-backend/alembic
-
-## File: env.py
-```python
-from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
-from alembic import context
-
+import random
+import string
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.main import app
 from app.db.base_class import Base
+from app.db.session import get_db
 
-from app.models import (
-    answer_choices,
-    questions, subjects,
-    subtopics,
-    topics,
-    user_responses,
-    users,
-    question_sets
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
+@pytest.fixture(scope="session")
+def db():
+    Base.metadata.create_all(bind=engine)
+    yield TestingSessionLocal
+    Base.metadata.drop_all(bind=engine)
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+@pytest.fixture(scope="function")
+def db_session(db):
+    session = db()
+    try:
+        yield session
+    finally:
+        session.close()
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = Base.metadata
+@pytest.fixture(scope="function")
+def client(db_session):
+    def override_get_db():
+        yield db_session
+    app.dependency_overrides[get_db] = override_get_db
+    yield TestClient(app)
+    del app.dependency_overrides[get_db]
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
-
-def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-    )
-
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
-
-
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
-
+@pytest.fixture(scope="function")
+def random_username():
+    return "testuser_" + "".join(random.choices(string.ascii_letters + string.digits, k=5))
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/alembic/versions
-
-## File: 3e72983f5a91_correcting_schema.py
-```python
-"""Correcting schema
-
-Revision ID: 3e72983f5a91
-Revises: fa0365eb6817
-Create Date: 2024-03-03 07:47:35.749008
-
-"""
-from typing import Sequence, Union
-
-from alembic import op
-import sqlalchemy as sa
+## File: test_api.py
+```py
+# filename: tests/test_api.py
+import pytest
+from app.schemas.user import UserCreate
+from app.models.users import User
+from app.crud.crud_user import create_user
 
 
-# revision identifiers, used by Alembic.
-revision: str = '3e72983f5a91'
-down_revision: Union[str, None] = 'fa0365eb6817'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+def test_register_user(client, db_session, random_username):
+    user_data = {
+        "username": random_username,
+        "password": "testpassword"
+    }
+    response = client.post("/register/", json=user_data)
+    assert response.status_code == 201
+    assert response.json()["username"] == random_username
 
+    # Clean up the created user
+    db_session.query(User).filter(User.username == random_username).delete()
+    db_session.commit()
 
-def upgrade() -> None:
-    # ### commands auto generated by Alembic - please adjust! ###
-    pass
-    # ### end Alembic commands ###
+def test_login_user(client, db_session, random_username):
+    password = "testpassword"
+    
+    # Create a user for testing login
+    user_data = UserCreate(username=random_username, password=password)
+    create_user(db_session, user_data)
+    
+    response = client.post("/token", data={"username": random_username, "password": password})
+    assert response.status_code == 200
+    assert "access_token" in response.json()
 
+    # Clean up the created user
+    db_session.query(User).filter(User.username == random_username).delete()
+    db_session.commit()
 
-def downgrade() -> None:
-    # ### commands auto generated by Alembic - please adjust! ###
-    pass
-    # ### end Alembic commands ###
+def test_create_question_set(client):
+    question_set_data = {
+        "name": "Test Question Set"
+    }
+    response = client.post("/question-sets/", json=question_set_data)
+    assert response.status_code == 201
+    assert response.json()["name"] == "Test Question Set"
 
+# Add more API endpoint tests for other routes
 ```
 
-## File: 4c57d74754e4_add_question_sets_table.py
-```python
-"""Add question_sets table
+## File: test_crud.py
+```py
+# filename: tests/test_crud.py
+import pytest
+from app.crud import crud_user, crud_question_sets
+from app.schemas import UserCreate, QuestionSetCreate
 
-Revision ID: 4c57d74754e4
-Revises: 3e72983f5a91
-Create Date: 2024-03-08 23:18:55.478012
+def test_create_user(db_session, random_username):
+    username = random_username
+    user_data = UserCreate(username=username, password="testpassword")
+    created_user = crud_user.create_user(db_session, user_data)
+    assert created_user.username == username
 
-"""
-from typing import Sequence, Union
+def test_create_question_set(db_session):
+    question_set_data = QuestionSetCreate(name="Test Question Set")
+    created_question_set = crud_question_sets.create_question_set(db_session, question_set_data)
+    assert created_question_set.name == "Test Question Set"
 
-from alembic import op
-import sqlalchemy as sa
-
-
-# revision identifiers, used by Alembic.
-revision: str = '4c57d74754e4'
-down_revision: Union[str, None] = '3e72983f5a91'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
-
-
-def upgrade() -> None:
-    # ### commands auto generated by Alembic - please adjust! ###
-    op.create_table('question_sets',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_question_sets_id'), 'question_sets', ['id'], unique=False)
-    op.create_index(op.f('ix_question_sets_name'), 'question_sets', ['name'], unique=False)
-    op.add_column('questions', sa.Column('question_set_id', sa.Integer(), nullable=True))
-    op.create_foreign_key(None, 'questions', 'question_sets', ['question_set_id'], ['id'])
-    # ### end Alembic commands ###
-
-
-def downgrade() -> None:
-    # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_constraint(None, 'questions', type_='foreignkey')
-    op.drop_column('questions', 'question_set_id')
-    op.drop_index(op.f('ix_question_sets_name'), table_name='question_sets')
-    op.drop_index(op.f('ix_question_sets_id'), table_name='question_sets')
-    op.drop_table('question_sets')
-    # ### end Alembic commands ###
-
+# Add similar tests for other CRUD operations
 ```
 
-## File: 57119ef31bf1_initial_migration.py
-```python
-"""Initial migration
+## File: test_models.py
+```py
+# filename: tests/test_models.py
+import pytest
+from app.models import User, Subject, Topic, Subtopic, Question, AnswerChoice
 
-Revision ID: 57119ef31bf1
-Revises: 
-Create Date: 2024-03-03 05:44:07.690920
+def test_user_model(db_session, random_username):
+    username = random_username
+    user = User(username=username, hashed_password="hashedpassword")
+    db_session.add(user)
+    db_session.commit()
+    assert user.id > 0
+    assert user.username == username
+    assert user.hashed_password == "hashedpassword"
 
-"""
-from typing import Sequence, Union
+def test_subject_model(db_session):
+    subject = Subject(name="Test Subject")
+    db_session.add(subject)
+    db_session.commit()
+    assert subject.id > 0
+    assert subject.name == "Test Subject"
 
-from alembic import op
-import sqlalchemy as sa
-
-
-# revision identifiers, used by Alembic.
-revision: str = '57119ef31bf1'
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
-
-
-def upgrade() -> None:
-    # ### commands auto generated by Alembic - please adjust! ###
-    pass
-    # ### end Alembic commands ###
-
-
-def downgrade() -> None:
-    # ### commands auto generated by Alembic - please adjust! ###
-    pass
-    # ### end Alembic commands ###
-
+# Add similar tests for other models: Topic, Subtopic, Question, AnswerChoice
 ```
 
-## File: fa0365eb6817_fixed_initial_migration.py
-```python
-"""Fixed Initial migration
+## File: test_schemas.py
+```py
+# filename: tests/test_schemas.py
+import pytest
+from app.schemas import UserCreate, QuestionCreate
 
-Revision ID: fa0365eb6817
-Revises: 57119ef31bf1
-Create Date: 2024-03-03 05:58:04.278815
+def test_user_create_schema():
+    user_data = {
+        "username": "testuser",
+        "password": "testpassword"
+    }
+    user_schema = UserCreate(**user_data)
+    assert user_schema.username == "testuser"
+    assert user_schema.password == "testpassword"
 
-"""
-from typing import Sequence, Union
+def test_question_create_schema():
+    question_data = {
+        "text": "Test question",
+        "subtopic_id": 1,
+        "question_set_id": 1
+    }
+    question_schema = QuestionCreate(**question_data)
+    assert question_schema.text == "Test question"
+    assert question_schema.subtopic_id == 1
+    assert question_schema.question_set_id == 1
 
-from alembic import op
-import sqlalchemy as sa
-
-
-# revision identifiers, used by Alembic.
-revision: str = 'fa0365eb6817'
-down_revision: Union[str, None] = '57119ef31bf1'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
-
-
-def upgrade() -> None:
-    # ### commands auto generated by Alembic - please adjust! ###
-    op.create_table('subjects',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_subjects_id'), 'subjects', ['id'], unique=False)
-    op.create_index(op.f('ix_subjects_name'), 'subjects', ['name'], unique=False)
-    op.create_table('users',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('username', sa.String(), nullable=True),
-    sa.Column('hashed_password', sa.String(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
-    op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
-    op.create_table('topics',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(), nullable=True),
-    sa.Column('subject_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_topics_id'), 'topics', ['id'], unique=False)
-    op.create_index(op.f('ix_topics_name'), 'topics', ['name'], unique=False)
-    op.create_table('subtopics',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(), nullable=True),
-    sa.Column('topic_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['topic_id'], ['topics.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_subtopics_id'), 'subtopics', ['id'], unique=False)
-    op.create_index(op.f('ix_subtopics_name'), 'subtopics', ['name'], unique=False)
-    op.create_table('questions',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('text', sa.String(), nullable=True),
-    sa.Column('subtopic_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['subtopic_id'], ['subtopics.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_questions_id'), 'questions', ['id'], unique=False)
-    op.create_index(op.f('ix_questions_text'), 'questions', ['text'], unique=False)
-    op.create_table('answer_choices',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('text', sa.String(), nullable=True),
-    sa.Column('is_correct', sa.Boolean(), nullable=True),
-    sa.Column('question_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['question_id'], ['questions.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_answer_choices_id'), 'answer_choices', ['id'], unique=False)
-    op.create_index(op.f('ix_answer_choices_text'), 'answer_choices', ['text'], unique=False)
-    op.create_table('user_responses',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('question_id', sa.Integer(), nullable=True),
-    sa.Column('answer_choice_id', sa.Integer(), nullable=True),
-    sa.Column('is_correct', sa.Boolean(), nullable=True),
-    sa.Column('timestamp', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.ForeignKeyConstraint(['answer_choice_id'], ['answer_choices.id'], ),
-    sa.ForeignKeyConstraint(['question_id'], ['questions.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_user_responses_id'), 'user_responses', ['id'], unique=False)
-    # ### end Alembic commands ###
-
-
-def downgrade() -> None:
-    # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_user_responses_id'), table_name='user_responses')
-    op.drop_table('user_responses')
-    op.drop_index(op.f('ix_answer_choices_text'), table_name='answer_choices')
-    op.drop_index(op.f('ix_answer_choices_id'), table_name='answer_choices')
-    op.drop_table('answer_choices')
-    op.drop_index(op.f('ix_questions_text'), table_name='questions')
-    op.drop_index(op.f('ix_questions_id'), table_name='questions')
-    op.drop_table('questions')
-    op.drop_index(op.f('ix_subtopics_name'), table_name='subtopics')
-    op.drop_index(op.f('ix_subtopics_id'), table_name='subtopics')
-    op.drop_table('subtopics')
-    op.drop_index(op.f('ix_topics_name'), table_name='topics')
-    op.drop_index(op.f('ix_topics_id'), table_name='topics')
-    op.drop_table('topics')
-    op.drop_index(op.f('ix_users_username'), table_name='users')
-    op.drop_index(op.f('ix_users_id'), table_name='users')
-    op.drop_table('users')
-    op.drop_index(op.f('ix_subjects_name'), table_name='subjects')
-    op.drop_index(op.f('ix_subjects_id'), table_name='subjects')
-    op.drop_table('subjects')
-    # ### end Alembic commands ###
-
+# Add similar tests for other schemas
 ```
