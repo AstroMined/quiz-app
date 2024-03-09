@@ -5,10 +5,10 @@ This module provides CRUD operations for user responses.
 It includes functions for creating and retrieving user responses.
 """
 
+from typing import List
 from sqlalchemy.orm import Session
 from app.models.user_responses import UserResponse
 from app.schemas.user_responses import UserResponseCreate
-from typing import List
 
 def create_user_response(db: Session, user_response: UserResponseCreate) -> UserResponse:
     """

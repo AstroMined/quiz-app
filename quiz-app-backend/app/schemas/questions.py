@@ -20,7 +20,7 @@ class QuestionCreate(QuestionBase):
     """
     The schema for creating a Question.
 
-    Inherits from QuestionBase and includes additional attributes required for question creation.
+    Inherits from QuestionBase.
     """
     pass
 
@@ -28,7 +28,7 @@ class QuestionUpdate(QuestionBase):
     """
     The schema for updating a Question.
 
-    Inherits from QuestionBase and includes additional attributes that can be updated.
+    Inherits from QuestionBase.
     """
     pass
 
@@ -36,7 +36,7 @@ class Question(QuestionBase):
     """
     The schema representing a stored Question.
 
-    Inherits from QuestionBase and includes additional attributes present in a stored Question.
+    Inherits from QuestionBase and includes additional attributes.
 
     Attributes:
         id (int): The unique identifier of the question.

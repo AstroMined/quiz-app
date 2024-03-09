@@ -5,12 +5,13 @@ This module contains tests for user authentication.
 The tests cover user authentication success and failure scenarios.
 """
 
-import pytest
 import random
 import string
+import pytest
 from fastapi.testclient import TestClient
 from main import app
 from app.models.users import User
+from app.core.security import get_password_hash
 
 client = TestClient(app)
 
@@ -35,13 +36,15 @@ def test_authenticate_user_success(db_session):
     # Create a user in the database
     username = random_lower_string()
     password = random_lower_string()
-    user = User(username=username, hashed_password=password)
+    hashed_password = get_password_hash(password)  # Hash the password
+    user = User(username=username, hashed_password=hashed_password)  # Store the hashed password
     db_session.add(user)
     db_session.commit()
 
     response = client.post(
-        "/token/",
+        "/token",
         data={"username": username, "password": password},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}  # Set the content type
     )
     assert response.status_code == 200
     assert "access_token" in response.json()

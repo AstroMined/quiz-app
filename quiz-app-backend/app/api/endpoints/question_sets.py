@@ -7,7 +7,7 @@ It defines routes for uploading question sets and retrieving question sets from 
 
 import json
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response  # Import Response
 from sqlalchemy.orm import Session
 from app.crud.crud_question_sets import get_question_sets, update_question_set, delete_question_set
 from app.crud.crud_question_sets import create_question_set as create_question_set_crud
@@ -107,3 +107,4 @@ def delete_question_set_endpoint(question_set_id: int, db: Session = Depends(get
     deleted = delete_question_set(db, question_set_id=question_set_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Question set not found")
+    return Response(status_code=204)

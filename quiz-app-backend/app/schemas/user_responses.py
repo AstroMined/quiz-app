@@ -5,8 +5,8 @@ This module defines the Pydantic schemas for the UserResponse model.
 The schemas are used for input validation and serialization/deserialization of UserResponse objects.
 """
 
-from pydantic import BaseModel
 from datetime import datetime
+from pydantic import BaseModel
 
 class UserResponseBase(BaseModel):
     """

@@ -101,4 +101,5 @@ def test_delete_question_set(db_session):
 
     response = client.delete(f"/question-sets/{question_set.id}")
     assert response.status_code == 204
-    assert db_session.query(QuestionSet).count() == 0
+    assert db_session.query(QuestionSet).filter(QuestionSet.id == question_set.id).count() == 0
+    

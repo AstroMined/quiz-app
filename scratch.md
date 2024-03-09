@@ -19,5 +19,4 @@ If there are aspects of the functionality you need to clarify or if you're unsur
 
 *Here, I'm seeking assistance with the following tasks for my project:*
 
-Using what you learn by commenting these files, I then want you to create a README.md file for the /code/quiz-app/quiz-app-backend/app/crud directory which explains the purpose of each file and the functions they make available.
-You can also make suggestions in the README.md file about new files that might need to be created or what the purpose of empty files in this directory might be given the goals of the project, which are explained briefly in /code/quiz-app/quiz-app-backend/README.md.
+{YOUR TASK HERE}

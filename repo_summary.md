@@ -69,16 +69,16 @@ This plan is subject to change as development progresses. It serves as a guideli
 # filename: main.py
 from fastapi import FastAPI
 from app.api.endpoints import (
-    # Alias the router import
     users as users_router,
     register as register_router,
     token as token_router,
-    question_sets as question_sets_router
+    question_sets as question_sets_router,
+    questions as questions_router,
+    user_responses as user_responses_router
 )
 # Import models if necessary, but it looks like you might not need to import them here unless you're initializing them
 from app.db.base_class import Base  # This might not be needed here if you're not directly using Base in main.py
 from app.models import (
-    # Adjust as necessary
     answer_choices,
     user_responses,
     users,
@@ -95,6 +95,8 @@ app.include_router(users_router.router)
 app.include_router(register_router.router)
 app.include_router(token_router.router)
 app.include_router(question_sets_router.router)
+app.include_router(questions_router.router, prefix="/questions", tags=["Questions"])
+app.include_router(user_responses_router.router, prefix="/user-responses", tags=["User Responses"])
 
 @app.get("/")
 def read_root():
@@ -233,7 +235,7 @@ class QuestionCreate(QuestionBase):
     """
     The schema for creating a Question.
 
-    Inherits from QuestionBase and includes additional attributes required for question creation.
+    Inherits from QuestionBase.
     """
     pass
 
@@ -241,7 +243,7 @@ class QuestionUpdate(QuestionBase):
     """
     The schema for updating a Question.
 
-    Inherits from QuestionBase and includes additional attributes that can be updated.
+    Inherits from QuestionBase.
     """
     pass
 
@@ -249,7 +251,7 @@ class Question(QuestionBase):
     """
     The schema representing a stored Question.
 
-    Inherits from QuestionBase and includes additional attributes present in a stored Question.
+    Inherits from QuestionBase and includes additional attributes.
 
     Attributes:
         id (int): The unique identifier of the question.
@@ -262,6 +264,28 @@ class Question(QuestionBase):
 
     class Config:
         from_attributes = True
+```
+
+## File: token.py
+```python
+# filename: app/schemas/token.py
+"""
+This module defines the Pydantic schema for the Token model.
+"""
+
+from pydantic import BaseModel
+
+class Token(BaseModel):
+    """
+    The schema representing an access token.
+
+    Attributes:
+        access_token (str): The access token.
+        token_type (str): The type of the token.
+    """
+    access_token: str
+    token_type: str
+
 ```
 
 ## File: user.py
@@ -326,6 +350,58 @@ class UserLogin(BaseModel):
     """
     username: str
     password: str
+```
+
+## File: user_responses.py
+```python
+# filename: app/schemas/user_responses.py
+"""
+This module defines the Pydantic schemas for the UserResponse model.
+
+The schemas are used for input validation and serialization/deserialization of UserResponse objects.
+"""
+
+from datetime import datetime
+from pydantic import BaseModel
+
+class UserResponseBase(BaseModel):
+    """
+    The base schema for a UserResponse.
+
+    Attributes:
+        user_id (int): The ID of the user.
+        question_id (int): The ID of the question.
+        answer_choice_id (int): The ID of the answer choice.
+        is_correct (bool): Indicates whether the user's response is correct.
+    """
+    user_id: int
+    question_id: int
+    answer_choice_id: int
+    is_correct: bool
+
+class UserResponseCreate(UserResponseBase):
+    """
+    The schema for creating a UserResponse.
+
+    Inherits from UserResponseBase.
+    """
+    pass
+
+class UserResponse(UserResponseBase):
+    """
+    The schema representing a stored UserResponse.
+
+    Inherits from UserResponseBase and includes additional attributes.
+
+    Attributes:
+        id (int): The unique identifier of the user response.
+        timestamp (datetime): The timestamp of the user's response.
+    """
+    id: int
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
 ```
 
 # Directory: /code/quiz-app/quiz-app-backend/app/crud
@@ -640,6 +716,52 @@ def remove_user(db: Session, user_id: int) -> User:
     return None
 ```
 
+## File: crud_user_responses.py
+```python
+# filename: app/crud/crud_user_responses.py
+"""
+This module provides CRUD operations for user responses.
+
+It includes functions for creating and retrieving user responses.
+"""
+
+from typing import List
+from sqlalchemy.orm import Session
+from app.models.user_responses import UserResponse
+from app.schemas.user_responses import UserResponseCreate
+
+def create_user_response(db: Session, user_response: UserResponseCreate) -> UserResponse:
+    """
+    Create a new user response.
+
+    Args:
+        db (Session): The database session.
+        user_response (UserResponseCreate): The user response data.
+
+    Returns:
+        UserResponse: The created user response.
+    """
+    db_user_response = UserResponse(**user_response.dict())
+    db.add(db_user_response)
+    db.commit()
+    db.refresh(db_user_response)
+    return db_user_response
+
+def get_user_responses(db: Session, skip: int = 0, limit: int = 100) -> List[UserResponse]:
+    """
+    Retrieve a list of user responses.
+
+    Args:
+        db (Session): The database session.
+        skip (int): The number of user responses to skip.
+        limit (int): The maximum number of user responses to retrieve.
+
+    Returns:
+        List[UserResponse]: The list of user responses.
+    """
+    return db.query(UserResponse).offset(skip).limit(limit).all()
+```
+
 # Directory: /code/quiz-app/quiz-app-backend/app/tests
 
 ## File: README.md
@@ -701,6 +823,7 @@ This module defines pytest fixtures for testing the Quiz App backend.
 Fixtures are reusable objects that can be used across multiple test files.
 """
 
+import os
 import random
 import string
 import pytest
@@ -712,6 +835,8 @@ from app.schemas.user import UserCreate
 from app.crud.crud_user import create_user, remove_user
 from app.db.session import get_db
 from app.db.base_class import Base
+
+TEST_DATABASE_URL = "sqlite:///./test_db.db"
 
 def random_lower_string() -> str:
     """
@@ -733,8 +858,12 @@ def db_session():
     Yields:
         Session: The database session object.
     """
-    # Setup for database session
-    engine = create_engine("sqlite:///./test_db.db")
+    # Delete the existing test database file if it exists
+    if os.path.exists("./test_db.db"):
+        os.remove("./test_db.db")
+
+    # Create a new test database
+    engine = create_engine(TEST_DATABASE_URL)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
@@ -803,12 +932,13 @@ This module contains tests for user authentication.
 The tests cover user authentication success and failure scenarios.
 """
 
-import pytest
 import random
 import string
+import pytest
 from fastapi.testclient import TestClient
 from main import app
 from app.models.users import User
+from app.core.security import get_password_hash
 
 client = TestClient(app)
 
@@ -833,13 +963,15 @@ def test_authenticate_user_success(db_session):
     # Create a user in the database
     username = random_lower_string()
     password = random_lower_string()
-    user = User(username=username, hashed_password=password)
+    hashed_password = get_password_hash(password)  # Hash the password
+    user = User(username=username, hashed_password=hashed_password)  # Store the hashed password
     db_session.add(user)
     db_session.commit()
 
     response = client.post(
-        "/token/",
+        "/token",
         data={"username": username, "password": password},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}  # Set the content type
     )
     assert response.status_code == 200
     assert "access_token" in response.json()
@@ -986,7 +1118,8 @@ def test_delete_question_set(db_session):
 
     response = client.delete(f"/question-sets/{question_set.id}")
     assert response.status_code == 204
-    assert db_session.query(QuestionSet).count() == 0
+    assert db_session.query(QuestionSet).filter(QuestionSet.id == question_set.id).count() == 0
+    
 ```
 
 ## File: test_questions.py
@@ -1538,11 +1671,12 @@ It defines routes for uploading question sets and retrieving question sets from 
 
 import json
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response  # Import Response
 from sqlalchemy.orm import Session
-from app.crud.crud_question_sets import create_question_set, get_question_sets
+from app.crud.crud_question_sets import get_question_sets, update_question_set, delete_question_set
+from app.crud.crud_question_sets import create_question_set as create_question_set_crud
 from app.db.session import get_db
-from app.schemas.question_sets import QuestionSet, QuestionSetCreate
+from app.schemas.question_sets import QuestionSet, QuestionSetCreate, QuestionSetUpdate
 
 router = APIRouter()
 
@@ -1591,7 +1725,7 @@ def create_question_set(question_set: QuestionSetCreate, db: Session = Depends(g
     """
     Create a new question set.
     """
-    return create_question_set(db=db, question_set=question_set)
+    return create_question_set_crud(db=db, question_set=question_set)
 
 @router.get("/question-sets/", response_model=List[QuestionSet])
 def read_question_sets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -1600,6 +1734,45 @@ def read_question_sets(skip: int = 0, limit: int = 100, db: Session = Depends(ge
     """
     question_sets = get_question_sets(db, skip=skip, limit=limit)
     return question_sets
+
+@router.put("/question-sets/{question_set_id}", response_model=QuestionSet)
+def update_question_set_endpoint(question_set_id: int, question_set: QuestionSetUpdate, db: Session = Depends(get_db)):
+    """
+    Update a question set.
+
+    Args:
+        question_set_id (int): The ID of the question set to update.
+        question_set (QuestionSetUpdate): The updated question set data.
+        db (Session): The database session.
+
+    Returns:
+        QuestionSet: The updated question set.
+
+    Raises:
+        HTTPException: If the question set is not found.
+    """
+    db_question_set = update_question_set(db, question_set_id=question_set_id, question_set=question_set)
+    if db_question_set is None:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    return db_question_set
+
+@router.delete("/question-sets/{question_set_id}", status_code=204)
+def delete_question_set_endpoint(question_set_id: int, db: Session = Depends(get_db)):
+    """
+    Delete a question set.
+
+    Args:
+        question_set_id (int): The ID of the question set to delete.
+        db (Session): The database session.
+
+    Raises:
+        HTTPException: If the question set is not found.
+    """
+    deleted = delete_question_set(db, question_set_id=question_set_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Question set not found")
+    return Response(status_code=204)
+
 ```
 
 ## File: questions.py
@@ -1612,11 +1785,11 @@ It defines routes for creating, retrieving, updating, and deleting questions.
 """
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response  # Import Response
 from sqlalchemy.orm import Session
 from app.crud.crud_questions import create_question, get_questions, update_question, delete_question
 from app.db.session import get_db
-from app.schemas.questions import QuestionCreate, Question
+from app.schemas.questions import QuestionCreate, Question, QuestionUpdate
 
 router = APIRouter()
 
@@ -1651,13 +1824,13 @@ def read_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     return questions
 
 @router.put("/questions/{question_id}", response_model=Question)
-def update_question_endpoint(question_id: int, question: QuestionCreate, db: Session = Depends(get_db)):
+def update_question_endpoint(question_id: int, question: QuestionUpdate, db: Session = Depends(get_db)):
     """
     Update a question.
 
     Args:
         question_id (int): The ID of the question to update.
-        question (QuestionCreate): The updated question data.
+        question (QuestionUpdate): The updated question data.
         db (Session): The database session.
 
     Returns:
@@ -1671,7 +1844,7 @@ def update_question_endpoint(question_id: int, question: QuestionCreate, db: Ses
         raise HTTPException(status_code=404, detail="Question not found")
     return db_question
 
-@router.delete("/questions/{question_id}")
+@router.delete("/questions/{question_id}", status_code=204)
 def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
     """
     Delete a question.
@@ -1680,16 +1853,13 @@ def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
         question_id (int): The ID of the question to delete.
         db (Session): The database session.
 
-    Returns:
-        dict: A success message.
-
     Raises:
         HTTPException: If the question is not found.
     """
     deleted = delete_question(db, question_id=question_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Question not found")
-    return {"message": "Question deleted successfully"}
+    return Response(status_code=204)
 ```
 
 ## File: register.py
@@ -1741,17 +1911,18 @@ This module provides an endpoint for user authentication and token generation.
 It defines a route for authenticating users and issuing access tokens upon successful authentication.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from app.crud.crud_user import authenticate_user
 from app.core.jwt import create_access_token
 from app.db.session import get_db
+from app.schemas.token import Token  # Import the Token schema
 
 router = APIRouter()
 
-@router.post("/token")
+@router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
     Endpoint to authenticate a user and issue a JWT access token.
@@ -1764,16 +1935,65 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         HTTPException: If the username or password is incorrect, or if an internal server error occurs.
         
     Returns:
-        A dictionary containing the access token and the token type.
+        Token: A Token object containing the access token and token type.
     """
     try:
         user = authenticate_user(db, username=form_data.username, password=form_data.password)
         if not user:
-            raise HTTPException(status_code=401, detail="Incorrect username or password")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
         access_token = create_access_token(data={"sub": user.username})
         return {"access_token": access_token, "token_type": "bearer"}
     except SQLAlchemyError:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+```
+
+## File: user_responses.py
+```python
+# filename: app/api/endpoints/user_responses.py
+"""
+This module provides endpoints for managing user responses.
+
+It defines routes for creating and retrieving user responses.
+"""
+
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from app.crud.crud_user_responses import create_user_response, get_user_responses
+from app.db.session import get_db
+from app.schemas.user_responses import UserResponse, UserResponseCreate
+
+router = APIRouter()
+
+@router.post("/user-responses/", response_model=UserResponse, status_code=201)
+def create_user_response_endpoint(user_response: UserResponseCreate, db: Session = Depends(get_db)):
+    """
+    Create a new user response.
+
+    Args:
+        user_response (UserResponseCreate): The user response data.
+        db (Session): The database session.
+
+    Returns:
+        UserResponse: The created user response.
+    """
+    return create_user_response(db=db, user_response=user_response)
+
+@router.get("/user-responses/", response_model=List[UserResponse])
+def get_user_responses_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """
+    Retrieve a list of user responses.
+
+    Args:
+        skip (int): The number of user responses to skip.
+        limit (int): The maximum number of user responses to retrieve.
+        db (Session): The database session.
+
+    Returns:
+        List[UserResponse]: The list of user responses.
+    """
+    user_responses = get_user_responses(db, skip=skip, limit=limit)
+    return user_responses
 ```
 
 ## File: users.py
@@ -2359,13 +2579,15 @@ from alembic import context
 
 from app.db.base_class import Base
 
-import app.models.answer_choices
-import app.models.questions
-import app.models.subjects
-import app.models.subtopics
-import app.models.topics
-import app.models.user_responses
-import app.models.users
+from app.models import (
+    answer_choices,
+    questions, subjects,
+    subtopics,
+    topics,
+    user_responses,
+    users,
+    question_sets
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -2474,6 +2696,53 @@ def upgrade() -> None:
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
     pass
+    # ### end Alembic commands ###
+
+```
+
+## File: 4c57d74754e4_add_question_sets_table.py
+```python
+"""Add question_sets table
+
+Revision ID: 4c57d74754e4
+Revises: 3e72983f5a91
+Create Date: 2024-03-08 23:18:55.478012
+
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision: str = '4c57d74754e4'
+down_revision: Union[str, None] = '3e72983f5a91'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.create_table('question_sets',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_question_sets_id'), 'question_sets', ['id'], unique=False)
+    op.create_index(op.f('ix_question_sets_name'), 'question_sets', ['name'], unique=False)
+    op.add_column('questions', sa.Column('question_set_id', sa.Integer(), nullable=True))
+    op.create_foreign_key(None, 'questions', 'question_sets', ['question_set_id'], ['id'])
+    # ### end Alembic commands ###
+
+
+def downgrade() -> None:
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_constraint(None, 'questions', type_='foreignkey')
+    op.drop_column('questions', 'question_set_id')
+    op.drop_index(op.f('ix_question_sets_name'), table_name='question_sets')
+    op.drop_index(op.f('ix_question_sets_id'), table_name='question_sets')
+    op.drop_table('question_sets')
     # ### end Alembic commands ###
 
 ```
