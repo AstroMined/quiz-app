@@ -7,13 +7,15 @@ from alembic import context
 
 from app.db.base_class import Base
 
-import app.models.answer_choices
-import app.models.questions
-import app.models.subjects
-import app.models.subtopics
-import app.models.topics
-import app.models.user_responses
-import app.models.users
+from app.models import (
+    answer_choices,
+    questions, subjects,
+    subtopics,
+    topics,
+    user_responses,
+    users,
+    question_sets
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

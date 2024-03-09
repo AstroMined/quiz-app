@@ -160,7 +160,7 @@ Regularly review and update the schemas as the application evolves to ensure the
 
 ## File: question_sets.py
 ```python
-# filename: app/schemas/question_set.py
+# filename: app/schemas/question_sets.py
 """
 This module defines the Pydantic schemas for the QuestionSet model.
 
@@ -206,7 +206,7 @@ class QuestionSet(QuestionSetBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 ```
 
 ## File: questions.py
@@ -237,21 +237,31 @@ class QuestionCreate(QuestionBase):
     """
     pass
 
+class QuestionUpdate(QuestionBase):
+    """
+    The schema for updating a Question.
+
+    Inherits from QuestionBase and includes additional attributes that can be updated.
+    """
+    pass
+
 class Question(QuestionBase):
     """
-    The schema representing a Question.
+    The schema representing a stored Question.
 
     Inherits from QuestionBase and includes additional attributes present in a stored Question.
 
     Attributes:
         id (int): The unique identifier of the question.
         subtopic_id (int): The ID of the associated subtopic.
+        question_set_id (int): The ID of the associated question set.
     """
     id: int
     subtopic_id: int
+    question_set_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 ```
 
 ## File: user.py
@@ -448,6 +458,104 @@ def delete_question_set(db: Session, question_set_id: int) -> bool:
     return False
 ```
 
+## File: crud_questions.py
+```python
+# filename: app/crud/crud_questions.py
+"""
+This module provides CRUD operations for questions.
+
+It includes functions for creating, retrieving, updating, and deleting questions.
+"""
+
+from sqlalchemy.orm import Session
+from app.models.questions import Question
+from app.schemas.questions import QuestionCreate, QuestionUpdate
+from typing import List
+
+def create_question(db: Session, question: QuestionCreate) -> Question:
+    """
+    Create a new question.
+
+    Args:
+        db (Session): The database session.
+        question (QuestionCreate): The question data.
+
+    Returns:
+        Question: The created question.
+    """
+    db_question = Question(**question.dict())
+    db.add(db_question)
+    db.commit()
+    db.refresh(db_question)
+    return db_question
+
+def get_questions(db: Session, skip: int = 0, limit: int = 100) -> List[Question]:
+    """
+    Retrieve a list of questions.
+
+    Args:
+        db (Session): The database session.
+        skip (int): The number of questions to skip.
+        limit (int): The maximum number of questions to retrieve.
+
+    Returns:
+        List[Question]: The list of questions.
+    """
+    return db.query(Question).offset(skip).limit(limit).all()
+
+def get_question(db: Session, question_id: int) -> Question:
+    """
+    Retrieve a question by ID.
+
+    Args:
+        db (Session): The database session.
+        question_id (int): The ID of the question.
+
+    Returns:
+        Question: The retrieved question, or None if not found.
+    """
+    return db.query(Question).filter(Question.id == question_id).first()
+
+def update_question(db: Session, question_id: int, question: QuestionUpdate) -> Question:
+    """
+    Update a question.
+
+    Args:
+        db (Session): The database session.
+        question_id (int): The ID of the question to update.
+        question (QuestionUpdate): The updated question data.
+
+    Returns:
+        Question: The updated question, or None if not found.
+    """
+    db_question = db.query(Question).filter(Question.id == question_id).first()
+    if db_question:
+        update_data = question.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_question, key, value)
+        db.commit()
+        db.refresh(db_question)
+    return db_question
+
+def delete_question(db: Session, question_id: int) -> bool:
+    """
+    Delete a question.
+
+    Args:
+        db (Session): The database session.
+        question_id (int): The ID of the question to delete.
+
+    Returns:
+        bool: True if the question was deleted, False otherwise.
+    """
+    db_question = db.query(Question).filter(Question.id == question_id).first()
+    if db_question:
+        db.delete(db_question)
+        db.commit()
+        return True
+    return False
+```
+
 ## File: crud_user.py
 ```python
 # filename: app/crud/crud_user.py
@@ -593,16 +701,16 @@ This module defines pytest fixtures for testing the Quiz App backend.
 Fixtures are reusable objects that can be used across multiple test files.
 """
 
-import pytest
 import random
 import string
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
 from main import app  # Import the app object directly from the main module
 from app.schemas.user import UserCreate
 from app.crud.crud_user import create_user, remove_user
 from app.db.session import get_db
-from sqlalchemy import create_engine
 from app.db.base_class import Base
 
 def random_lower_string() -> str:
@@ -626,15 +734,15 @@ def db_session():
         Session: The database session object.
     """
     # Setup for database session
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./test_db.db"
-    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+    engine = create_engine("sqlite:///./test_db.db")
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base.metadata.create_all(bind=engine)  # Create all tables for the test database
+    Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     try:
         yield db
     finally:
         db.close()
+        Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(scope="session")
 def test_app(db_session):
@@ -698,6 +806,11 @@ The tests cover user authentication success and failure scenarios.
 import pytest
 import random
 import string
+from fastapi.testclient import TestClient
+from main import app
+from app.models.users import User
+
+client = TestClient(app)
 
 def random_lower_string() -> str:
     """
@@ -708,18 +821,22 @@ def random_lower_string() -> str:
     """
     return "".join(random.choices(string.ascii_lowercase, k=8))
 
-def test_authenticate_user_success(test_user, client):
+def test_authenticate_user_success(db_session):
     """
     Test successful user authentication.
 
     This test verifies that a user can successfully authenticate with valid credentials.
 
     Args:
-        test_user (tuple): A tuple containing the user object and password.
-        client (TestClient): The FastAPI test client.
+        db_session: The database session fixture.
     """
-    user, password = test_user  # Unpack the user object and password
-    username = user.username
+    # Create a user in the database
+    username = random_lower_string()
+    password = random_lower_string()
+    user = User(username=username, hashed_password=password)
+    db_session.add(user)
+    db_session.commit()
+
     response = client.post(
         "/token/",
         data={"username": username, "password": password},
@@ -728,38 +845,251 @@ def test_authenticate_user_success(test_user, client):
     assert "access_token" in response.json()
     assert response.json()["token_type"] == "bearer"
 
-def test_authenticate_user_failure(client):
+def test_authenticate_user_failure(db_session):
     """
     Test failed user authentication.
 
     This test verifies that user authentication fails with invalid credentials.
 
     Args:
-        client (TestClient): The FastAPI test client.
+        db_session: The database session fixture.
     """
     username = random_lower_string()
+    password = random_lower_string()
+
     response = client.post(
         "/token/",
-        data={"username": username, "password": "wrong_password"},
+        data={"username": username, "password": password},
     )
     assert response.status_code == 401
     assert "detail" in response.json()
     assert response.json()["detail"] == "Incorrect username or password"
 
-def test_authenticate_user_missing_credentials(client):
+def test_authenticate_user_missing_credentials(db_session):
     """
     Test user authentication with missing credentials.
 
     This test verifies that user authentication returns an error when credentials are missing.
 
     Args:
-        client (TestClient): The FastAPI test client.
+        db_session: The database session fixture.
     """
     response = client.post(
         "/token/",
         data={},
     )
     assert response.status_code == 422  # Unprocessable Entity for missing fields
+```
+
+## File: test_question_sets.py
+```python
+# filename: app/tests/test_question_sets.py
+"""
+This module contains tests for the question set endpoints.
+
+The tests cover the creation, retrieval, update, and deletion of question sets.
+"""
+
+import json
+from fastapi.testclient import TestClient
+from main import app
+from app.models.question_sets import QuestionSet
+
+client = TestClient(app)
+
+def test_create_question_set(db_session):
+    """
+    Test creating a new question set.
+
+    This test checks if a question set can be created successfully by sending a POST request
+    to the "/question-sets/" endpoint with valid data.
+
+    Args:
+        db_session: The database session fixture.
+    """
+    question_set_data = {
+        "name": "Test Question Set",
+        "questions": [
+            {
+                "text": "What is the capital of France?",
+                "answer_choices": [
+                    {"text": "Paris", "is_correct": True},
+                    {"text": "London", "is_correct": False},
+                    {"text": "Berlin", "is_correct": False},
+                    {"text": "Madrid", "is_correct": False}
+                ]
+            }
+        ]
+    }
+
+    response = client.post("/question-sets/", json=question_set_data)
+    assert response.status_code == 201
+    assert response.json()["name"] == "Test Question Set"
+
+def test_get_question_sets(db_session):
+    """
+    Test retrieving question sets.
+
+    This test checks if the question sets can be retrieved successfully by sending a GET request
+    to the "/question-sets/" endpoint.
+
+    Args:
+        db_session: The database session fixture.
+    """
+    # Create some question sets in the database
+    question_set1 = QuestionSet(name="Question Set 1")
+    question_set2 = QuestionSet(name="Question Set 2")
+    db_session.add_all([question_set1, question_set2])
+    db_session.commit()
+
+    response = client.get("/question-sets/")
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+def test_update_question_set(db_session):
+    """
+    Test updating a question set.
+
+    This test checks if a question set can be updated successfully by sending a PUT request
+    to the "/question-sets/{question_set_id}" endpoint with valid data.
+
+    Args:
+        db_session: The database session fixture.
+    """
+    # Create a question set in the database
+    question_set = QuestionSet(name="Question Set")
+    db_session.add(question_set)
+    db_session.commit()
+
+    updated_question_set_data = {
+        "name": "Updated Question Set"
+    }
+
+    response = client.put(f"/question-sets/{question_set.id}", json=updated_question_set_data)
+    assert response.status_code == 200
+    assert response.json()["name"] == "Updated Question Set"
+
+def test_delete_question_set(db_session):
+    """
+    Test deleting a question set.
+
+    This test checks if a question set can be deleted successfully by sending a DELETE request
+    to the "/question-sets/{question_set_id}" endpoint.
+
+    Args:
+        db_session: The database session fixture.
+    """
+    # Create a question set in the database
+    question_set = QuestionSet(name="Question Set")
+    db_session.add(question_set)
+    db_session.commit()
+
+    response = client.delete(f"/question-sets/{question_set.id}")
+    assert response.status_code == 204
+    assert db_session.query(QuestionSet).count() == 0
+```
+
+## File: test_questions.py
+```python
+# filename: app/tests/test_questions.py
+"""
+This module contains tests for the question endpoints.
+
+The tests cover the creation, retrieval, update, and deletion of questions.
+"""
+
+import json
+from fastapi.testclient import TestClient
+from main import app
+from app.models.questions import Question
+
+client = TestClient(app)
+
+def test_create_question(db_session):
+    """
+    Test creating a new question.
+
+    This test checks if a question can be created successfully by sending a POST request
+    to the "/questions/" endpoint with valid data.
+
+    Args:
+        db_session: The database session fixture.
+    """
+    question_data = {
+        "text": "What is the capital of France?",
+        "answer_choices": [
+            {"text": "Paris", "is_correct": True},
+            {"text": "London", "is_correct": False},
+            {"text": "Berlin", "is_correct": False},
+            {"text": "Madrid", "is_correct": False}
+        ]
+    }
+
+    response = client.post("/questions/", json=question_data)
+    assert response.status_code == 201
+    assert response.json()["text"] == "What is the capital of France?"
+
+def test_get_questions(db_session):
+    """
+    Test retrieving questions.
+
+    This test checks if the questions can be retrieved successfully by sending a GET request
+    to the "/questions/" endpoint.
+
+    Args:
+        db_session: The database session fixture.
+    """
+    # Create some questions in the database
+    question1 = Question(text="Question 1")
+    question2 = Question(text="Question 2")
+    db_session.add_all([question1, question2])
+    db_session.commit()
+
+    response = client.get("/questions/")
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+def test_update_question(db_session):
+    """
+    Test updating a question.
+
+    This test checks if a question can be updated successfully by sending a PUT request
+    to the "/questions/{question_id}" endpoint with valid data.
+
+    Args:
+        db_session: The database session fixture.
+    """
+    # Create a question in the database
+    question = Question(text="Question")
+    db_session.add(question)
+    db_session.commit()
+
+    updated_question_data = {
+        "text": "Updated Question"
+    }
+
+    response = client.put(f"/questions/{question.id}", json=updated_question_data)
+    assert response.status_code == 200
+    assert response.json()["text"] == "Updated Question"
+
+def test_delete_question(db_session):
+    """
+    Test deleting a question.
+
+    This test checks if a question can be deleted successfully by sending a DELETE request
+    to the "/questions/{question_id}" endpoint.
+
+    Args:
+        db_session: The database session fixture.
+    """
+    # Create a question in the database
+    question = Question(text="Question")
+    db_session.add(question)
+    db_session.commit()
+
+    response = client.delete(f"/questions/{question.id}")
+    assert response.status_code == 204
+    assert db_session.query(Question).count() == 0
 ```
 
 ## File: test_registration.py
@@ -855,6 +1185,65 @@ def test_registration_with_empty_data(client):
     assert response.status_code == 422
 
 # More specific tests can be added as needed to cover all edge cases and validation rules
+```
+
+## File: test_user_responses.py
+```python
+# filename: app/tests/test_user_responses.py
+"""
+This module contains tests for the user response endpoints.
+
+The tests cover the creation and retrieval of user responses.
+"""
+
+import json
+from fastapi.testclient import TestClient
+from main import app
+from app.models.user_responses import UserResponse
+
+client = TestClient(app)
+
+def test_create_user_response(db_session):
+    """
+    Test creating a new user response.
+
+    This test checks if a user response can be created successfully by sending a POST request
+    to the "/user-responses/" endpoint with valid data.
+
+    Args:
+        db_session: The database session fixture.
+    """
+    user_response_data = {
+        "user_id": 1,
+        "question_id": 1,
+        "answer_choice_id": 1,
+        "is_correct": True
+    }
+
+    response = client.post("/user-responses/", json=user_response_data)
+    assert response.status_code == 201
+    assert response.json()["user_id"] == 1
+    assert response.json()["is_correct"] == True
+
+def test_get_user_responses(db_session):
+    """
+    Test retrieving user responses.
+
+    This test checks if the user responses can be retrieved successfully by sending a GET request
+    to the "/user-responses/" endpoint.
+
+    Args:
+        db_session: The database session fixture.
+    """
+    # Create some user responses in the database
+    user_response1 = UserResponse(user_id=1, question_id=1, answer_choice_id=1, is_correct=True)
+    user_response2 = UserResponse(user_id=2, question_id=2, answer_choice_id=2, is_correct=False)
+    db_session.add_all([user_response1, user_response2])
+    db_session.commit()
+
+    response = client.get("/user-responses/")
+    assert response.status_code == 200
+    assert len(response.json()) == 2
 ```
 
 # Directory: /code/quiz-app/quiz-app-backend/app/db
@@ -1147,13 +1536,13 @@ This module provides endpoints for managing question sets.
 It defines routes for uploading question sets and retrieving question sets from the database.
 """
 
+import json
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app.crud.crud_question_sets import create_question_set, get_question_sets
 from app.db.session import get_db
-from typing import List
-from app.models.question_sets import QuestionSet  # Import the QuestionSet model
-import json
+from app.schemas.question_sets import QuestionSet, QuestionSetCreate
 
 router = APIRouter()
 
@@ -1196,6 +1585,111 @@ def read_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     """
     questions = get_question_sets(db, skip=skip, limit=limit)
     return questions
+
+@router.post("/question-sets/", response_model=QuestionSet, status_code=201)
+def create_question_set(question_set: QuestionSetCreate, db: Session = Depends(get_db)):
+    """
+    Create a new question set.
+    """
+    return create_question_set(db=db, question_set=question_set)
+
+@router.get("/question-sets/", response_model=List[QuestionSet])
+def read_question_sets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """
+    Retrieve a list of question sets.
+    """
+    question_sets = get_question_sets(db, skip=skip, limit=limit)
+    return question_sets
+```
+
+## File: questions.py
+```python
+# filename: app/api/endpoints/questions.py
+"""
+This module provides endpoints for managing questions.
+
+It defines routes for creating, retrieving, updating, and deleting questions.
+"""
+
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from app.crud.crud_questions import create_question, get_questions, update_question, delete_question
+from app.db.session import get_db
+from app.schemas.questions import QuestionCreate, Question
+
+router = APIRouter()
+
+@router.post("/questions/", response_model=Question, status_code=201)
+def create_question_endpoint(question: QuestionCreate, db: Session = Depends(get_db)):
+    """
+    Create a new question.
+
+    Args:
+        question (QuestionCreate): The question data.
+        db (Session): The database session.
+
+    Returns:
+        Question: The created question.
+    """
+    return create_question(db=db, question=question)
+
+@router.get("/questions/", response_model=List[Question])
+def read_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """
+    Retrieve a list of questions.
+
+    Args:
+        skip (int): The number of questions to skip.
+        limit (int): The maximum number of questions to retrieve.
+        db (Session): The database session.
+
+    Returns:
+        List[Question]: The list of questions.
+    """
+    questions = get_questions(db, skip=skip, limit=limit)
+    return questions
+
+@router.put("/questions/{question_id}", response_model=Question)
+def update_question_endpoint(question_id: int, question: QuestionCreate, db: Session = Depends(get_db)):
+    """
+    Update a question.
+
+    Args:
+        question_id (int): The ID of the question to update.
+        question (QuestionCreate): The updated question data.
+        db (Session): The database session.
+
+    Returns:
+        Question: The updated question.
+
+    Raises:
+        HTTPException: If the question is not found.
+    """
+    db_question = update_question(db, question_id=question_id, question=question)
+    if db_question is None:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return db_question
+
+@router.delete("/questions/{question_id}")
+def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
+    """
+    Delete a question.
+
+    Args:
+        question_id (int): The ID of the question to delete.
+        db (Session): The database session.
+
+    Returns:
+        dict: A success message.
+
+    Raises:
+        HTTPException: If the question is not found.
+    """
+    deleted = delete_question(db, question_id=question_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return {"message": "Question deleted successfully"}
 ```
 
 ## File: register.py

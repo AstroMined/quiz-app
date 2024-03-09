@@ -5,17 +5,20 @@ This module defines pytest fixtures for testing the Quiz App backend.
 Fixtures are reusable objects that can be used across multiple test files.
 """
 
-import pytest
+import os
 import random
 import string
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
 from main import app  # Import the app object directly from the main module
 from app.schemas.user import UserCreate
 from app.crud.crud_user import create_user, remove_user
 from app.db.session import get_db
-from sqlalchemy import create_engine
 from app.db.base_class import Base
+
+TEST_DATABASE_URL = "sqlite:///./test_db.db"
 
 def random_lower_string() -> str:
     """
@@ -37,16 +40,20 @@ def db_session():
     Yields:
         Session: The database session object.
     """
-    # Setup for database session
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./test_db.db"
-    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+    # Delete the existing test database file if it exists
+    if os.path.exists("./test_db.db"):
+        os.remove("./test_db.db")
+
+    # Create a new test database
+    engine = create_engine(TEST_DATABASE_URL)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base.metadata.create_all(bind=engine)  # Create all tables for the test database
+    Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     try:
         yield db
     finally:
         db.close()
+        Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(scope="session")
 def test_app(db_session):

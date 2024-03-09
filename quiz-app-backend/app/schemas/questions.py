@@ -24,18 +24,28 @@ class QuestionCreate(QuestionBase):
     """
     pass
 
+class QuestionUpdate(QuestionBase):
+    """
+    The schema for updating a Question.
+
+    Inherits from QuestionBase and includes additional attributes that can be updated.
+    """
+    pass
+
 class Question(QuestionBase):
     """
-    The schema representing a Question.
+    The schema representing a stored Question.
 
     Inherits from QuestionBase and includes additional attributes present in a stored Question.
 
     Attributes:
         id (int): The unique identifier of the question.
         subtopic_id (int): The ID of the associated subtopic.
+        question_set_id (int): The ID of the associated question set.
     """
     id: int
     subtopic_id: int
+    question_set_id: int
 
     class Config:
         from_attributes = True
