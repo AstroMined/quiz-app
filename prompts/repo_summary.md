@@ -84,7 +84,7 @@ from app.api.endpoints import (
     user_responses as user_responses_router
 )
 # Import models if necessary, but it looks like you might not need to import them here unless you're initializing them
-from app.db.base_class import Base  # This might not be needed here if you're not directly using Base in main.py
+from app.db.base_class import Base
 from app.models import (
     answer_choices,
     user_responses,
@@ -108,6 +108,7 @@ app.include_router(user_responses_router.router, prefix="/user-responses", tags=
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
 ```
 
 # Directory: /code/quiz-app/quiz-app-backend/app/schemas
@@ -157,7 +158,7 @@ Regularly review and update the schemas as the application evolves to ensure the
 
 ## File: __init__.py
 ```py
-from .user import UserCreate, UserLogin
+from .user import UserCreate, UserLogin, User
 from .questions import QuestionCreate
 from .question_sets import QuestionSetCreate
 ```
@@ -353,6 +354,12 @@ class UserLogin(BaseModel):
     """
     username: str
     password: str
+
+class User(UserBase):
+    id: int
+
+    class Config:
+        from_attributes = True
 ```
 
 ## File: user_responses.py
@@ -661,8 +668,8 @@ def create_user(db: Session, user: UserCreate) -> User:
     Returns:
         User: The created user.
     """
-    fake_hashed_password = get_password_hash(user.password)
-    db_user = User(username=user.username, hashed_password=fake_hashed_password)
+    hashed_password = get_password_hash(user.password)
+    db_user = User(username=user.username, hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -835,13 +842,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.db.base_class import Base
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./quiz_app.db"  # Adjust for production
-
+# Development database
+SQLALCHEMY_DATABASE_URL = "sqlite:///./app.db"
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}  # Only needed for SQLite
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db() -> None:
@@ -1173,14 +1178,14 @@ It defines routes for creating, retrieving, updating, and deleting questions.
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Response  # Import Response
 from sqlalchemy.orm import Session
-from app.crud.crud_questions import create_question, get_questions, update_question, delete_question
+from app.crud import crud_questions
 from app.db.session import get_db
 from app.schemas.questions import QuestionCreate, Question, QuestionUpdate
 
 router = APIRouter()
 
 @router.post("/questions/", response_model=Question, status_code=201)
-def create_question_endpoint(question: QuestionCreate, db: Session = Depends(get_db)):
+def create_question(question: QuestionCreate, db: Session = Depends(get_db)):
     """
     Create a new question.
 
@@ -1191,7 +1196,7 @@ def create_question_endpoint(question: QuestionCreate, db: Session = Depends(get
     Returns:
         Question: The created question.
     """
-    return create_question(db=db, question=question)
+    return crud_questions.create_question(db, question)
 
 @router.get("/questions/", response_model=List[Question])
 def read_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -1206,11 +1211,11 @@ def read_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     Returns:
         List[Question]: The list of questions.
     """
-    questions = get_questions(db, skip=skip, limit=limit)
+    questions = crud_questions.get_questions(db, skip=skip, limit=limit)
     return questions
 
 @router.put("/questions/{question_id}", response_model=Question)
-def update_question_endpoint(question_id: int, question: QuestionUpdate, db: Session = Depends(get_db)):
+def update_question(question_id: int, question: QuestionUpdate, db: Session = Depends(get_db)):
     """
     Update a question.
 
@@ -1225,13 +1230,13 @@ def update_question_endpoint(question_id: int, question: QuestionUpdate, db: Ses
     Raises:
         HTTPException: If the question is not found.
     """
-    db_question = update_question(db, question_id=question_id, question=question)
+    db_question = crud_questions.update_question(db, question_id=question_id, question=question)
     if db_question is None:
         raise HTTPException(status_code=404, detail="Question not found")
     return db_question
 
 @router.delete("/questions/{question_id}", status_code=204)
-def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
+def delete_question(question_id: int, db: Session = Depends(get_db)):
     """
     Delete a question.
 
@@ -1242,7 +1247,7 @@ def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
     Raises:
         HTTPException: If the question is not found.
     """
-    deleted = delete_question(db, question_id=question_id)
+    deleted = crud_questions.delete_question(db, question_id=question_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Question not found")
     return Response(status_code=204)
@@ -1395,7 +1400,11 @@ This module provides a simple endpoint for retrieving user information.
 It defines a route for retrieving a list of users (currently hardcoded).
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.db.session import get_db
+from app.crud.crud_user import create_user as create_user_crud
+from app.schemas import UserCreate, User
 
 router = APIRouter()
 
@@ -1408,6 +1417,11 @@ def read_users():
         A list of user objects (currently hardcoded).
     """
     return [{"username": "user1"}, {"username": "user2"}]
+
+@router.post("/users/", response_model=User, status_code=201)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    return create_user_crud(db, user)
+
 ```
 
 # Directory: /code/quiz-app/quiz-app-backend/app/models
@@ -1461,12 +1475,14 @@ Regularly review and update the models as the application evolves to ensure they
 
 ## File: __init__.py
 ```py
+# filename: app/models/__init__.py
 from .users import User
 from .subjects import Subject
 from .topics import Topic
 from .subtopics import Subtopic
 from .questions import Question
 from .answer_choices import AnswerChoice
+from .question_sets import QuestionSet  # Add this line
 ```
 
 ## File: answer_choices.py
@@ -1961,11 +1977,14 @@ from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.db.base_class import Base
 from app.db.session import get_db
+from app.crud import crud_user, crud_questions, crud_question_sets
+from app.schemas import UserCreate, QuestionSetCreate, QuestionCreate
+from app.models import User, QuestionSet, Question, Subtopic
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-
+# Testing database
+SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -1980,6 +1999,10 @@ def db_session(db):
     session = db()
     try:
         yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
     finally:
         session.close()
 
@@ -1994,6 +2017,30 @@ def client(db_session):
 @pytest.fixture(scope="function")
 def random_username():
     return "testuser_" + "".join(random.choices(string.ascii_letters + string.digits, k=5))
+
+@pytest.fixture
+def test_user(db_session, random_username):
+    user_data = UserCreate(username=random_username, password="testpassword")
+    user = crud_user.create_user(db_session, user_data)
+    db_session.commit()  # Commit the changes to the database
+    return user
+
+@pytest.fixture
+def test_question_set(db_session):
+    question_set_data = QuestionSetCreate(name="Test Question Set")
+    question_set = crud_question_sets.create_question_set(db_session, question_set_data)
+    return question_set
+
+@pytest.fixture
+def test_question(db_session, test_question_set):
+    # Create a test subtopic
+    subtopic = Subtopic(name="Test Subtopic")
+    db_session.add(subtopic)
+    db_session.commit()
+
+    question_data = QuestionCreate(text="Test Question", question_set_id=test_question_set.id, subtopic_id=subtopic.id)
+    question = crud_questions.create_question(db_session, question_data)
+    return question
 ```
 
 ## File: test_api.py
@@ -2044,6 +2091,58 @@ def test_create_question_set(client):
 # Add more API endpoint tests for other routes
 ```
 
+## File: test_api_question_sets.py
+```py
+# filename: tests/test_api_question_sets.py
+def test_create_question_set(client, db_session):
+    data = {"name": "Test Question Set"}
+    response = client.post("/question-sets/", json=data)
+    assert response.status_code == 201
+    assert response.json()["name"] == "Test Question Set"
+
+def test_read_question_sets(client, db_session, test_question_set):
+    response = client.get("/question-sets/")
+    assert response.status_code == 200
+    assert any(qs["id"] == test_question_set.id and qs["name"] == test_question_set.name for qs in response.json())
+
+# Add more tests for question set API endpoints
+```
+
+## File: test_api_questions.py
+```py
+# filename: tests/test_api_questions.py
+def test_create_question(client, db_session, test_question_set):
+    data = {"text": "Test Question", "question_set_id": test_question_set.id}
+    response = client.post("/questions/", json=data)
+    assert response.status_code == 201
+    assert response.json()["text"] == "Test Question"
+
+def test_read_questions(client, db_session, test_question):
+    response = client.get("/questions/")
+    assert response.status_code == 200
+    assert response.json() == [test_question.dict()]
+
+# Add more tests for question API endpoints
+```
+
+## File: test_api_users.py
+```py
+# filename: tests/test_api_users.py
+def test_create_user(client, db_session, random_username):
+    data = {"username": random_username, "password": "testpassword"}
+    response = client.post("/users/", json=data)
+    assert response.status_code == 201
+    assert response.json()["username"] == random_username
+
+def test_read_users(client, db_session, test_user):
+    response = client.get("/users/")
+    assert response.status_code == 200
+    assert test_user.username in [user["username"] for user in response.json()]
+
+# Add more tests for user API endpoints
+
+```
+
 ## File: test_crud.py
 ```py
 # filename: tests/test_crud.py
@@ -2052,10 +2151,16 @@ from app.crud import crud_user, crud_question_sets
 from app.schemas import UserCreate, QuestionSetCreate
 
 def test_create_user(db_session, random_username):
-    username = random_username
-    user_data = UserCreate(username=username, password="testpassword")
+    user_data = UserCreate(username=random_username, password="newpassword")
     created_user = crud_user.create_user(db_session, user_data)
-    assert created_user.username == username
+    assert created_user.username == random_username
+   
+def test_authenticate_user(db_session, random_username):
+    user_data = UserCreate(username=random_username, password="authpassword")
+    crud_user.create_user(db_session, user_data)
+    authenticated_user = crud_user.authenticate_user(db_session, username=random_username, password="authpassword")
+    assert authenticated_user
+    assert authenticated_user.username == random_username
 
 def test_create_question_set(db_session):
     question_set_data = QuestionSetCreate(name="Test Question Set")
@@ -2069,7 +2174,7 @@ def test_create_question_set(db_session):
 ```py
 # filename: tests/test_models.py
 import pytest
-from app.models import User, Subject, Topic, Subtopic, Question, AnswerChoice
+from app.models import User, Subject, Topic, Subtopic, Question, AnswerChoice, QuestionSet
 
 def test_user_model(db_session, random_username):
     username = random_username
@@ -2087,7 +2192,19 @@ def test_subject_model(db_session):
     assert subject.id > 0
     assert subject.name == "Test Subject"
 
+def test_question_model(db_session):
+    question_set = QuestionSet(name="Test Question Set")
+    db_session.add(question_set)
+    db_session.commit()
+    question = Question(text="Test Question", question_set=question_set)
+    db_session.add(question)
+    db_session.commit()
+    assert question.id
+    assert question.text == "Test Question"
+    assert question.question_set == question_set
+    
 # Add similar tests for other models: Topic, Subtopic, Question, AnswerChoice
+
 ```
 
 ## File: test_schemas.py
