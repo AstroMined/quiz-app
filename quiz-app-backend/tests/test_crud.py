@@ -4,10 +4,16 @@ from app.crud import crud_user, crud_question_sets
 from app.schemas import UserCreate, QuestionSetCreate
 
 def test_create_user(db_session, random_username):
-    username = random_username
-    user_data = UserCreate(username=username, password="testpassword")
+    user_data = UserCreate(username=random_username, password="newpassword")
     created_user = crud_user.create_user(db_session, user_data)
-    assert created_user.username == username
+    assert created_user.username == random_username
+   
+def test_authenticate_user(db_session, random_username):
+    user_data = UserCreate(username=random_username, password="authpassword")
+    crud_user.create_user(db_session, user_data)
+    authenticated_user = crud_user.authenticate_user(db_session, username=random_username, password="authpassword")
+    assert authenticated_user
+    assert authenticated_user.username == random_username
 
 def test_create_question_set(db_session):
     question_set_data = QuestionSetCreate(name="Test Question Set")

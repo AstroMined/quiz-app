@@ -58,3 +58,9 @@ class UserLogin(BaseModel):
     """
     username: str
     password: str
+
+class User(UserBase):
+    id: int
+
+    class Config:
+        from_attributes = True

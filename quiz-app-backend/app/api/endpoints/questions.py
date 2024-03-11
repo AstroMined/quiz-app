@@ -8,14 +8,14 @@ It defines routes for creating, retrieving, updating, and deleting questions.
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Response  # Import Response
 from sqlalchemy.orm import Session
-from app.crud.crud_questions import create_question, get_questions, update_question, delete_question
+from app.crud import crud_questions
 from app.db.session import get_db
 from app.schemas.questions import QuestionCreate, Question, QuestionUpdate
 
 router = APIRouter()
 
 @router.post("/questions/", response_model=Question, status_code=201)
-def create_question_endpoint(question: QuestionCreate, db: Session = Depends(get_db)):
+def create_question(question: QuestionCreate, db: Session = Depends(get_db)):
     """
     Create a new question.
 
@@ -26,7 +26,7 @@ def create_question_endpoint(question: QuestionCreate, db: Session = Depends(get
     Returns:
         Question: The created question.
     """
-    return create_question(db=db, question=question)
+    return crud_questions.create_question(db, question)
 
 @router.get("/questions/", response_model=List[Question])
 def read_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -41,11 +41,11 @@ def read_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     Returns:
         List[Question]: The list of questions.
     """
-    questions = get_questions(db, skip=skip, limit=limit)
+    questions = crud_questions.get_questions(db, skip=skip, limit=limit)
     return questions
 
 @router.put("/questions/{question_id}", response_model=Question)
-def update_question_endpoint(question_id: int, question: QuestionUpdate, db: Session = Depends(get_db)):
+def update_question(question_id: int, question: QuestionUpdate, db: Session = Depends(get_db)):
     """
     Update a question.
 
@@ -60,13 +60,13 @@ def update_question_endpoint(question_id: int, question: QuestionUpdate, db: Ses
     Raises:
         HTTPException: If the question is not found.
     """
-    db_question = update_question(db, question_id=question_id, question=question)
+    db_question = crud_questions.update_question(db, question_id=question_id, question=question)
     if db_question is None:
         raise HTTPException(status_code=404, detail="Question not found")
     return db_question
 
 @router.delete("/questions/{question_id}", status_code=204)
-def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
+def delete_question(question_id: int, db: Session = Depends(get_db)):
     """
     Delete a question.
 
@@ -77,7 +77,7 @@ def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
     Raises:
         HTTPException: If the question is not found.
     """
-    deleted = delete_question(db, question_id=question_id)
+    deleted = crud_questions.delete_question(db, question_id=question_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Question not found")
     return Response(status_code=204)
