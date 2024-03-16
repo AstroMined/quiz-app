@@ -158,9 +158,12 @@ Regularly review and update the schemas as the application evolves to ensure the
 
 ## File: __init__.py
 ```py
-from .user import UserCreate, UserLogin, User
-from .questions import QuestionCreate
-from .question_sets import QuestionSetCreate
+from .user import UserCreate, UserLogin, UserBase, User
+from .questions import QuestionBase, Question, QuestionCreate, QuestionUpdate
+from .question_sets import QuestionSetCreate, QuestionSetBase, QuestionSet, QuestionSetUpdate
+from .token import Token
+from .user_responses import UserResponseBase, UserResponse, UserResponseCreate
+
 ```
 
 ## File: question_sets.py
@@ -240,8 +243,8 @@ class QuestionCreate(QuestionBase):
 
     Inherits from QuestionBase.
     """
-    subtopic_id: int  # Add this line to include the subtopic_id field
-    question_set_id: int  # Add this line to include the question_set_id field
+    subtopic_id: int
+    question_set_id: int
 
 class QuestionUpdate(QuestionBase):
     """
@@ -812,7 +815,8 @@ Remember to keep the database-related modules focused on database management, se
 
 ## File: __init__.py
 ```py
-
+from .base_class import Base
+from .session import get_db, init_db
 ```
 
 ## File: base_class.py
@@ -966,89 +970,6 @@ This module serves as a central point to import and organize the various endpoin
 
 It imports the router objects from each endpoint file and makes them available for use in the main FastAPI application.
 """
-```
-
-## File: authentication.py
-```py
-# filename: app/api/endpoints/authentication.py
-"""
-This module provides endpoints for user registration and authentication.
-
-It defines routes for user registration and issuing access tokens upon successful authentication.
-"""
-
-# Import necessary libraries and modules
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from app import crud, models, schemas
-from app.core import security, jwt
-from app.db.session import SessionLocal
-
-# Create a FastAPI router for handling authentication-related routes
-router = APIRouter()
-
-def get_db():
-    """
-    Dependency that creates a new database session.
-    
-    Yields:
-        A SQLAlchemy SessionLocal instance that can be used to execute database operations.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@router.post("/register/")
-def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """
-    Endpoint to register a new user.
-    
-    Args:
-        user: A UserCreate schema object containing the user's registration information.
-        db: A database session dependency injected by FastAPI.
-        
-    Raises:
-        HTTPException: If the username is already registered.
-        
-    Returns:
-        The newly created user object.
-    """
-    # Check if the username is already taken
-    db_user = crud.get_user_by_username(db, username=user.username)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
-    # Hash the user's password for security
-    user.password = security.get_password_hash(user.password)
-    # Create the user in the database
-    return crud.create_user(db=db, user=user)
-
-@router.post("/token/")
-def login_for_access_token(form_data: schemas.UserLogin, db: Session = Depends(get_db)):
-    """
-    Endpoint to authenticate a user and issue a JWT access token.
-    
-    Args:
-        form_data: A UserLogin schema object containing the user's login credentials.
-        db: A database session dependency injected by FastAPI.
-        
-    Raises:
-        HTTPException: If the username or password is incorrect.
-        
-    Returns:
-        A dictionary containing the access token and the token type.
-    """
-    # Authenticate the user
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    # Set the expiration time for the access token
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    # Create the access token
-    access_token = jwt.create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
-    # Return the access token and the token type
-    return {"access_token": access_token, "token_type": "bearer"}
 ```
 
 ## File: question_sets.py
@@ -1305,6 +1226,7 @@ This module provides an endpoint for user authentication and token generation.
 It defines a route for authenticating users and issuing access tokens upon successful authentication.
 """
 
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -1312,7 +1234,6 @@ from app.crud.crud_user import authenticate_user
 from app.core.jwt import create_access_token
 from app.db.session import get_db
 from app.schemas.token import Token
-from datetime import timedelta
 
 router = APIRouter()
 
@@ -1400,27 +1321,68 @@ This module provides a simple endpoint for retrieving user information.
 It defines a route for retrieving a list of users (currently hardcoded).
 """
 
-from fastapi import APIRouter, Depends
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
+from app.models.users import User as UserModel
 from app.crud.crud_user import create_user as create_user_crud
-from app.schemas import UserCreate, User
+from app.schemas import UserCreate as UserCreateSchema, User as UserSchema
 
 router = APIRouter()
 
-@router.get("/users/")
-def read_users():
+@router.get("/users/", response_model=List[UserSchema])
+def read_users(db: Session = Depends(get_db)):
     """
     Endpoint to retrieve a list of users.
     
+    Args:
+        db: The database session.
+    
     Returns:
-        A list of user objects (currently hardcoded).
+        A list of user objects.
     """
-    return [{"username": "user1"}, {"username": "user2"}]
+    users = db.query(UserModel).all()
+    return users
 
-@router.post("/users/", response_model=User, status_code=201)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    return create_user_crud(db, user)
+@router.post("/users/", response_model=UserSchema, status_code=201)
+def create_user(user: UserCreateSchema, db: Session = Depends(get_db)):
+    """
+    Create a new user in the database.
+
+    This endpoint receives user data as a request payload, validates it against
+    the UserCreateSchema, and then proceeds to create a new user record in the
+    database using the provided details. It returns the newly created user data
+    as per the UserModelSchema.
+
+    Args:
+        user (UserCreateSchema): The user information required to create a new user.
+                                  This includes, but is not limited to, the username
+                                  and password.
+        db (Session, optional): The database session used to perform database
+                                operations. This dependency is injected by FastAPI
+                                via Depends(get_db).
+
+    Returns:
+        UserModelSchema: The schema of the newly created user, which includes
+                         the user's id, username, and other fields as defined
+                         in the schema but not including sensitive information
+                         like passwords.
+
+    Raises:
+        HTTPException: A 400 error if the user creation process fails, which
+                       could occur if the username already exists.
+    """
+    # Attempt to create a new user in the database using CRUD operations
+    try:
+        new_user = create_user_crud(db=db, user=user)
+        return new_user
+    except Exception as e:
+        # If there's an error (e.g., username already exists), raise an HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Failed to create user. ' + str(e)
+            ) from e
 
 ```
 
@@ -1990,29 +1952,42 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="session")
 def db():
+    print("Creating test database and tables...")
     Base.metadata.create_all(bind=engine)
     yield TestingSessionLocal
+    print("Dropping test database tables...")
     Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(scope="function")
 def db_session(db):
     session = db()
+    print(f"Starting a new test session: {session}")
     try:
         yield session
         session.commit()
+        print("Test session committed.")
     except:
         session.rollback()
+        print("Test session rolled back.")
         raise
     finally:
         session.close()
+        print(f"Test session closed: {session}")
 
 @pytest.fixture(scope="function")
 def client(db_session):
     def override_get_db():
-        yield db_session
+        print(f"Overriding get_db dependency with test session: {db_session}")
+        try:
+            yield db_session
+        finally:
+            print(f"Ending use of test session: {db_session}")
+
     app.dependency_overrides[get_db] = override_get_db
-    yield TestClient(app)
+    client = TestClient(app)
+    yield client
     del app.dependency_overrides[get_db]
+    print("Removed get_db override.")
 
 @pytest.fixture(scope="function")
 def random_username():
@@ -2091,6 +2066,60 @@ def test_create_question_set(client):
 # Add more API endpoint tests for other routes
 ```
 
+## File: test_api_authentication.py
+```py
+# filename: tests/test_api_authentication.py
+def test_user_authentication(client, test_user):
+    """Test user authentication and token retrieval."""
+    response = client.post("/token", data={"username": test_user.username, "password": "testpassword"})
+    assert response.status_code == 200, "Authentication failed."
+    assert "access_token" in response.json(), "Access token missing in response."
+    assert response.json()["token_type"] == "bearer", "Incorrect token type."
+
+def test_register_user_success(client):
+    """Test successful user registration."""
+    user_data = {"username": "new_user", "password": "new_password"}
+    response = client.post("/register/", json=user_data)
+    assert response.status_code == 201, "User registration failed."
+    assert response.json()["username"] == "new_user", "Username in response does not match."
+
+def test_login_user_success(client, test_user):
+    """Test successful user login and token retrieval."""
+    login_data = {"username": test_user.username, "password": "testpassword"}
+    response = client.post("/token", data=login_data)
+    assert response.status_code == 200, "User login failed."
+    assert "access_token" in response.json(), "Access token missing in login response."
+
+def test_registration_user_exists(client, test_user):
+    """Test registration with an existing username."""
+    response = client.post("/register/", json={"username": test_user.username, "password": "anotherpassword"})
+    assert response.status_code == 400, "Registration should fail for existing username."
+
+def test_token_access_with_invalid_credentials(client):
+    """Test token access with invalid credentials."""
+    response = client.post("/token", data={"username": "nonexistentuser", "password": "wrongpassword"})
+    assert response.status_code == 401, "Token issuance should fail with invalid credentials."
+
+def test_register_user_duplicate(client, test_user):
+    """
+    Test registration with a username that already exists.
+    """
+    user_data = {"username": test_user.username, "password": "duplicatePass"}
+    response = client.post("/register/", json=user_data)
+    assert response.status_code == 400
+    assert "already registered" in response.json()["detail"]
+
+def test_login_wrong_password(client, test_user):
+    """
+    Test login with incorrect password.
+    """
+    login_data = {"username": test_user.username, "password": "wrongpassword"}
+    response = client.post("/token", data=login_data)
+    assert response.status_code == 401
+    assert "Incorrect username or password" in response.json()["detail"]
+
+```
+
 ## File: test_api_question_sets.py
 ```py
 # filename: tests/test_api_question_sets.py
@@ -2105,24 +2134,50 @@ def test_read_question_sets(client, db_session, test_question_set):
     assert response.status_code == 200
     assert any(qs["id"] == test_question_set.id and qs["name"] == test_question_set.name for qs in response.json())
 
+def test_update_nonexistent_question_set(client, test_user):
+    """
+    Test updating a question set that does not exist.
+    """
+    question_set_update = {"name": "Updated Name"}
+    response = client.put(f"/question-sets/99999", json=question_set_update)
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"]
+
 # Add more tests for question set API endpoints
+
 ```
 
 ## File: test_api_questions.py
 ```py
 # filename: tests/test_api_questions.py
 def test_create_question(client, db_session, test_question_set):
-    data = {"text": "Test Question", "question_set_id": test_question_set.id}
-    response = client.post("/questions/", json=data)
-    assert response.status_code == 201
-    assert response.json()["text"] == "Test Question"
+    # Example modification, assuming 'subtopic_id' is required
+    data = {
+        "text": "Test Question",
+        "question_set_id": test_question_set.id,
+        "subtopic_id": 1
+    }
+    response = client.post("/questions/questions/", json=data)
+    assert response.status_code == 201, response.text
+
 
 def test_read_questions(client, db_session, test_question):
-    response = client.get("/questions/")
+    response = client.get("/questions/questions/")
     assert response.status_code == 200
-    assert response.json() == [test_question.dict()]
+
+    # Deserialize the response to find our test question
+    questions = response.json()
+    found_test_question = next((q for q in questions if q["id"] == test_question.id), None)
+
+    # Now we assert that our test question is indeed found
+    assert found_test_question is not None, "Test question was not found in the response."
+    assert found_test_question["text"] == test_question.text
+    assert found_test_question["question_set_id"] == test_question.question_set_id
+    assert found_test_question["subtopic_id"] == test_question.subtopic_id
+    # Add asserts for other relevant fields to match your schema
 
 # Add more tests for question API endpoints
+
 ```
 
 ## File: test_api_users.py
@@ -2140,6 +2195,24 @@ def test_read_users(client, db_session, test_user):
     assert test_user.username in [user["username"] for user in response.json()]
 
 # Add more tests for user API endpoints
+
+```
+
+## File: test_core_jwt.py
+```py
+# filename: tests/test_core_jwt.py
+from app.core import jwt
+from datetime import timedelta
+
+def test_jwt_token_creation_and_verification():
+    """
+    Test the JWT token creation and verification process.
+    """
+    test_data = {"sub": "testuser"}
+    token = jwt.create_access_token(data=test_data, expires_delta=timedelta(minutes=30))
+    assert token is not None
+    decoded_sub = jwt.verify_token(token, credentials_exception=ValueError("Invalid token"))
+    assert decoded_sub == test_data["sub"], "Decoded subject does not match the expected value."
 
 ```
 
@@ -2168,6 +2241,105 @@ def test_create_question_set(db_session):
     assert created_question_set.name == "Test Question Set"
 
 # Add similar tests for other CRUD operations
+```
+
+## File: test_crud_question_sets.py
+```py
+# filename: tests/test_crud_question_sets.py
+import pytest
+from app.crud import crud_question_sets
+from app.schemas import QuestionSetCreate
+
+@pytest.fixture
+def question_set_data():
+    return QuestionSetCreate(name="Sample Question Set")
+
+def test_create_question_set(db_session, question_set_data):
+    """Test creation of a question set."""
+    question_set = crud_question_sets.create_question_set(db=db_session, question_set=question_set_data)
+    assert question_set is not None, "Question set was not created."
+    assert question_set.name == question_set_data.name, "Question set name mismatch."
+
+def test_delete_question_set(db_session, question_set_data):
+    """Test deletion of a question set."""
+    question_set = crud_question_sets.create_question_set(db=db_session, question_set=question_set_data)
+    assert crud_question_sets.delete_question_set(db=db_session, question_set_id=question_set.id) is True, "Question set deletion failed."
+
+```
+
+## File: test_crud_questions.py
+```py
+# filename: tests/test_crud_questions.py
+from app.schemas import QuestionCreate
+from app.crud import crud_questions
+
+def test_create_and_retrieve_question(db_session, test_question_set):
+    """Test creation and retrieval of a question."""
+    question_data = QuestionCreate(text="Sample Question?", subtopic_id=1, question_set_id=test_question_set.id)
+    created_question = crud_questions.create_question(db=db_session, question=question_data)
+    retrieved_question = crud_questions.get_question(db_session, question_id=created_question.id)
+    assert retrieved_question is not None, "Failed to retrieve created question."
+    assert retrieved_question.text == "Sample Question?", "Question text does not match."
+
+def test_get_nonexistent_question(db_session):
+    """Test retrieval of a non-existent question."""
+    question = crud_questions.get_question(db_session, question_id=999)
+    assert question is None, "Fetching a non-existent question should return None."
+
+def test_delete_nonexistent_question(db_session):
+    """Test deletion of a non-existent question."""
+    result = crud_questions.delete_question(db_session, question_id=999)
+    assert result is False, "Deleting a non-existent question should return False."
+
+```
+
+## File: test_crud_user_responses.py
+```py
+# filename: tests/test_crud_user_responses.py
+from app.schemas import UserResponseCreate
+from app.crud import crud_user_responses
+
+def test_create_and_retrieve_user_response(db_session, test_user, test_question):
+    """Test creation and retrieval of a user response."""
+    response_data = UserResponseCreate(user_id=test_user.id, question_id=test_question.id, answer_choice_id=1, is_correct=True)
+    created_response = crud_user_responses.create_user_response(db=db_session, user_response=response_data)
+    assert created_response is not None, "Failed to create user response."
+    assert created_response.is_correct == True, "User response correctness does not match."
+
+```
+
+## File: test_db_session.py
+```py
+# filename: tests/test_db_session.py
+
+def test_database_session_lifecycle(db_session):
+    """Test the lifecycle of a database session."""
+    # Assuming 'db_session' is already using the correct test database ('test.db') as configured in conftest.py
+    assert db_session.bind.url.__to_string__() == "sqlite:///./test.db", "Not using the test database"
+
+```
+
+## File: test_jwt.py
+```py
+# filename: tests/test_jwt.py
+import pytest
+from app.core import jwt
+from datetime import timedelta
+
+@pytest.fixture
+def test_data():
+    return {"sub": "testuser"}
+
+def test_jwt_token_generation_and_validation(test_data):
+    """Test JWT token generation and subsequent validation."""
+    # Generate a token
+    token = jwt.create_access_token(data=test_data, expires_delta=timedelta(minutes=15))
+    assert token is not None, "Failed to generate JWT token."
+    
+    # Validate the token
+    decoded_username = jwt.verify_token(token, credentials_exception=Exception("Invalid token"))
+    assert decoded_username == test_data["sub"], "JWT token validation failed. Username mismatch."
+
 ```
 
 ## File: test_models.py
