@@ -1,0 +1,240 @@
+﻿ID,Work Item Type,Title 1,Title 2,Title 3,Title 4,Description,State,Area Path,Iteration Path,Priority,Effort,Tags,Acceptance Criteria
+167,Epic,Quiz App Backend Development,,,,"Develop a comprehensive and scalable backend system for the quiz application using FastAPI. Implement features for user account management, question set management, filtering and randomization, user response tracking, and API endpoints. Ensure the backend is secure, efficient, and follows best practices in terms of architecture, testing, and deployment. The goal is to provide a robust and maintainable backend foundation for the quiz app frontend.",New,Quiz App Backend,Quiz App Backend,1,XL,backend; fastapi; development,"- User account management implemented
+Question set management features
+Filtering and randomization options
+User response tracking system
+API endpoints for all functionalities
+Secure and efficient Backend
+Best practices followed
+Well-tested and maintainable codebase
+Seamless integration with frontend
+Scalable and performant architecture"
+168,Feature,,User Account Management,,,"Implement a user account management system in the quiz app backend to handle user registration, authentication, and authorization. Use JSON Web Tokens (JWT) for secure authentication and include endpoints for user registration, login, and logout. Store user information securely in the database and provide necessary API endpoints for user profile management.",New,Quiz App Backend,Quiz App Backend,1,L,user-management; authentication; jwt,"- User registration implemented
+JWT Authentication system
+User login and logout endpoints
+Secure User information storage
+User profile management APIs
+Password hashing and Security measures
+Proper error handling and validation
+integration with frontend for auth flow"
+169,User Story,,,JWT-based Authentication,,"Implement JSON Web Token (JWT) based authentication in the quiz app backend for secure user session management. Generate and sign JWT tokens upon successful user login, and include user information and token expiration time in the token payload. Verify and validate JWT tokens for protected API endpoints, ensuring only authenticated users can access restricted resources.",Active,Quiz App Backend,Sprint 1,1,M,jwt; authentication; security,"- JWT token generation implemented
+User info and expiration in payload
+token signing with Secure key
+JWT verification for protected APIs
+Proper token validation and error handling
+Secure storage of JWT secret key
+integration with User login/logout flow
+tested with different auth scenarios"
+170,Task,,,,Create auth.py file,Create auth.py file to handle JWT implementation,New,Quiz App Backend,Sprint 1,2,S,authentication,,
+171,Task,,,,Update user model in models.py,Update the user model in models.py for JWT,New,Quiz App Backend,Sprint 1,2,S,models,,
+172,Task,,,,Implement JWT token verification in dependencies.py,Implement JWT token verification in dependencies.py,New,Quiz App Backend,Sprint 1,2,S,dependencies,,
+173,User Story,,,User Registration,,"Implement user registration functionality in the quiz app backend to allow new users to create an account. Provide an API endpoint for user registration that accepts user information such as username, email, and password. Validate the input data, check for existing user records, and securely store the user information in the database upon successful registration.",Active,Quiz App Backend,Sprint 1,1,S,user-registration,"- User registration endpoint created
+Accepts username, email, Password
+validates Input Data
+Checks for existing User records
+Securely stores User info in database
+Returns success/error response
+Password hashing implemented
+tested with different registration scenarios"
+174,Task,,,,Implement user registration in auth.py,Implement user registration functionality in auth.py,New,Quiz App Backend,Sprint 1,2,XS,registration,,
+175,Task,,,,Define user schema in schemas.py,Define the user schema in schemas.py for user registration,New,Quiz App Backend,Sprint 1,2,XS,schema,,
+176,Task,,,,Handle database operations in crud.py,Handle user creation database operations in crud.py,New,Quiz App Backend,Sprint 1,2,XS,crud,,
+177,User Story,,,User Login and Logout,,"Implement user login and logout functionality in the quiz app backend to allow registered users to securely authenticate and manage their sessions. Provide API endpoints for user login that accept username and password, validate the credentials, and generate a JWT token upon successful authentication. Implement user logout by invalidating or revoking the JWT token.",Active,Quiz App Backend,Sprint 1,1,S,user-login; logout; jwt,"- User login endpoint created
+Accepts username and Password
+validates User credentials
+Generates JWT token on success
+Handles invalid credentials
+User logout endpoint created
+Invalidates or revokes JWT token
+Returns success/error response
+tested with different login scenarios"
+178,Task,,,,Implement user login in auth.py,Implement user login functionality in auth.py,New,Quiz App Backend,Sprint 1,2,XS,login,,
+179,Task,,,,Implement user logout in auth.py,Implement user logout functionality in auth.py,New,Quiz App Backend,Sprint 1,2,XS,logout,,
+180,Feature,,Question Set Management,,,"Develop a feature for managing question sets in the quiz app backend. Implement functionality to allow users to create, retrieve, update, and delete question sets. Store question sets in the database with relevant metadata such as title, description, tags, and difficulty level. Provide API endpoints for performing CRUD operations on question sets.",New,Quiz App Backend,Quiz App Backend,1,L,question-sets; crud,"- Question set creation endpoint
+Question set retrieval endpoint
+Question set update endpoint
+Question set deletion endpoint
+Question set metadata storage
+Proper validation and error handling
+integration with database (e.g., MongoDB)
+tested with different Question set scenarios"
+181,User Story,,,Question Set Uploads,,"Implement functionality to allow users to upload question sets in JSON format to the quiz app backend. Provide an API endpoint that accepts a JSON file containing an array of questions, along with their answers, explanations, and metadata. Parse and validate the JSON data, and store the question set in the database for future use.",New,Quiz App Backend,Sprint 1,1,M,question-upload; json,"- Question set upload endpoint created
+Accepts JSON file with questions
+Parses and validates JSON Data
+Extracts questions, answers, metadata
+stores Question set in the database
+Returns success/error response
+Handles file upload and processing
+tested with different JSON files"
+182,Task,,,,Create question_sets.py file,Create question_sets.py file to handle question set uploads,New,Quiz App Backend,Sprint 1,2,S,question-sets,,
+183,Task,,,,Define question set model in models.py,Update models.py to define the question set model,New,Quiz App Backend,Sprint 1,2,S,models,,
+184,Task,,,,Create question set schema in schemas.py,Define the question set schema in schemas.py,New,Quiz App Backend,Sprint 1,2,S,schema,,
+185,User Story,,,Database Storage,,"Set up the database storage for the quiz app backend to store question sets. Use SQLite for the development environment and PostgreSQL for the production environment. Define the necessary database models and schemas for storing question sets, including fields for question text, answer options, correct answer, explanations, tags, and difficulty level. Implement database migrations to manage schema changes.",Active,Quiz App Backend,Sprint 1,1,S,database; sqlite; postgresql,"- SQLite set up for development
+PostgreSQL set up for production
+database models defined for Question sets
+Question text, answers, explanations stored
+Tags and difficulty level fields included
+database migrations implemented
+Proper database connection handling
+tested with different storage scenarios"
+186,Task,,,,Configure SQLite database in database.py,Configure SQLite database in database.py for development,New,Quiz App Backend,Sprint 1,2,XS,database,,
+187,Task,,,,Configure PostgreSQL database for production,Configure PostgreSQL database for production environment,New,Quiz App Backend,Sprint 2,2,XS,database,,
+188,User Story,,,Public/Private Question Sets,,Allow users to mark question sets as public or private.,New,Quiz App Backend,Sprint 2,2,S,question-sets,- Public/private flag added to question set model and schema
+189,Task,,,,Implement public/private flags in question_sets.py,Implement public/private flags for question sets in question_sets.py,New,Quiz App Backend,Sprint 2,2,XS,question-sets,,
+190,Task,,,,Update question set model for public/private,Update the question set model in models.py to support public/private,New,Quiz App Backend,Sprint 2,2,XS,models,,
+191,Feature,,Filtering and Randomization,,,"Develop filtering and randomization capabilities for the quiz app backend to enable dynamic question selection. Implement filtering options to allow users to select questions based on specific criteria such as subject, topic, subtopic, difficulty level, or tags. Develop randomization logic to generate random subsets of questions from the filtered pool, ensuring a diverse and unpredictable quiz experience.",New,Quiz App Backend,Quiz App Backend,1,L,filtering; randomization,"- Filtering options implemented
+Filter by subject, topic, subtopic, difficulty
+randomization logic developed
+Random subset of questions generated
+Filtered pool as randomization Input
+Configurable randomization parameters
+Testable and deterministic randomization
+integration with Question selection flow
+tested with different Filtering scenarios"
+192,User Story,,,Filtering Options,,"Implement filtering options in the quiz app backend to allow users to narrow down the question pool based on specific criteria. Provide API endpoints that accept filtering parameters such as subject, topic, subtopic, difficulty level, or tags. Retrieve questions from the database that match the specified criteria and return them in a structured format for the frontend to display.",New,Quiz App Backend,Sprint 2,1,S,filtering; criteria,"- Filtering API endpoints created
+Accepts subject, topic, subtopic, difficulty
+Accepts Tags for advanced Filtering
+Retrieves matching questions from database
+Returns Filtered questions in structured format
+Proper validation and error handling"
+193,Task,,,,Create filters.py file,Create filters.py file to handle question filtering,New,Quiz App Backend,Sprint 2,2,XS,filters,,
+194,Task,,,,Implement question filtering in models.py,Implement question filtering capabilities in models.py,New,Quiz App Backend,Sprint 2,2,XS,models,,
+195,User Story,,,Randomization Logic,,Implement logic to randomize questions and answer choices.,New,Quiz App Backend,Sprint 2,1,M,randomization,- Randomization function for questions and answer choices implemented and tested
+196,Task,,,,Create randomization.py file,Create randomization.py to handle question/answer randomization,New,Quiz App Backend,Sprint 2,2,XS,randomization,,
+197,Feature,,Response Tracking,,,Record user responses including correctness and timestamps.,New,Quiz App Backend,Quiz App Backend,2,M,response-tracking,"- Correctness and timestamps recorded for user responses
+Response model created
+Submission and retrieval endpoints implemented"
+198,User Story,,,Track User Answers,,Design a system to record user answers with timestamps and correctness.,New,Quiz App Backend,Sprint 3,2,M,response-tracking,"- User response model created with fields for user ID, question ID, selected answer, correctness, and timestamp
+CRUD functions implemented for user responses"
+199,Task,,,,Create responses.py file,Create responses.py to track user responses,New,Quiz App Backend,Sprint 3,2,XS,responses,,
+200,Task,,,,Define response model in models.py,Update models.py to define the user response model,New,Quiz App Backend,Sprint 3,2,XS,models,,
+201,Task,,,,Create response schema in schemas.py,Define the user response schema in schemas.py,New,Quiz App Backend,Sprint 3,2,XS,schema,,
+202,Feature,,API Endpoints,,,Develop RESTful API endpoints for core functionality.,New,Quiz App Backend,Quiz App Backend,1,L,api,"- Endpoints for users, question sets, filtering, response submission
+CRUD operations supported
+Swagger documentation"
+203,User Story,,,User Management Endpoints,,Develop endpoints for user registration and management.,New,Quiz App Backend,Sprint 1,1,M,user-management; api,"- User registration endpoint
+User profile retrieval and update endpoints
+Proper authentication and authorization
+Validation and error handling"
+204,Task,,,,Implement user endpoints in main.py,Implement user management API endpoints in main.py,New,Quiz App Backend,Sprint 1,1,S,api,,
+205,User Story,,,Question Set Endpoints,,Develop endpoints for question set CRUD operations.,New,Quiz App Backend,Sprint 1,1,M,question-sets; api,"- Question set creation endpoint
+Question set retrieval, update, delete endpoints
+Proper validation and error handling
+Authentication and authorization"
+206,Task,,,,Implement question set endpoints,Implement question set API endpoints in main.py,New,Quiz App Backend,Sprint 1,1,S,api,,
+207,User Story,,,Filtering Endpoints,,"Develop API endpoints for filtering questions based on various criteria such as subject, topic, subtopic, difficulty level, or tags. The endpoints should accept filtering parameters, query the database efficiently, and return the filtered results in a paginated manner. Proper validation and error handling should be implemented.",New,Quiz App Backend,Sprint 2,1,S,api; filtering,"- Filtering endpoints implemented
+Accepts Filtering parameters
+Queries database efficiently
+Returns paginated Results
+Proper validation and error handling
+tested with different Filtering scenarios"
+208,Task,,,,Implement filtering endpoints,Implement question filtering API endpoints in main.py,New,Quiz App Backend,Sprint 2,1,XS,api,,
+209,User Story,,,Response Submission Endpoints,,"Develop API endpoints for submitting and retrieving user responses to quiz questions. The submission endpoint should accept the user's answer, validate it, and store it along with the timestamp and correctness status. The retrieval endpoint should allow fetching user responses based on filters like user ID, question ID, or time range, with pagination support.",New,Quiz App Backend,Sprint 3,2,M,api; user-response,"- User response submission endpoint
+Accepts and validates user's answer
+Stores answer, timestamp, correctness
+User response retrieval endpoint
+Supports filtering and pagination
+Tested with different scenarios"
+210,Task,,,,Implement response submission endpoints,Implement user response submission endpoints in main.py,New,Quiz App Backend,Sprint 3,1,S,api,,
+211,User Story,,,API Documentation,,"Utilize FastAPI's built-in Swagger UI to automatically generate interactive API documentation for the quiz app backend. Ensure all API endpoints, request/response models, and authentication mechanisms are properly documented. Include clear descriptions, examples, and any necessary instructions for using the API effectively.",New,Quiz App Backend,Sprint 2,2,M,api; documentation,"- Swagger UI integrated with FastAPI
+all endpoints documented
+Request/response models defined
+Authentication mechanisms explained
+Clear descriptions and examples
+Interactive and User-friendly docs"
+212,Task,,,,Add docstrings to endpoint functions,Add docstrings to all endpoint functions for Swagger UI,New,Quiz App Backend,Sprint 2,2,M,api,,
+213,Feature,,Security Considerations,,,"Implement security measures in the quiz app backend to protect against common vulnerabilities and ensure the integrity of the system. This includes input validation, secure authentication and authorization mechanisms, protection against injection attacks, and proper error handling. Conduct security testing and follow OWASP guidelines to harden the backend security.",New,Quiz App Backend,Quiz App Backend,1,XL,security,"- Input validation implemented
+Secure Authentication/authorization
+Protection against injection attacks
+Proper error handling
+Security testing conducted
+OWASP guidelines followed"
+214,User Story,,,Input Validation,,"Implement strict input validation for all user inputs in the quiz app backend to prevent potential security vulnerabilities. Validate and sanitize input data, such as user credentials, question content, and API parameters, to mitigate the risk of injection attacks, cross-site scripting (XSS), and other malicious activities.",New,Quiz App Backend,Sprint 2,1,M,security; validation,"- Input validation implemented
+User credentials validated
+Question content sanitized
+API parameters validated
+injection attacks prevented
+XSS and other attacks mitigated"
+215,Task,,,,Implement input validation,Implement input validation in all endpoint-related files,New,Quiz App Backend,Sprint 2,1,M,security,,
+216,User Story,,,CORS Configuration,,"Configure Cross-Origin Resource Sharing (CORS) settings in the quiz app backend to control access from different origins. Implement appropriate CORS headers and policies to allow or restrict requests from specific domains, ensuring the backend API can be consumed by authorized clients while preventing unauthorized access.",New,Quiz App Backend,Sprint 2,1,S,security; cors,"- CORS configuration implemented
+Appropriate CORS headers set
+Access control policies defined
+Requests from allowed origins accepted
+Unauthorized Access prevented
+tested with different origin scenarios"
+217,Task,,,,Configure CORS in main.py,Configure CORS settings in main.py,New,Quiz App Backend,Sprint 2
+218,Feature,,Extra Features (Optional),,,"Implement additional features in the quiz app backend to enhance the user experience and provide more value. This may include features like a scoring system, leaderboards, achievement badges, time tracking, personalized recommendations, or a review mode for incorrect answers. These features should be designed and implemented based on user feedback and business requirements.",New,Quiz App Backend,Future Iterations,3,L,extra-features,"- Scoring system implemented
+Leaderboards feature added
+Achievement badges introduced
+Time tracking enabled
+Personalized recommendations given
+Review mode for incorrect answers"
+219,User Story,,,Scoring System,,"Implement a scoring system in the quiz app backend to track users' performance and provide a competitive element. Calculate scores based on factors like accuracy, speed, and difficulty level. Store and update user scores in the database, and provide API endpoints for retrieving and displaying leaderboards.",New,Quiz App Backend,Future Iterations,3,M,scoring; leaderboard,"- Scoring system implemented
+Scores calculated based on factors
+User Scores stored and updated
+Leaderboard API endpoints provided
+Top Scores retrieved and displayed
+tested with different scenarios"
+220,Task,,,,Create scoring.py file,Create scoring.py to implement a scoring system,New,Quiz App Backend,Future Iterations,3,S,scoring,,
+221,Task,,,,Update models.py for scoring,Update models.py to support scoring data,New,Quiz App Backend,Future Iterations,3,S,models,,
+222,Task,,,,Define scoring schemas,Define scoring related schemas in schemas.py,New,Quiz App Backend,Future Iterations,3,S,schema,,
+223,User Story,,,Review Mode,,"Implement a review mode feature in the quiz app backend to allow users to review their incorrect answers and learn from their mistakes. After completing a quiz, users should be able to access a summary of their results, highlighting the questions they answered incorrectly. Provide detailed explanations and references for each incorrect answer to facilitate learning.",New,Quiz App Backend,Future Iterations,3,M,review-mode; learning,"- Review mode implemented
+Quiz result summary generated
+incorrect answers highlighted
+Detailed explanations provided
+Reference materials linked
+User progress tracked
+tested with different Quiz scenarios"
+224,Task,,,,Create review.py file,Create review.py to implement review mode,New,Quiz App Backend,Future Iterations,3,S,review,,
+225,Task,,,,Update models.py for review mode,Update models.py to support review mode,New,Quiz App Backend,Future Iterations,3,S,models,,
+226,Epic,Testing and Deployment,,,,"Implement comprehensive testing for the quiz app backend to ensure its quality and reliability. Develop unit tests for individual components and integration tests for the API endpoints. Set up an automated CI/CD pipeline to streamline the deployment process, and deploy the backend to a production environment, following containerization best practices. Conduct thorough performance testing to optimize the backend's performance and scalability.",New,Quiz App Backend,Quiz App Backend,1,XL,testing; deployment,"- Unit and integration tests implemented
+High test coverage achieved
+Automated CI/CD pipeline set up
+Backend containerized and deployed
+Performance testing completed
+Backend Optimized for Performance"
+227,Feature,,Unit Testing,,,"Develop comprehensive unit tests for the quiz app backend to verify the functionality of individual components. This includes tests for models, CRUD operations, utility functions, and other backend logic. The tests should aim for high coverage, validate edge cases, and ensure the correctness of the implemented features.",New,Quiz App Backend,Testing,1,L,testing,"- Unit tests for models, CRUD, utils
+Edge cases covered
+High test coverage
+all tests passing"
+228,User Story,,,Test CRUD Operations,,"Create unit tests for all CRUD (Create, Read, Update, Delete) operations in the quiz app backend. This includes tests for creating, retrieving, updating, and deleting questions, question sets, user accounts, and user responses. The tests should validate the functionality, error handling, and data integrity of the CRUD operations.",New,Quiz App Backend,Testing,1,M,testing; crud,"- Unit tests for all CRUD operations
+Positive and negative scenarios covered
+error handling tested
+Data integrity validated
+all tests passing with good coverage"
+229,Task,,,,Implement CRUD tests,Write unit tests for CRUD operations,New,Quiz App Backend,Testing,1,S,testing,,
+230,User Story,,,Test API Endpoints,,"Create comprehensive unit tests for all the API endpoints of the quiz app backend. This includes tests for CRUD operations on questions, question sets, user accounts, and user responses. The tests should cover positive and negative scenarios, validate input/output, and ensure the API endpoints behave as expected.",New,Quiz App Backend,Testing,1,L,testing; api; endpoints,"- Unit tests created for all API endpoints
+Positive and negative scenarios covered
+Input/output validation tests
+Edge cases and error handling tested
+all tests passing with good coverage"
+231,Task,,,,Implement API tests,Write unit tests for API endpoints,New,Quiz App Backend,Testing,1,M,testing,,
+232,Feature,,Deployment,,,"Deploy the quiz app backend to production environment, ensuring it is containerized, automated through CI/CD, and performance tested for optimal operation. This feature aims to streamline the deployment process, reduce manual errors, and guarantee the backend's reliability and scalability in the production environment.",New,Quiz App Backend,Deployment,1,L,deployment,"- Backend containerized
+CI/CD pipeline Automated
+deployed to production
+Performance testing completed
+Optimized based on Performance Results"
+233,User Story,,,Dockerize Application,,"Create a Dockerfile to containerize the quiz app backend. This will involve specifying the base image, copying the necessary files, installing dependencies, exposing ports, and defining the startup command. The goal is to have a reproducible and portable deployment unit.",New,Quiz App Backend,Deployment,1,M,docker; deployment,"- Dockerfile created
+Image builds successfully
+Container runs without errors
+App functions as expected within Container"
+234,Task,,,,Create Dockerfile,Write a Dockerfile for the quiz app backend,New,Quiz App Backend,Deployment,1,S,docker,,
+235,User Story,,,Configure CI/CD Pipeline,,"Set up a CI/CD pipeline for automating the build, testing and deployment processes of the quiz app backend. This will include configuring the version control system, defining the build and test stages, and automating deployments to the target environment based on triggers or schedules, enabling faster and more reliable releases.",New,Quiz App Backend,Deployment,1,M,ci/cd; automation,"- CI/CD pipeline configured
+Automated builds and tests
+Successful deployments to target environment
+Rollback mechanism in place"
+236,Task,,,,Configure CI/CD,Configure a CI/CD pipeline for the quiz app backend,New,Quiz App Backend,Deployment,1,M,ci/cd,,
+237,User Story,,,Deploy to Production,,"Release the quiz app backend to the production environment, making it available to end users. This involves deploying the containerized application to a production-grade infrastructure, configuring necessary environment variables, setting up monitoring and logging, and performing any required data migrations or initializations.",New,Quiz App Backend,Deployment,1,M,deployment; release,"- App deployed to production
+environment variables configured
+Monitoring and logging set up
+Data migrations/initializations done
+App accessible to end users"
+238,Task,,,,Deploy backend,Deploy the quiz app backend to production,New,Quiz App Backend,Deployment,1,M,deployment,,
+239,User Story,,,Performance Testing,,"Conduct performance testing on the quiz app backend to ensure it can handle the expected load and identify any performance bottlenecks. This will involve designing performance test scenarios, defining metrics and thresholds, using tools to simulate load, analyzing results, and optimizing the application based on the findings.",New,Quiz App Backend,Testing,2,M,testing; performance; optimization,"- Performance test scenarios designed
+Metrics and thresholds defined
+Load testing tools set up
+Performance tests executed
+Results analyzed and bottlenecks identified
+Optimizations implemented and verified"
+240,Task,,,,Perform load testing,Perform load testing on the deployed backend,New,Quiz App Backend,Testing,2,S,testing,,
+241,Task,,,,Optimize based on results,Optimize the backend based on performance testing results,New,Quiz App Backend,Testing,2,M,optimization,,

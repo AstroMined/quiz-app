@@ -11,21 +11,13 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.users import User as UserModel
 from app.crud.crud_user import create_user as create_user_crud
-from app.schemas import UserCreate as UserCreateSchema, User as UserSchema
+from app.schemas.user import UserCreate as UserCreateSchema, User as UserSchema
+from app.core.auth import get_current_user
 
 router = APIRouter()
 
 @router.get("/users/", response_model=List[UserSchema])
-def read_users(db: Session = Depends(get_db)):
-    """
-    Endpoint to retrieve a list of users.
-    
-    Args:
-        db: The database session.
-    
-    Returns:
-        A list of user objects.
-    """
+def read_users(db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
     users = db.query(UserModel).all()
     return users
 

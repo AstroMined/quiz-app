@@ -47,3 +47,24 @@ def test_login_wrong_password(client, test_user):
     response = client.post("/token", data=login_data)
     assert response.status_code == 401
     assert "Incorrect username or password" in response.json()["detail"]
+
+# filename: tests/test_api_authentication.py
+def test_login_and_access_protected_endpoint(client, test_user):
+    login_data = {"username": test_user.username, "password": "testpassword"}
+    response = client.post("/token", data=login_data)
+    assert response.status_code == 200
+    access_token = response.json()["access_token"]
+
+    # Access a protected endpoint using the token
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 200
+
+def test_access_protected_endpoint_without_token(client):
+    response = client.get("/users/")
+    assert response.status_code == 401
+
+def test_access_protected_endpoint_with_invalid_token(client):
+    headers = {"Authorization": "Bearer invalid_token"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 401
