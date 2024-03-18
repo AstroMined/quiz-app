@@ -1,0 +1,12 @@
+﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
+"244","User Story","JWT-based Authentication","Active","authentication; jwt; security","Implement JSON Web Token (JWT) based authentication in the quiz app backend for secure user session management. Generate and sign JWT tokens upon successful user login, and include user information and token expiration time in the token payload. Verify and validate JWT tokens for protected API endpoints, ensuring only authenticated users can access restricted resources.","JWT token generation implemented
+User info and expiration in payload
+token signing with Secure key
+JWT verification for protected APIs
+Proper token validation and error handling
+Secure storage of JWT secret key
+integration with User login/logout flow
+tested with different auth scenarios"
+"245","Task","Create auth.py file","Active","authentication","Create auth.py file to handle JWT implementation",
+"246","Task","Update user model in models.py","Active","models","Update the user model in models.py for JWT",
+"247","Task","Implement JWT token verification in dependencies.py","Active","dependencies","Implement JWT token verification in dependencies.py",
