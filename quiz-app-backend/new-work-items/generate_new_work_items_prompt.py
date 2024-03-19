@@ -43,7 +43,8 @@ def convert_csv_to_markdown(csv_file_path, template_file_path, output_file_path)
     print(f"Markdown document saved to {output_file_path}")
 
 # Example usage:
-# csv_file_path = '/path/to/new-work-items.csv'
-# template_file_path = '/path/to/new-work-items-prompt-template.md'
-# output_file_path = '/path/to/new-work-items-prompt.md'
-# convert_csv_to_markdown(csv_file_path, template_file_path, output_file_path)
+if __name__ == "__main__":
+    csv_file_path = '/code/quiz-app/quiz-app-backend/new-work-items/new-work-items.csv'
+    template_file_path = '/code/quiz-app/quiz-app-backend/new-work-items/new-work-items-prompt-template.md'
+    output_file_path = '/code/quiz-app/quiz-app-backend/new-work-items/new-work-items-prompt.md'
+    convert_csv_to_markdown(csv_file_path, template_file_path, output_file_path)

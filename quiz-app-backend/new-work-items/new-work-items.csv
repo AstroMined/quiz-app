@@ -1,12 +1,12 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"244","User Story","JWT-based Authentication","Active","authentication; jwt; security","Implement JSON Web Token (JWT) based authentication in the quiz app backend for secure user session management. Generate and sign JWT tokens upon successful user login, and include user information and token expiration time in the token payload. Verify and validate JWT tokens for protected API endpoints, ensuring only authenticated users can access restricted resources.","JWT token generation implemented
-User info and expiration in payload
-token signing with Secure key
-JWT verification for protected APIs
-Proper token validation and error handling
-Secure storage of JWT secret key
-integration with User login/logout flow
-tested with different auth scenarios"
-"245","Task","Create auth.py file","Active","authentication","Create auth.py file to handle JWT implementation",
-"246","Task","Update user model in models.py","Active","models","Update the user model in models.py for JWT",
-"247","Task","Implement JWT token verification in dependencies.py","Active","dependencies","Implement JWT token verification in dependencies.py",
+"248","User Story","User Registration","Active","user-registration","Implement user registration functionality in the quiz app backend to allow new users to create an account. Provide an API endpoint for user registration that accepts user information such as username, email, and password. Validate the input data, check for existing user records, and securely store the user information in the database upon successful registration.","User registration endpoint created
+Accepts username email Password
+validates Input Data
+Checks for existing User records
+Securely stores User info in database
+Returns success/error response
+Password hashing implemented
+tested with different registration scenarios"
+"249","Task","Implement user registration in auth.py","Active","registration","Implement user registration functionality in auth.py",
+"250","Task","Define user schema in schemas.py","Active","schema","Define the user schema in schemas.py for user registration",
+"251","Task","Handle database operations in crud.py","Active","crud","Handle user creation database operations in crud.py",

@@ -70,9 +70,9 @@ def random_username():
 
 @pytest.fixture
 def test_user(db_session, random_username):
-    user_data = UserCreate(username=random_username, password="testpassword")
+    user_data = UserCreate(username=random_username, password="TestPassword123")
     user = crud_user.create_user(db_session, user_data)
-    db_session.commit()  # Commit the changes to the database
+    db_session.commit()
     return user
 
 @pytest.fixture

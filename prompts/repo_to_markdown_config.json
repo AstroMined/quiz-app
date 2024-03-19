@@ -1,6 +1,6 @@
 {
   "root_directory": "/code/quiz-app/quiz-app-backend",
-  "file_extensions": [".py", ".md"],
+  "file_extensions": [".py"],
   "specific_files": {},
   "ignore_directories": [
     "alembic",

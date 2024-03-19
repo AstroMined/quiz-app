@@ -24,75 +24,75 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### JWT-based Authentication
+### User Registration
 
-**ID:** 244
+**ID:** 248
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** authentication; jwt; security
+**Tags:** user-registration
 
 **Description:**
 
-Implement JSON Web Token (JWT) based authentication in the quiz app backend for secure user session management. Generate and sign JWT tokens upon successful user login, and include user information and token expiration time in the token payload. Verify and validate JWT tokens for protected API endpoints, ensuring only authenticated users can access restricted resources.
+Implement user registration functionality in the quiz app backend to allow new users to create an account. Provide an API endpoint for user registration that accepts user information such as username, email, and password. Validate the input data, check for existing user records, and securely store the user information in the database upon successful registration.
 
 **Acceptance Criteria:**
 
-- JWT token generation implemented
-- User info and expiration in payload
-- token signing with Secure key
-- JWT verification for protected APIs
-- Proper token validation and error handling
-- Secure storage of JWT secret key
-- integration with User login/logout flow
-- tested with different auth scenarios
+- User registration endpoint created
+- Accepts username email Password
+- validates Input Data
+- Checks for existing User records
+- Securely stores User info in database
+- Returns success/error response
+- Password hashing implemented
+- tested with different registration scenarios
 
 
-### Create auth.py file
+### Implement user registration in auth.py
 
-**ID:** 245
-
-**Work Item Type:** Task
-
-**State:** Active
-
-**Tags:** authentication
-
-**Description:**
-
-Create auth.py file to handle JWT implementation
-
-
-### Update user model in models.py
-
-**ID:** 246
+**ID:** 249
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** models
+**Tags:** registration
 
 **Description:**
 
-Update the user model in models.py for JWT
+Implement user registration functionality in auth.py
 
 
-### Implement JWT token verification in dependencies.py
+### Define user schema in schemas.py
 
-**ID:** 247
+**ID:** 250
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** dependencies
+**Tags:** schema
 
 **Description:**
 
-Implement JWT token verification in dependencies.py
+Define the user schema in schemas.py for user registration
+
+
+### Handle database operations in crud.py
+
+**ID:** 251
+
+**Work Item Type:** Task
+
+**State:** Active
+
+**Tags:** crud
+
+**Description:**
+
+Handle user creation database operations in crud.py
 
 
 
