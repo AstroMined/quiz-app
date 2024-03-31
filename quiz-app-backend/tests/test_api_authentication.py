@@ -1,4 +1,9 @@
 # filename: tests/test_api_authentication.py
+
+from datetime import timedelta
+from app.core import create_access_token
+from app.models import RevokedToken
+
 def test_user_authentication(client, test_user):
     """Test user authentication and token retrieval."""
     response = client.post("/token", data={"username": test_user.username, "password": "TestPassword123"})
@@ -46,7 +51,6 @@ def test_login_wrong_password(client, test_user):
     assert response.status_code == 401
     assert "Incorrect username or password" in response.json()["detail"]
 
-# filename: tests/test_api_authentication.py
 def test_login_and_access_protected_endpoint(client, test_user):
     login_data = {"username": test_user.username, "password": "TestPassword123"}
     response = client.post("/token", data=login_data)
@@ -94,3 +98,114 @@ def test_register_user_missing_lowercase_in_password(client):
     response = client.post("/register/", json=user_data)
     assert response.status_code == 422
     assert "Password must contain at least one lowercase letter" in str(response.content)
+
+def test_login_success(client, test_user):
+    """
+    Test successful user login.
+    """
+    response = client.post("/login", json={"username": test_user.username, "password": "TestPassword123"})
+    assert response.status_code == 200
+    assert "access_token" in response.json()
+
+def test_login_invalid_credentials(client):
+    """
+    Test login with invalid credentials.
+    """
+    response = client.post("/login", json={"username": "invalid_user", "password": "invalid_password"})
+    assert response.status_code == 401
+    assert "Username not found" in response.json()["detail"]
+
+def test_logout_success(client, test_user, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.post("/logout", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["message"] == "Successfully logged out"
+
+def test_login_inactive_user(client, test_user, db_session):
+    """
+    Test login with an inactive user.
+    """
+    # Set the user as inactive
+    test_user.is_active = False
+    db_session.commit()
+    
+    response = client.post("/login", json={"username": test_user.username, "password": "TestPassword123"})
+    assert response.status_code == 401
+    assert "inactive" in response.json()["detail"]
+
+def test_login_invalid_token_format(client):
+    headers = {"Authorization": "Bearer invalid_token_format"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 401
+    assert "Invalid token" in response.json()["detail"]
+
+def test_login_expired_token(client, test_user):
+    """
+    Test accessing a protected route with an expired token.
+    """
+    # Create an expired token
+    expired_token = create_access_token(data={"sub": test_user.username}, expires_delta=timedelta(minutes=-1)) 
+    headers = {"Authorization": f"Bearer {expired_token}"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 401
+    assert "Token has expired" in response.json()["detail"]
+
+def test_login_nonexistent_user(client):
+    """
+    Test login with a non-existent username.
+    """
+    login_data = {"username": "nonexistent_user", "password": "password123"}
+    response = client.post("/login", json=login_data)
+    assert response.status_code == 401
+    assert "Username not found" in response.json()["detail"]
+
+def test_logout_revoked_token(client, test_user, test_token, db_session):
+    """
+    Test logout with an already revoked token.
+    """
+    # Revoke the token manually
+    revoked_token = RevokedToken(token=test_token)
+    db_session.add(revoked_token)
+    db_session.commit()
+
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.post("/logout", headers=headers)
+    assert response.status_code == 401
+    assert "Token has been revoked" in response.json()["detail"]
+
+def test_protected_endpoint_expired_token(client, test_user, db_session):
+    """
+    Test accessing a protected endpoint with an expired token after logout.
+    """
+    # Create an access token with a short expiration time
+    access_token_expires = timedelta(minutes=-1)
+    access_token = create_access_token(data={"sub": test_user.username}, expires_delta=access_token_expires)
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 401
+    assert "Token has expired" in response.json()["detail"]
+
+def test_login_logout_flow(client, test_user):
+    """
+    Test the complete login and logout flow.
+    """
+    # Login
+    login_data = {"username": test_user.username, "password": "TestPassword123"}
+    login_response = client.post("/login", json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.json()["access_token"]
+    
+    # Access a protected endpoint with the token
+    headers = {"Authorization": f"Bearer {access_token}"}
+    protected_response = client.get("/users/", headers=headers)
+    assert protected_response.status_code == 200
+    
+    # Logout
+    logout_response = client.post("/logout", headers=headers)
+    assert logout_response.status_code == 200
+    
+    # Try accessing the protected endpoint again after logout
+    protected_response_after_logout = client.get("/users/", headers=headers)
+    assert protected_response_after_logout.status_code == 401
+    assert "Could not validate credentials" in protected_response_after_logout.json()["detail"]

@@ -5,10 +5,10 @@ This module provides CRUD operations for questions.
 It includes functions for creating, retrieving, updating, and deleting questions.
 """
 
-from sqlalchemy.orm import Session
-from app.models.questions import Question
-from app.schemas.questions import QuestionCreate, QuestionUpdate
 from typing import List
+from sqlalchemy.orm import Session
+from app.models import Question
+from app.schemas import QuestionCreate, QuestionUpdate
 
 def create_question(db: Session, question: QuestionCreate) -> Question:
     """

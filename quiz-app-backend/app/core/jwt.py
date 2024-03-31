@@ -1,7 +1,8 @@
 # filename: app/core/jwt.py
 from datetime import datetime, timedelta
 from typing import Optional
-from jose import jwt
+from jose import jwt, JWTError
+from fastapi import HTTPException, status
 from app.core.config import settings
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -23,3 +24,12 @@ def verify_token(token: str, credentials_exception):
         return username
     except jwt.JWTError:
         raise credentials_exception
+
+def decode_access_token(token: str):
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")  # Use the correct error message here
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")  # Use the correct error message here

@@ -5,10 +5,10 @@ This module provides CRUD operations for question sets.
 It includes functions for creating, retrieving, updating, and deleting question sets.
 """
 
-from sqlalchemy.orm import Session
-from app.models.question_sets import QuestionSet
-from app.schemas.question_sets import QuestionSetCreate, QuestionSetUpdate
 from typing import List
+from sqlalchemy.orm import Session
+from app.models import QuestionSet
+from app.schemas import QuestionSetCreate, QuestionSetUpdate
 
 def create_question_set(db: Session, question_set: QuestionSetCreate) -> QuestionSet:
     """

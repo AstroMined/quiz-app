@@ -5,10 +5,9 @@ This module defines the User model.
 The User model represents a user in the quiz app.
 """
 
-from app.models.user_responses import UserResponse
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
+from app.db import Base
 
 class User(Base):
     """

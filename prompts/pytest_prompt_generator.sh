@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Path to your template and output files
+TEMPLATE_FILE="/code/quiz-app/prompts/test_failure_prompt_template.md"
+OUTPUT_FILE="/code/quiz-app/prompts/test_failure_prompt.md"
+
+# Combine the template content with the output of pytest and overwrite the output file
+cat $TEMPLATE_FILE > $OUTPUT_FILE
+pytest --cov=app /code/quiz-app/quiz-app-backend/tests/ >> $OUTPUT_FILE

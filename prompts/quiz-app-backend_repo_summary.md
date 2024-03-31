@@ -3,32 +3,25 @@
 
 ## File: __init__.py
 ```py
-
+from .main import app
 ```
 
 ## File: main.py
 ```py
 # filename: main.py
-from fastapi import FastAPI
+
+from fastapi import FastAPI, Request, HTTPException, status
 from app.api.endpoints import (
     users as users_router,
     register as register_router,
     token as token_router,
+    auth as auth_router,
     question_sets as question_sets_router,
     questions as questions_router,
     user_responses as user_responses_router
 )
-# Import models if necessary, but it looks like you might not need to import them here unless you're initializing them
-from app.db.base_class import Base
-from app.models import (
-    answer_choices,
-    user_responses,
-    users,
-    questions,
-    subjects,
-    topics,
-    subtopics
-)
+from app.db import get_db, SessionLocal
+from app.models import RevokedToken
 
 app = FastAPI()
 
@@ -36,6 +29,7 @@ app = FastAPI()
 app.include_router(users_router.router, tags=["User Management"])
 app.include_router(register_router.router, tags=["Authentication"])
 app.include_router(token_router.router, tags=["Authentication"])
+app.include_router(auth_router.router, tags=["Authentication"])
 app.include_router(question_sets_router.router, tags=["Question Sets"])
 app.include_router(questions_router.router, tags=["Questions"])
 app.include_router(user_responses_router.router, tags=["User Responses"])
@@ -44,17 +38,53 @@ app.include_router(user_responses_router.router, tags=["User Responses"])
 def read_root():
     return {"Hello": "World"}
 
+# Middleware to check if the token is blacklisted
+@app.middleware("http")
+async def check_blacklist(request: Request, call_next):
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        db = SessionLocal()
+        if db.query(RevokedToken).filter(RevokedToken.token == token).first():
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+        db.close()
+    response = await call_next(request)
+    return response
+
+@app.middleware("http")
+async def check_revoked_token(request: Request, call_next):
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        db = next(get_db())
+        revoked_token = db.query(RevokedToken).filter(RevokedToken.token == token).first()
+        if revoked_token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+    response = await call_next(request)
+    return response
+
 ```
 
 # Directory: /code/quiz-app/quiz-app-backend/app/schemas
 
 ## File: __init__.py
 ```py
-from .user import UserCreate, UserLogin, UserBase, User
+from .auth import LoginForm
 from .questions import QuestionBase, Question, QuestionCreate, QuestionUpdate
 from .question_sets import QuestionSetCreate, QuestionSetBase, QuestionSet, QuestionSetUpdate
 from .token import Token
+from .user import UserCreate, UserLogin, UserBase, User
 from .user_responses import UserResponseBase, UserResponse, UserResponseCreate
+
+```
+
+## File: auth.py
+```py
+from pydantic import BaseModel, Field
+
+class LoginForm(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=8)
 
 ```
 
@@ -196,6 +226,7 @@ This module defines the Pydantic schemas for the User model.
 The schemas are used for input validation and serialization/deserialization of User objects.
 """
 
+import string
 from pydantic import BaseModel, validator
 
 class UserBase(BaseModel):
@@ -243,6 +274,13 @@ class UserCreate(UserBase):
             raise ValueError('Password must contain at least one uppercase letter')
         if not any(char.islower() for char in v):
             raise ValueError('Password must contain at least one lowercase letter')
+        if not any(char in string.punctuation for char in v):
+            raise ValueError('Password must contain at least one special character')
+        if any(char.isspace() for char in v):
+            raise ValueError('Password must not contain whitespace characters')
+        weak_passwords = ['password', '123456', 'qwerty', 'abc123', 'letmein', 'admin', 'welcome', 'monkey', '111111', 'iloveyou']
+        if v.lower() in weak_passwords:
+            raise ValueError('Password is too common. Please choose a stronger password.')
         return v
 
 class UserLogin(BaseModel):
@@ -315,14 +353,63 @@ class UserResponse(UserResponseBase):
         from_attributes = True
 ```
 
+# Directory: /code/quiz-app/quiz-app-backend/app/services
+
+## File: __init__.py
+```py
+# filename: app/services/__init__.py
+
+from .auth_service import authenticate_user
+
+```
+
+## File: auth_service.py
+```py
+# filename: app/services/auth_service.py
+"""
+This module provides authentication and authorization services.
+"""
+
+from sqlalchemy.orm import Session
+from app.crud import get_user_by_username
+from app.core import verify_password
+from app.models import User
+
+def authenticate_user(db: Session, username: str, password: str) -> User:
+    """
+    Authenticate a user.
+
+    Args:
+        db (Session): The database session.
+        username (str): The username of the user.
+        password (str): The password of the user.
+
+    Returns:
+        User: The authenticated user, or False if authentication fails.
+    """
+    user = get_user_by_username(db, username)
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    if not user.is_active:
+        return False
+    return user
+
+```
+
 # Directory: /code/quiz-app/quiz-app-backend/app/crud
 
 ## File: __init__.py
 ```py
-from .crud_user import create_user, get_user_by_username, authenticate_user, remove_user
-from .crud_user_responses import create_user_response, get_user_responses
-from .crud_questions import create_question, get_question, get_questions, update_question, delete_question
+# filename: app/crud/__init__.py
+
 from .crud_question_sets import create_question_set, get_question_sets, update_question_set, delete_question_set
+from .crud_questions import create_question, get_question, get_questions, update_question, delete_question
+from .crud_user import create_user, remove_user
+from .crud_user_responses import create_user_response, get_user_responses
+from .crud_user_utils import get_user_by_username
+
 ```
 
 ## File: crud_question_sets.py
@@ -334,10 +421,10 @@ This module provides CRUD operations for question sets.
 It includes functions for creating, retrieving, updating, and deleting question sets.
 """
 
-from sqlalchemy.orm import Session
-from app.models.question_sets import QuestionSet
-from app.schemas.question_sets import QuestionSetCreate, QuestionSetUpdate
 from typing import List
+from sqlalchemy.orm import Session
+from app.models import QuestionSet
+from app.schemas import QuestionSetCreate, QuestionSetUpdate
 
 def create_question_set(db: Session, question_set: QuestionSetCreate) -> QuestionSet:
     """
@@ -418,10 +505,10 @@ This module provides CRUD operations for questions.
 It includes functions for creating, retrieving, updating, and deleting questions.
 """
 
-from sqlalchemy.orm import Session
-from app.models.questions import Question
-from app.schemas.questions import QuestionCreate, QuestionUpdate
 from typing import List
+from sqlalchemy.orm import Session
+from app.models import Question
+from app.schemas import QuestionCreate, QuestionUpdate
 
 def create_question(db: Session, question: QuestionCreate) -> Question:
     """
@@ -512,15 +599,12 @@ def delete_question(db: Session, question_id: int) -> bool:
 # filename: app/crud/crud_user.py
 """
 This module provides CRUD operations for users.
-
-It includes functions for creating users, retrieving users by username,
-authenticating users, and removing users.
 """
 
-from app.schemas.user import UserCreate, UserLogin
 from sqlalchemy.orm import Session
-from app.models.users import User
-from app.core.security import verify_password, get_password_hash
+from app.models import User
+from app.schemas import UserCreate
+from app.core.security import get_password_hash  # Import from app.core.security
 
 def create_user(db: Session, user: UserCreate) -> User:
     """
@@ -540,38 +624,6 @@ def create_user(db: Session, user: UserCreate) -> User:
     db.refresh(db_user)
     return db_user
 
-def get_user_by_username(db: Session, username: str) -> User:
-    """
-    Retrieve a user by username.
-
-    Args:
-        db (Session): The database session.
-        username (str): The username of the user.
-
-    Returns:
-        User: The user with the specified username.
-    """
-    return db.query(User).filter(User.username == username).first()
-
-def authenticate_user(db: Session, username: str, password: str) -> User:
-    """
-    Authenticate a user.
-
-    Args:
-        db (Session): The database session.
-        username (str): The username of the user.
-        password (str): The password of the user.
-
-    Returns:
-        User: The authenticated user, or False if authentication fails.
-    """
-    user = get_user_by_username(db, username)
-    if not user:
-        return False
-    if not verify_password(password, user.hashed_password):
-        return False
-    return user
-
 def remove_user(db: Session, user_id: int) -> User:
     """
     Remove a user.
@@ -589,6 +641,7 @@ def remove_user(db: Session, user_id: int) -> User:
         db.commit()
         return user
     return None
+
 ```
 
 ## File: crud_user_responses.py
@@ -602,8 +655,8 @@ It includes functions for creating and retrieving user responses.
 
 from typing import List
 from sqlalchemy.orm import Session
-from app.models.user_responses import UserResponse
-from app.schemas.user_responses import UserResponseCreate
+from app.models import UserResponse
+from app.schemas import UserResponseCreate
 
 def create_user_response(db: Session, user_response: UserResponseCreate) -> UserResponse:
     """
@@ -637,12 +690,37 @@ def get_user_responses(db: Session, skip: int = 0, limit: int = 100) -> List[Use
     return db.query(UserResponse).offset(skip).limit(limit).all()
 ```
 
+## File: crud_user_utils.py
+```py
+# filename: app/crud/crud_user_utils.py
+"""
+This module provides utility functions for user-related operations.
+"""
+
+from sqlalchemy.orm import Session
+from app.models import User
+
+def get_user_by_username(db: Session, username: str) -> User:
+    """
+    Retrieve a user by username.
+
+    Args:
+        db (Session): The database session.
+        username (str): The username of the user.
+
+    Returns:
+        User: The user with the specified username.
+    """
+    return db.query(User).filter(User.username == username).first()
+
+```
+
 # Directory: /code/quiz-app/quiz-app-backend/app/db
 
 ## File: __init__.py
 ```py
 from .base_class import Base
-from .session import get_db, init_db
+from .session import get_db, init_db, SessionLocal
 ```
 
 ## File: base_class.py
@@ -673,7 +751,7 @@ from sqlalchemy.orm import sessionmaker
 from app.db.base_class import Base
 
 # Development database
-SQLALCHEMY_DATABASE_URL = "sqlite:///./app.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./quiz_app.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
@@ -701,6 +779,7 @@ def get_db() -> SessionLocal:
         yield db
     finally:
         db.close()
+
 ```
 
 # Directory: /code/quiz-app/quiz-app-backend/app/api
@@ -725,6 +804,96 @@ This module serves as a central point to import and organize the various endpoin
 
 It imports the router objects from each endpoint file and makes them available for use in the main FastAPI application.
 """
+```
+
+## File: auth.py
+```py
+# filename: app/api/endpoints/auth.py
+import logging
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from jose import JWTError
+from app.core import create_access_token, verify_password
+from app.db import get_db
+from app.models import User, RevokedToken
+from app.schemas import Token, LoginForm
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+blacklist = set()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
+@router.post("/login", response_model=Token)
+async def login_for_access_token(form_data: LoginForm, db: Session = Depends(get_db)):
+    """
+    Endpoint to authenticate a user and generate an access token.
+    """
+    user = db.query(User).filter(User.username == form_data.username).first()
+
+    if user:
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User account is inactive",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if not verify_password(form_data.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Username not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = create_access_token(data={"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Endpoint to logout the current user and invalidate the access token.
+    
+    Args:
+        token (str): The access token to be invalidated.
+        db (Session): The database session.
+        
+    Returns:
+        dict: A success message indicating the user has been logged out.
+        
+    Raises:
+        HTTPException: If an error occurs during token decoding or user logout.
+    """
+    try:
+        # Check if the token is already revoked
+        revoked_token = db.query(RevokedToken).filter(RevokedToken.token == token).first()
+        if revoked_token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Token has been revoked")
+
+        # Revoke the token
+        revoked_token = RevokedToken(token=token)
+        db.add(revoked_token)
+        db.commit()
+        return {"message": "Successfully logged out"}
+
+    except JWTError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid token") from exc
+    except HTTPException as exc:
+        raise exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Failed to logout user") from exc
+
 ```
 
 ## File: question_sets.py
@@ -940,10 +1109,10 @@ It defines a route for registering new users by validating the provided data and
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.core.security import get_password_hash
-from app.crud.crud_user import create_user, get_user_by_username
-from app.db.session import get_db
-from app.schemas.user import UserCreate
+from app.core import get_password_hash
+from app.crud import create_user, get_user_by_username
+from app.db import get_db
+from app.schemas import UserCreate
 
 router = APIRouter()
 
@@ -977,19 +1146,16 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 # filename: app/api/endpoints/token.py
 """
 This module provides an endpoint for user authentication and token generation.
-
-It defines a route for authenticating users and issuing access tokens upon successful authentication.
 """
 
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.crud.crud_user import authenticate_user
-from app.core.jwt import create_access_token
-from app.core.config import settings
-from app.db.session import get_db
-from app.schemas.token import Token
+from app.services.auth_service import authenticate_user
+from app.core import create_access_token, settings
+from app.db import get_db
+from app.schemas import Token
 
 router = APIRouter()
 
@@ -1104,7 +1270,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.users import User as UserModel
-from app.crud.crud_user import create_user as create_user_crud
+from app.crud.crud_user import create_user as create_user_crud  # Import from crud_user module
 from app.schemas.user import UserCreate as UserCreateSchema, User as UserSchema
 from app.core.auth import get_current_user
 
@@ -1161,13 +1327,16 @@ def create_user(user: UserCreateSchema, db: Session = Depends(get_db)):
 ## File: __init__.py
 ```py
 # filename: app/models/__init__.py
-from .users import User
-from .subjects import Subject
-from .topics import Topic
-from .subtopics import Subtopic
-from .questions import Question
+
 from .answer_choices import AnswerChoice
-from .question_sets import QuestionSet  # Add this line
+from .question_sets import QuestionSet
+from .questions import Question
+from .subjects import Subject
+from .subtopics import Subtopic
+from .topics import Topic
+from .token import RevokedToken
+from .user_responses import UserResponse
+from .users import User
 ```
 
 ## File: answer_choices.py
@@ -1336,6 +1505,21 @@ class Subtopic(Base):
     questions = relationship("Question", back_populates="subtopic")
 ```
 
+## File: token.py
+```py
+from sqlalchemy import Column, Integer, String, DateTime
+from app.db.base_class import Base
+from datetime import datetime
+
+class RevokedToken(Base):
+    __tablename__ = "revoked_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String, unique=True, index=True)
+    revoked_at = Column(DateTime, default=datetime.utcnow)
+
+```
+
 ## File: topics.py
 ```py
 # filename: app/models/topics.py
@@ -1424,10 +1608,9 @@ This module defines the User model.
 The User model represents a user in the quiz app.
 """
 
-from app.models.user_responses import UserResponse
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
+from app.db import Base
 
 class User(Base):
     """
@@ -1460,6 +1643,10 @@ This module serves as the main entry point for the core package.
 
 It can be used to perform any necessary initialization or configuration for the core package.
 """
+from .config import Settings, settings
+from .jwt import create_access_token, verify_token
+from .security import verify_password, get_password_hash
+
 ```
 
 ## File: auth.py
@@ -1468,23 +1655,48 @@ It can be used to perform any necessary initialization or configuration for the 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from app.core.jwt import verify_token
-from app.crud.crud_user import get_user_by_username
-from app.db.session import get_db
+from jose import JWTError
+from .jwt import decode_access_token  # Import from jwt module directly
+from app.crud import get_user_by_username
+from app.db import get_db
+from app.models import RevokedToken
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Dependency to get the current authenticated user.
+
+    Args:
+        token (str): The JWT access token.
+        db (Session): The database session.
+
+    Returns:
+        User: The authenticated user.
+
+    Raises:
+        HTTPException: If the token is invalid, expired, or revoked, or if the user is not found.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    username = verify_token(token, credentials_exception)
-    user = get_user_by_username(db, username=username)
-    if user is None:
+    try:
+        payload = decode_access_token(token)
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        revoked_token = db.query(RevokedToken).filter(RevokedToken.token == token).first()
+        if revoked_token:
+            raise credentials_exception
+        user = get_user_by_username(db, username=username)
+        if user is None:
+            raise credentials_exception
+        return user
+    except JWTError:
         raise credentials_exception
-    return user
+
 ```
 
 ## File: config.py
@@ -1508,7 +1720,8 @@ settings = Settings()
 # filename: app/core/jwt.py
 from datetime import datetime, timedelta
 from typing import Optional
-from jose import jwt
+from jose import jwt, JWTError
+from fastapi import HTTPException, status
 from app.core.config import settings
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -1530,6 +1743,16 @@ def verify_token(token: str, credentials_exception):
         return username
     except jwt.JWTError:
         raise credentials_exception
+
+def decode_access_token(token: str):
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")  # Use the correct error message here
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")  # Use the correct error message here
+
 ```
 
 ## File: security.py
@@ -1576,31 +1799,47 @@ def get_password_hash(password):
 ## File: conftest.py
 ```py
 # filename: tests/conftest.py
-import os
 import sys
+sys.path.insert(0, "/code/quiz-app/quiz-app-backend")
 
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+# pylint: disable=wrong-import-position
 import random
 import string
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.main import app
-from app.db.base_class import Base
-from app.db.session import get_db
-from app.crud import crud_user, crud_questions, crud_question_sets
+from app import app
+from app.db import Base, get_db
+from app.crud import create_user, create_question, create_question_set
 from app.schemas import UserCreate, QuestionSetCreate, QuestionCreate
-from app.models import User, QuestionSet, Question, Subtopic
+from app.models import Subtopic
+from app.core import create_access_token
 
 # Testing database
-SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(
-    SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base.metadata.create_all(bind=engine)
+
+def override_get_db():
+    try:
+        db = TestingSessionLocal()
+        yield db
+    finally:
+        db.close()
+
+app.dependency_overrides[get_db] = override_get_db
+
+@pytest.fixture
+def client():
+    """
+    Fixture that creates a test client for the FastAPI application.
+    """
+    with TestClient(app) as client:
+        yield client
 
 @pytest.fixture(scope="session")
 def db():
@@ -1627,35 +1866,20 @@ def db_session(db):
         print(f"Test session closed: {session}")
 
 @pytest.fixture(scope="function")
-def client(db_session):
-    def override_get_db():
-        print(f"Overriding get_db dependency with test session: {db_session}")
-        try:
-            yield db_session
-        finally:
-            print(f"Ending use of test session: {db_session}")
-
-    app.dependency_overrides[get_db] = override_get_db
-    client = TestClient(app)
-    yield client
-    del app.dependency_overrides[get_db]
-    print("Removed get_db override.")
-
-@pytest.fixture(scope="function")
 def random_username():
     return "testuser_" + "".join(random.choices(string.ascii_letters + string.digits, k=5))
 
 @pytest.fixture
 def test_user(db_session, random_username):
     user_data = UserCreate(username=random_username, password="TestPassword123")
-    user = crud_user.create_user(db_session, user_data)
+    user = create_user(db_session, user_data)
     db_session.commit()
     return user
 
 @pytest.fixture
 def test_question_set(db_session):
     question_set_data = QuestionSetCreate(name="Test Question Set")
-    question_set = crud_question_sets.create_question_set(db_session, question_set_data)
+    question_set = create_question_set(db_session, question_set_data)
     return question_set
 
 @pytest.fixture
@@ -1665,49 +1889,27 @@ def test_question(db_session, test_question_set):
     db_session.add(subtopic)
     db_session.commit()
 
-    question_data = QuestionCreate(text="Test Question", question_set_id=test_question_set.id, subtopic_id=subtopic.id)
-    question = crud_questions.create_question(db_session, question_data)
+    question_data = QuestionCreate(text="Test Question",
+                                   question_set_id=test_question_set.id,
+                                   subtopic_id=subtopic.id)
+    question = create_question(db_session, question_data)
     return question
-```
 
-## File: test_api.py
-```py
-# filename: tests/test_api.py
-import pytest
-from app.schemas.user import UserCreate
-from app.crud import crud_user
+@pytest.fixture
+def test_token(test_user):
+    access_token = create_access_token(data={"sub": test_user.username})
+    return access_token
 
-
-def test_register_user(client, db_session, random_username):
-    user_data = {
-        "username": random_username,
-        "password": "TestPassword123"
-    }
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 201
-
-def test_login_user(client, db_session, random_username):
-    password = "TestPassword123"
-    user_data = UserCreate(username=random_username, password=password)
-    crud_user.create_user(db_session, user_data)
-    response = client.post("/token", data={"username": random_username, "password": password})
-    assert response.status_code == 200
-    assert "access_token" in response.json()
-
-def test_create_question_set(client):
-    question_set_data = {
-        "name": "Test Question Set"
-    }
-    response = client.post("/question-sets/", json=question_set_data)
-    assert response.status_code == 201
-    assert response.json()["name"] == "Test Question Set"
-
-# Add more API endpoint tests for other routes
 ```
 
 ## File: test_api_authentication.py
 ```py
 # filename: tests/test_api_authentication.py
+
+from datetime import timedelta
+from app.core import create_access_token
+from app.models import RevokedToken
+
 def test_user_authentication(client, test_user):
     """Test user authentication and token retrieval."""
     response = client.post("/token", data={"username": test_user.username, "password": "TestPassword123"})
@@ -1755,7 +1957,6 @@ def test_login_wrong_password(client, test_user):
     assert response.status_code == 401
     assert "Incorrect username or password" in response.json()["detail"]
 
-# filename: tests/test_api_authentication.py
 def test_login_and_access_protected_endpoint(client, test_user):
     login_data = {"username": test_user.username, "password": "TestPassword123"}
     response = client.post("/token", data=login_data)
@@ -1803,6 +2004,118 @@ def test_register_user_missing_lowercase_in_password(client):
     response = client.post("/register/", json=user_data)
     assert response.status_code == 422
     assert "Password must contain at least one lowercase letter" in str(response.content)
+
+def test_login_success(client, test_user):
+    """
+    Test successful user login.
+    """
+    response = client.post("/login", json={"username": test_user.username, "password": "TestPassword123"})
+    assert response.status_code == 200
+    assert "access_token" in response.json()
+
+def test_login_invalid_credentials(client):
+    """
+    Test login with invalid credentials.
+    """
+    response = client.post("/login", json={"username": "invalid_user", "password": "invalid_password"})
+    assert response.status_code == 401
+    assert "Username not found" in response.json()["detail"]
+
+def test_logout_success(client, test_user, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.post("/logout", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["message"] == "Successfully logged out"
+
+def test_login_inactive_user(client, test_user, db_session):
+    """
+    Test login with an inactive user.
+    """
+    # Set the user as inactive
+    test_user.is_active = False
+    db_session.commit()
+    
+    response = client.post("/login", json={"username": test_user.username, "password": "TestPassword123"})
+    assert response.status_code == 401
+    assert "inactive" in response.json()["detail"]
+
+def test_login_invalid_token_format(client):
+    headers = {"Authorization": "Bearer invalid_token_format"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 401
+    assert "Invalid token" in response.json()["detail"]
+
+def test_login_expired_token(client, test_user):
+    """
+    Test accessing a protected route with an expired token.
+    """
+    # Create an expired token
+    expired_token = create_access_token(data={"sub": test_user.username}, expires_delta=timedelta(minutes=-1)) 
+    headers = {"Authorization": f"Bearer {expired_token}"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 401
+    assert "Token has expired" in response.json()["detail"]
+
+def test_login_nonexistent_user(client):
+    """
+    Test login with a non-existent username.
+    """
+    login_data = {"username": "nonexistent_user", "password": "password123"}
+    response = client.post("/login", json=login_data)
+    assert response.status_code == 401
+    assert "Username not found" in response.json()["detail"]
+
+def test_logout_revoked_token(client, test_user, test_token, db_session):
+    """
+    Test logout with an already revoked token.
+    """
+    # Revoke the token manually
+    revoked_token = RevokedToken(token=test_token)
+    db_session.add(revoked_token)
+    db_session.commit()
+
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.post("/logout", headers=headers)
+    assert response.status_code == 401
+    assert "Token has been revoked" in response.json()["detail"]
+
+def test_protected_endpoint_expired_token(client, test_user, db_session):
+    """
+    Test accessing a protected endpoint with an expired token after logout.
+    """
+    # Create an access token with a short expiration time
+    access_token_expires = timedelta(minutes=-1)
+    access_token = create_access_token(data={"sub": test_user.username}, expires_delta=access_token_expires)
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 401
+    assert "Token has expired" in response.json()["detail"]
+
+def test_login_logout_flow(client, test_user):
+    """
+    Test the complete login and logout flow.
+    """
+    # Login
+    login_data = {"username": test_user.username, "password": "TestPassword123"}
+    login_response = client.post("/login", json=login_data)
+    assert login_response.status_code == 200
+    access_token = login_response.json()["access_token"]
+    
+    # Access a protected endpoint with the token
+    headers = {"Authorization": f"Bearer {access_token}"}
+    protected_response = client.get("/users/", headers=headers)
+    assert protected_response.status_code == 200
+    
+    # Logout
+    logout_response = client.post("/logout", headers=headers)
+    assert logout_response.status_code == 200
+    
+    # Try accessing the protected endpoint again after logout
+    protected_response_after_logout = client.get("/users/", headers=headers)
+    assert protected_response_after_logout.status_code == 401
+    assert "Could not validate credentials" in protected_response_after_logout.json()["detail"]
+
 ```
 
 ## File: test_api_question_sets.py
@@ -1942,6 +2255,34 @@ def test_read_users(client, db_session, test_user):
 
 ```
 
+## File: test_auth_integration.py
+```py
+def test_protected_route_with_valid_token(client, test_user, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 200
+
+def test_protected_route_with_invalid_token(client):
+    headers = {"Authorization": "Bearer invalid_token"}
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 401
+
+def test_protected_route_with_revoked_token(client, test_user, test_token):
+    """
+    Test accessing a protected route with a revoked token.
+    """
+    # Logout to revoke the token
+    headers = {"Authorization": f"Bearer {test_token}"}
+    logout_response = client.post("/logout", headers=headers)
+    assert logout_response.status_code == 200
+    
+    # Try accessing the protected route with the revoked token
+    response = client.get("/users/", headers=headers)
+    assert response.status_code == 401
+    assert "Could not validate credentials" in response.json()["detail"]
+
+```
+
 ## File: test_core_auth.py
 ```py
 # filename: tests/test_core_auth.py
@@ -1959,19 +2300,20 @@ def test_oauth2_scheme():
 ## File: test_core_jwt.py
 ```py
 # filename: tests/test_core_jwt.py
+
+from datetime import timedelta
 import pytest
-from datetime import datetime, timedelta
 from jose import JWTError
-from app.core import jwt
+from app.core import create_access_token, verify_token
 
 def test_jwt_token_creation_and_verification():
     """
     Test the JWT token creation and verification process.
     """
     test_data = {"sub": "testuser"}
-    token = jwt.create_access_token(data=test_data, expires_delta=timedelta(minutes=30))
+    token = create_access_token(data=test_data, expires_delta=timedelta(minutes=30))
     assert token is not None
-    decoded_sub = jwt.verify_token(token, credentials_exception=ValueError("Invalid token"))
+    decoded_sub = verify_token(token, credentials_exception=ValueError("Invalid token"))
     assert decoded_sub == test_data["sub"], "Decoded subject does not match the expected value."
 
 def test_create_access_token_with_expiration():
@@ -1979,7 +2321,7 @@ def test_create_access_token_with_expiration():
     Test creating an access token with a specific expiration time.
     """
     expires_delta = timedelta(minutes=30)
-    access_token = jwt.create_access_token(data={"sub": "testuser"}, expires_delta=expires_delta)
+    access_token = create_access_token(data={"sub": "testuser"}, expires_delta=expires_delta)
     assert access_token is not None
 
 def test_verify_token_invalid():
@@ -1988,41 +2330,42 @@ def test_verify_token_invalid():
     """
     invalid_token = "invalid_token"
     with pytest.raises(JWTError):
-        jwt.verify_token(invalid_token, credentials_exception=JWTError)
+        verify_token(invalid_token, credentials_exception=JWTError)
 
 def test_verify_token_expired():
     """
     Test verifying an expired token.
     """
     expires_delta = timedelta(minutes=-1)  # Expired token
-    expired_token = jwt.create_access_token(data={"sub": "testuser"}, expires_delta=expires_delta)
+    expired_token = create_access_token(data={"sub": "testuser"}, expires_delta=expires_delta)
     with pytest.raises(JWTError):
-        jwt.verify_token(expired_token, credentials_exception=JWTError)
+        verify_token(expired_token, credentials_exception=JWTError)
 
 ```
 
 ## File: test_crud.py
 ```py
 # filename: tests/test_crud.py
-import pytest
-from app.crud import crud_user, crud_question_sets
+
+from app.crud import create_user, create_question_set
 from app.schemas import UserCreate, QuestionSetCreate
+from app.services import authenticate_user
 
 def test_create_user(db_session, random_username):
     user_data = UserCreate(username=random_username, password="NewPassword123")
-    created_user = crud_user.create_user(db_session, user_data)
+    created_user = create_user(db_session, user_data)
     assert created_user.username == random_username
 
 def test_authenticate_user(db_session, random_username):
     user_data = UserCreate(username=random_username, password="AuthPassword123")
-    crud_user.create_user(db_session, user_data)
-    authenticated_user = crud_user.authenticate_user(db_session, username=random_username, password="AuthPassword123")
+    create_user(db_session, user_data)
+    authenticated_user = authenticate_user(db_session, username=random_username, password="AuthPassword123")
     assert authenticated_user
     assert authenticated_user.username == random_username
 
 def test_create_question_set(db_session):
     question_set_data = QuestionSetCreate(name="Test Question Set")
-    created_question_set = crud_question_sets.create_question_set(db_session, question_set_data)
+    created_question_set = create_question_set(db_session, question_set_data)
     assert created_question_set.name == "Test Question Set"
 
 # Add similar tests for other CRUD operations
@@ -2032,7 +2375,7 @@ def test_create_question_set(db_session):
 ```py
 # filename: tests/test_crud_question_sets.py
 import pytest
-from app.crud import crud_question_sets
+from app.crud import create_question_set, delete_question_set, update_question_set
 from app.schemas import QuestionSetCreate
 
 @pytest.fixture
@@ -2041,16 +2384,14 @@ def question_set_data():
 
 def test_create_question_set(db_session, question_set_data):
     """Test creation of a question set."""
-    question_set = crud_question_sets.create_question_set(db=db_session, question_set=question_set_data)
+    question_set = create_question_set(db=db_session, question_set=question_set_data)
     assert question_set is not None, "Question set was not created."
     assert question_set.name == question_set_data.name, "Question set name mismatch."
 
 def test_delete_question_set(db_session, question_set_data):
     """Test deletion of a question set."""
-    question_set = crud_question_sets.create_question_set(db=db_session, question_set=question_set_data)
-    assert crud_question_sets.delete_question_set(db=db_session, question_set_id=question_set.id) is True, "Question set deletion failed."
-
-# filename: tests/test_crud_question_sets.py
+    question_set = create_question_set(db=db_session, question_set=question_set_data)
+    assert delete_question_set(db=db_session, question_set_id=question_set.id) is True, "Question set deletion failed."
 
 def test_update_question_set_not_found(db_session):
     """
@@ -2058,7 +2399,7 @@ def test_update_question_set_not_found(db_session):
     """
     question_set_id = 999  # Assuming this ID does not exist
     question_set_update = {"name": "Updated Name"}
-    updated_question_set = crud_question_sets.update_question_set(db_session, question_set_id, question_set_update)
+    updated_question_set = update_question_set(db_session, question_set_id, question_set_update)
     assert updated_question_set is None
 
 ```

@@ -5,6 +5,7 @@ This module defines the Pydantic schemas for the User model.
 The schemas are used for input validation and serialization/deserialization of User objects.
 """
 
+import string
 from pydantic import BaseModel, validator
 
 class UserBase(BaseModel):
@@ -52,6 +53,13 @@ class UserCreate(UserBase):
             raise ValueError('Password must contain at least one uppercase letter')
         if not any(char.islower() for char in v):
             raise ValueError('Password must contain at least one lowercase letter')
+        if not any(char in string.punctuation for char in v):
+            raise ValueError('Password must contain at least one special character')
+        if any(char.isspace() for char in v):
+            raise ValueError('Password must not contain whitespace characters')
+        weak_passwords = ['password', '123456', 'qwerty', 'abc123', 'letmein', 'admin', 'welcome', 'monkey', '111111', 'iloveyou']
+        if v.lower() in weak_passwords:
+            raise ValueError('Password is too common. Please choose a stronger password.')
         return v
 
 class UserLogin(BaseModel):

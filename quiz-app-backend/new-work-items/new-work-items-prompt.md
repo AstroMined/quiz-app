@@ -24,75 +24,61 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### User Registration
+### User Login and Logout
 
-**ID:** 248
+**ID:** 252
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** user-registration
+**Tags:** jwt; logout; user-login
 
 **Description:**
 
-Implement user registration functionality in the quiz app backend to allow new users to create an account. Provide an API endpoint for user registration that accepts user information such as username, email, and password. Validate the input data, check for existing user records, and securely store the user information in the database upon successful registration.
+Implement user login and logout functionality in the quiz app backend to allow registered users to securely authenticate and manage their sessions. Provide API endpoints for user login that accept username and password, validate the credentials, and generate a JWT token upon successful authentication. Implement user logout by invalidating or revoking the JWT token.
 
 **Acceptance Criteria:**
 
-- User registration endpoint created
-- Accepts username email Password
-- validates Input Data
-- Checks for existing User records
-- Securely stores User info in database
+- User login endpoint created
+- Accepts username and Password
+- validates User credentials
+- Generates JWT token on success
+- Handles invalid credentials
+- User logout endpoint created
+- Invalidates or revokes JWT token
 - Returns success/error response
-- Password hashing implemented
-- tested with different registration scenarios
+- tested with different login scenarios
 
 
-### Implement user registration in auth.py
+### Implement user login in auth.py
 
-**ID:** 249
-
-**Work Item Type:** Task
-
-**State:** Active
-
-**Tags:** registration
-
-**Description:**
-
-Implement user registration functionality in auth.py
-
-
-### Define user schema in schemas.py
-
-**ID:** 250
+**ID:** 253
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** schema
+**Tags:** login
 
 **Description:**
 
-Define the user schema in schemas.py for user registration
+Implement user login functionality in auth.py
 
 
-### Handle database operations in crud.py
+### Implement user logout in auth.py
 
-**ID:** 251
+**ID:** 254
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** crud
+**Tags:** logout
 
 **Description:**
 
-Handle user creation database operations in crud.py
+Implement user logout functionality in auth.py
 
 
 

@@ -2,7 +2,6 @@ import os
 import argparse
 import subprocess
 import json
-from datetime import datetime
 
 def is_directory_ignored(directory, ignore_directories):
     """Check if the directory is in the list of directories to ignore."""
@@ -66,8 +65,7 @@ def main():
 
     # Create a unique filename for the markdown file
     root_dir_name = os.path.basename(os.path.normpath(config['root_directory']))
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    markdown_file_path = f"{root_dir_name}_repo_summary_{timestamp}.md"
+    markdown_file_path = f"{root_dir_name}_repo_summary.md"
 
     # Save the markdown content to the file
     with open(markdown_file_path, 'w', encoding='utf-8') as md_file:

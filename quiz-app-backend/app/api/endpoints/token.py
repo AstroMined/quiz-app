@@ -1,19 +1,16 @@
 # filename: app/api/endpoints/token.py
 """
 This module provides an endpoint for user authentication and token generation.
-
-It defines a route for authenticating users and issuing access tokens upon successful authentication.
 """
 
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.crud.crud_user import authenticate_user
-from app.core.jwt import create_access_token
-from app.core.config import settings
-from app.db.session import get_db
-from app.schemas.token import Token
+from app.services.auth_service import authenticate_user
+from app.core import create_access_token, settings
+from app.db import get_db
+from app.schemas import Token
 
 router = APIRouter()
 

@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from app.db.base_class import Base
 
 # Development database
-SQLALCHEMY_DATABASE_URL = "sqlite:///./app.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./quiz_app.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )

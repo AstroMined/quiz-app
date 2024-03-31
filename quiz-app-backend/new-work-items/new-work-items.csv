@@ -1,12 +1,12 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"248","User Story","User Registration","Active","user-registration","Implement user registration functionality in the quiz app backend to allow new users to create an account. Provide an API endpoint for user registration that accepts user information such as username, email, and password. Validate the input data, check for existing user records, and securely store the user information in the database upon successful registration.","User registration endpoint created
-Accepts username email Password
-validates Input Data
-Checks for existing User records
-Securely stores User info in database
+"252","User Story","User Login and Logout","Active","jwt; logout; user-login","Implement user login and logout functionality in the quiz app backend to allow registered users to securely authenticate and manage their sessions. Provide API endpoints for user login that accept username and password, validate the credentials, and generate a JWT token upon successful authentication. Implement user logout by invalidating or revoking the JWT token.","User login endpoint created
+Accepts username and Password
+validates User credentials
+Generates JWT token on success
+Handles invalid credentials
+User logout endpoint created
+Invalidates or revokes JWT token
 Returns success/error response
-Password hashing implemented
-tested with different registration scenarios"
-"249","Task","Implement user registration in auth.py","Active","registration","Implement user registration functionality in auth.py",
-"250","Task","Define user schema in schemas.py","Active","schema","Define the user schema in schemas.py for user registration",
-"251","Task","Handle database operations in crud.py","Active","crud","Handle user creation database operations in crud.py",
+tested with different login scenarios"
+"253","Task","Implement user login in auth.py","Active","login","Implement user login functionality in auth.py",
+"254","Task","Implement user logout in auth.py","Active","logout","Implement user logout functionality in auth.py",
