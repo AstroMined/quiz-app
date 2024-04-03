@@ -12,22 +12,16 @@ from app.db.base_class import Base
 class Question(Base):
     """
     The Question model.
-
-    Attributes:
-        id (int): The primary key of the question.
-        text (str): The text of the question.
-        subtopic_id (int): The foreign key referencing the associated subtopic.
-        question_set_id (int): The foreign key referencing the associated question set.
-        subtopic (Subtopic): The relationship to the associated subtopic.
-        question_set (QuestionSet): The relationship to the associated question set.
-        answer_choices (List[AnswerChoice]): The relationship to the associated answer choices.
     """
     __tablename__ = "questions"
+    def __repr__(self):
+        return f"<Question(id={self.id}, text={self.text}, subtopic_id={self.subtopic_id}, question_set_id={self.question_set_id})>"
 
     id = Column(Integer, primary_key=True, index=True)
     text = Column(String, index=True)
     subtopic_id = Column(Integer, ForeignKey('subtopics.id'))
     question_set_id = Column(Integer, ForeignKey('question_sets.id'))
+    explanation = Column(String)  # Add this line
     
     subtopic = relationship("Subtopic", back_populates="questions")
     question_set = relationship("QuestionSet", back_populates="questions")

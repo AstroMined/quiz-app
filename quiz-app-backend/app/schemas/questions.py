@@ -5,7 +5,9 @@ This module defines the Pydantic schemas for the Question model.
 The schemas are used for input validation and serialization/deserialization of Question objects.
 """
 
+from typing import List
 from pydantic import BaseModel
+from app.schemas import AnswerChoiceCreate, AnswerChoice
 
 class QuestionBase(BaseModel):
     """
@@ -24,6 +26,8 @@ class QuestionCreate(QuestionBase):
     """
     subtopic_id: int
     question_set_id: int
+    answer_choices: List[AnswerChoiceCreate]
+    explanation: str
 
 class QuestionUpdate(QuestionBase):
     """
@@ -47,6 +51,7 @@ class Question(QuestionBase):
     id: int
     subtopic_id: int
     question_set_id: int
+    answer_choices: List[AnswerChoice]
 
     class Config:
         from_attributes = True

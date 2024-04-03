@@ -5,3 +5,4 @@ from .crud_questions import create_question, get_question, get_questions, update
 from .crud_user import create_user, remove_user
 from .crud_user_responses import create_user_response, get_user_responses
 from .crud_user_utils import get_user_by_username
+from .crud_subtopics import create_subtopic

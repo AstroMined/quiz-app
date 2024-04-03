@@ -7,24 +7,29 @@ It includes functions for creating, retrieving, updating, and deleting questions
 
 from typing import List
 from sqlalchemy.orm import Session
-from app.models import Question
+from app.models import Question, AnswerChoice
 from app.schemas import QuestionCreate, QuestionUpdate
 
 def create_question(db: Session, question: QuestionCreate) -> Question:
-    """
-    Create a new question.
-
-    Args:
-        db (Session): The database session.
-        question (QuestionCreate): The question data.
-
-    Returns:
-        Question: The created question.
-    """
-    db_question = Question(**question.dict())
+    db_question = Question(
+        text=question.text,
+        question_set_id=question.question_set_id,
+        subtopic_id=question.subtopic_id,
+        explanation=question.explanation
+    )
     db.add(db_question)
     db.commit()
     db.refresh(db_question)
+
+    for choice in question.answer_choices:
+        db_choice = AnswerChoice(
+            text=choice.text,
+            is_correct=choice.is_correct,
+            question=db_question
+        )
+        db.add(db_choice)
+
+    db.commit()
     return db_question
 
 def get_questions(db: Session, skip: int = 0, limit: int = 100) -> List[Question]:
@@ -39,7 +44,8 @@ def get_questions(db: Session, skip: int = 0, limit: int = 100) -> List[Question
     Returns:
         List[Question]: The list of questions.
     """
-    return db.query(Question).offset(skip).limit(limit).all()
+    questions = db.query(Question).offset(skip).limit(limit).all()
+    return questions
 
 def get_question(db: Session, question_id: int) -> Question:
     """

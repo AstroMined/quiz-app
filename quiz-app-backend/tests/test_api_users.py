@@ -1,12 +1,12 @@
 # filename: tests/test_api_users.py
 def test_create_user(client, db_session, random_username):
-    data = {"username": random_username, "password": "TestPassword123"}
+    data = {"username": random_username, "password": "TestPassword123!"}
     response = client.post("/users/", json=data)
     assert response.status_code == 201
 
 def test_read_users(client, db_session, test_user):
     # Authenticate and get the access token
-    login_data = {"username": test_user.username, "password": "TestPassword123"}
+    login_data = {"username": test_user.username, "password": "TestPassword123!"}
     response = client.post("/token", data=login_data)
     assert response.status_code == 200
     access_token = response.json()["access_token"]

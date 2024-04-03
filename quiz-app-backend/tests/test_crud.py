@@ -5,20 +5,20 @@ from app.schemas import UserCreate, QuestionSetCreate
 from app.services import authenticate_user
 
 def test_create_user(db_session, random_username):
-    user_data = UserCreate(username=random_username, password="NewPassword123")
+    user_data = UserCreate(username=random_username, password="NewPassword123!")
     created_user = create_user(db_session, user_data)
     assert created_user.username == random_username
 
 def test_authenticate_user(db_session, random_username):
-    user_data = UserCreate(username=random_username, password="AuthPassword123")
+    user_data = UserCreate(username=random_username, password="AuthPassword123!")
     create_user(db_session, user_data)
-    authenticated_user = authenticate_user(db_session, username=random_username, password="AuthPassword123")
+    authenticated_user = authenticate_user(db_session, username=random_username, password="AuthPassword123!")
     assert authenticated_user
     assert authenticated_user.username == random_username
 
 def test_create_question_set(db_session):
-    question_set_data = QuestionSetCreate(name="Test Question Set")
+    question_set_data = QuestionSetCreate(name="Test CRUD Question Set")
     created_question_set = create_question_set(db_session, question_set_data)
-    assert created_question_set.name == "Test Question Set"
+    assert created_question_set.name == "Test CRUD Question Set"
 
 # Add similar tests for other CRUD operations

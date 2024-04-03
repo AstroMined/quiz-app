@@ -1,31 +1,13 @@
-# filename: app/crud/crud_questions.py
+# filename: app/crud/crud_question_sets.py
 """
 This module provides CRUD operations for question sets.
-
-It includes functions for creating, retrieving, updating, and deleting question sets.
 """
 
 from typing import List
 from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
 from app.models import QuestionSet
 from app.schemas import QuestionSetCreate, QuestionSetUpdate
-
-def create_question_set(db: Session, question_set: QuestionSetCreate) -> QuestionSet:
-    """
-    Create a new question set.
-
-    Args:
-        db (Session): The database session.
-        question_set (QuestionSetCreate): The question set data.
-
-    Returns:
-        QuestionSet: The created question set.
-    """
-    db_question_set = QuestionSet(**question_set.dict())
-    db.add(db_question_set)
-    db.commit()
-    db.refresh(db_question_set)
-    return db_question_set
 
 def get_question_sets(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionSet]:
     """
@@ -41,40 +23,37 @@ def get_question_sets(db: Session, skip: int = 0, limit: int = 100) -> List[Ques
     """
     return db.query(QuestionSet).offset(skip).limit(limit).all()
 
+def create_question_set(db: Session, question_set: QuestionSetCreate) -> QuestionSet:
+    """
+    Create a new question set.
+    """
+    existing_question_set = db.query(QuestionSet).filter(QuestionSet.name == question_set.name).first()
+    if existing_question_set:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Question set with name '{question_set.name}' already exists.")
+    
+    db_question_set = QuestionSet(**question_set.dict())
+    db.add(db_question_set)
+    db.commit()
+    db.refresh(db_question_set)
+    return db_question_set
+
 def update_question_set(db: Session, question_set_id: int, question_set: QuestionSetUpdate) -> QuestionSet:
-    """
-    Update a question set.
-
-    Args:
-        db (Session): The database session.
-        question_set_id (int): The ID of the question set to update.
-        question_set (QuestionSetUpdate): The updated question set data.
-
-    Returns:
-        QuestionSet: The updated question set.
-    """
     db_question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
-    if db_question_set:
-        for var, value in vars(question_set).items():
-            setattr(db_question_set, var, value) if value else None
-        db.commit()
-        db.refresh(db_question_set)
+    if not db_question_set:
+        raise HTTPException(status_code=404, detail=f"Question set with ID {question_set_id} not found.")
+    
+    update_data = question_set.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_question_set, field, value)
+    db.commit()
+    db.refresh(db_question_set)
     return db_question_set
 
 def delete_question_set(db: Session, question_set_id: int) -> bool:
-    """
-    Delete a question set.
-
-    Args:
-        db (Session): The database session.
-        question_set_id (int): The ID of the question set to delete.
-
-    Returns:
-        bool: True if the question set was deleted, False otherwise.
-    """
     db_question_set = db.query(QuestionSet).filter(QuestionSet.id == question_set_id).first()
-    if db_question_set:
-        db.delete(db_question_set)
-        db.commit()
-        return True
-    return False
+    if not db_question_set:
+        raise HTTPException(status_code=404, detail=f"Question set with ID {question_set_id} not found.")
+    
+    db.delete(db_question_set)
+    db.commit()
+    return True

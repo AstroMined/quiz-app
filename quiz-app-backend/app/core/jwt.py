@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt, JWTError
 from fastapi import HTTPException, status
-from app.core.config import settings
+from app.core import settings
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()

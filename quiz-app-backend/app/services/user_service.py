@@ -1,9 +1,9 @@
-# filename: app/core/auth.py
+# filename: app/services/user_service.py
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose import JWTError
-from .jwt import decode_access_token  # Import from jwt module directly
+from app.core import decode_access_token
 from app.crud import get_user_by_username
 from app.db import get_db
 from app.models import RevokedToken

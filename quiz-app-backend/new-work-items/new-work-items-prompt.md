@@ -24,61 +24,75 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### User Login and Logout
+### Question Set Uploads
 
-**ID:** 252
+**ID:** 256
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** jwt; logout; user-login
+**Tags:** json; question-upload
 
 **Description:**
 
-Implement user login and logout functionality in the quiz app backend to allow registered users to securely authenticate and manage their sessions. Provide API endpoints for user login that accept username and password, validate the credentials, and generate a JWT token upon successful authentication. Implement user logout by invalidating or revoking the JWT token.
+Implement functionality to allow users to upload question sets in JSON format to the quiz app backend. Provide an API endpoint that accepts a JSON file containing an array of questions, along with their answers, explanations, and metadata. Parse and validate the JSON data, and store the question set in the database for future use.
 
 **Acceptance Criteria:**
 
-- User login endpoint created
-- Accepts username and Password
-- validates User credentials
-- Generates JWT token on success
-- Handles invalid credentials
-- User logout endpoint created
-- Invalidates or revokes JWT token
+- Question set upload endpoint created
+- Accepts JSON file with questions
+- Parses and validates JSON Data
+- Extracts questions answers metadata
+- stores Question set in the database
 - Returns success/error response
-- tested with different login scenarios
+- Handles file upload and processing
+- tested with different JSON files
 
 
-### Implement user login in auth.py
+### Create question_sets.py file
 
-**ID:** 253
-
-**Work Item Type:** Task
-
-**State:** Active
-
-**Tags:** login
-
-**Description:**
-
-Implement user login functionality in auth.py
-
-
-### Implement user logout in auth.py
-
-**ID:** 254
+**ID:** 257
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** logout
+**Tags:** question-sets
 
 **Description:**
 
-Implement user logout functionality in auth.py
+Create question_sets.py file to handle question set uploads
+
+
+### Define question set model in models.py
+
+**ID:** 258
+
+**Work Item Type:** Task
+
+**State:** Active
+
+**Tags:** models
+
+**Description:**
+
+Update models.py to define the question set model
+
+
+### Create question set schema in schemas.py
+
+**ID:** 259
+
+**Work Item Type:** Task
+
+**State:** Active
+
+**Tags:** schema
+
+**Description:**
+
+Define the question set schema in schemas.py
 
 
 

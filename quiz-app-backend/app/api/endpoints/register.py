@@ -31,7 +31,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     """
     db_user = get_user_by_username(db, username=user.username)
     if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
+        raise HTTPException(status_code=422, detail="Username already registered")
     hashed_password = get_password_hash(user.password)
     user_create = UserCreate(username=user.username, password=hashed_password)
     created_user = create_user(db=db, user=user_create)

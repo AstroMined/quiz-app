@@ -1,6 +1,6 @@
 # filename: tests/test_core_auth.py
 
-from app.core.auth import oauth2_scheme
+from app.services import oauth2_scheme
 
 def test_oauth2_scheme():
     """

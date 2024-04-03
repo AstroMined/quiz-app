@@ -12,9 +12,9 @@ def test_user_create_schema_password_validation():
         UserCreate(username="testuser", password="short")
 
     # Test password valid
-    user_data = {"username": "testuser", "password": "ValidPassword123"}
+    user_data = {"username": "testuser", "password": "ValidPassword123!"}
     user_schema = UserCreate(**user_data)
-    assert user_schema.password == "ValidPassword123"
+    assert user_schema.password == "ValidPassword123!"
 
 def test_user_create_schema_password_complexity_validation():
     """Test password complexity validation in UserCreate schema."""
@@ -31,6 +31,6 @@ def test_user_create_schema_password_complexity_validation():
         UserCreate(username="testuser", password="NOLOWERCASEPASSWORD123")
 
     # Test valid password
-    user_data = {"username": "testuser", "password": "ValidPassword123"}
+    user_data = {"username": "testuser", "password": "ValidPassword123!"}
     user_schema = UserCreate(**user_data)
-    assert user_schema.password == "ValidPassword123"
+    assert user_schema.password == "ValidPassword123!"

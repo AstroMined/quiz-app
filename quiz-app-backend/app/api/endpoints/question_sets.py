@@ -6,42 +6,69 @@ It defines routes for uploading question sets and retrieving question sets from 
 """
 
 import json
+import logging
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response  # Import Response
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 from sqlalchemy.orm import Session
-from app.crud.crud_question_sets import get_question_sets, update_question_set, delete_question_set
-from app.crud.crud_question_sets import create_question_set as create_question_set_crud
-from app.db.session import get_db
-from app.schemas.question_sets import QuestionSet, QuestionSetCreate, QuestionSetUpdate
+from pydantic import ValidationError
+from app.crud import (
+    get_question_sets,
+    update_question_set,
+    delete_question_set,
+    create_question_set,
+    create_question
+)
+from app.db import get_db
+from app.schemas import (
+    QuestionSet,
+    QuestionSetCreate,
+    QuestionSetUpdate,
+    QuestionCreate
+)
+from app.services import get_current_user
+from app.models.users import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 @router.post("/upload-questions/")
-async def upload_question_set(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_question_set_endpoint(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Endpoint to upload a question set in JSON format.
-    
-    Args:
-        file: An UploadFile object representing the JSON file containing the question set data.
-        db: A database session dependency injected by FastAPI.
-        
-    Raises:
-        HTTPException: If the uploaded file is not a valid JSON file.
-        
-    Returns:
-        The created question set object.
     """
-    content = await file.read()
     try:
+        content = await file.read()
         question_data = json.loads(content.decode('utf-8'))
-        # Assuming you have a function to process and validate the JSON data
-        question_set_created = create_question_set(db, question_data)
-        return question_set_created
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+        # Validate question data
+        for question in question_data:
+            QuestionCreate(**question)  # Validate question against schema
+
+        # Create question set
+        question_set = QuestionSetCreate(name=file.filename)
+        question_set_created = create_question_set(db, question_set)
+
+        # Create questions and associate with question set
+        for question in question_data:
+            question['question_set_id'] = question_set_created.id
+            try:
+                create_question(db, QuestionCreate(**question))
+            except ValidationError as exc:
+                raise HTTPException(status_code=400, detail=f"Invalid question data: {exc}")
+
+        return {"message": "Question set uploaded successfully"}
+
+    except (json.JSONDecodeError, ValidationError) as exc:
+        logger.exception("Invalid JSON data")  # Add logging statement
+        raise HTTPException(status_code=400, detail=f"Invalid JSON data: {str(exc)}")
+
+    except Exception as exc:
+        logger.exception("Error uploading question set")  # Add logging statement
+        raise HTTPException(status_code=500, detail=f"Error uploading question set: {str(exc)}")
 
 @router.get("/question-set/", response_model=List[QuestionSet])
-def read_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_questions_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
     Endpoint to retrieve question sets from the database.
     
@@ -57,14 +84,14 @@ def read_questions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     return questions
 
 @router.post("/question-sets/", response_model=QuestionSet, status_code=201)
-def create_question_set(question_set: QuestionSetCreate, db: Session = Depends(get_db)):
+def create_question_set_endpoint(question_set: QuestionSetCreate, db: Session = Depends(get_db)):
     """
     Create a new question set.
     """
-    return create_question_set_crud(db=db, question_set=question_set)
+    return create_question_set(db=db, question_set=question_set)
 
 @router.get("/question-sets/", response_model=List[QuestionSet])
-def read_question_sets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_question_sets_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
     Retrieve a list of question sets.
     """

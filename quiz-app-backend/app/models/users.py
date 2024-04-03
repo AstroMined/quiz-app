@@ -12,15 +12,9 @@ from app.db import Base
 class User(Base):
     """
     The User model.
-
-    Attributes:
-        id (int): The primary key of the user.
-        username (str): The username of the user.
-        hashed_password (str): The hashed password of the user.
-        is_active (bool): Indicates whether the user is active.
-        responses (List[UserResponse]): The relationship to the associated user responses.
     """
     __tablename__ = "users"
+    __table_args__ = {'extend_existing': True}  # Add this line
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
