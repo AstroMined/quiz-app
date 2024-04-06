@@ -7,9 +7,9 @@ The schemas are used for input validation and serialization/deserialization of Q
 
 from typing import List
 from pydantic import BaseModel
-from app.schemas import AnswerChoiceCreate, AnswerChoice
+from app.schemas import AnswerChoiceCreateSchema, AnswerChoiceSchema
 
-class QuestionBase(BaseModel):
+class QuestionBaseSchema(BaseModel):
     """
     The base schema for a Question.
 
@@ -18,7 +18,7 @@ class QuestionBase(BaseModel):
     """
     text: str
 
-class QuestionCreate(QuestionBase):
+class QuestionCreateSchema(QuestionBaseSchema):
     """
     The schema for creating a Question.
 
@@ -26,10 +26,10 @@ class QuestionCreate(QuestionBase):
     """
     subtopic_id: int
     question_set_id: int
-    answer_choices: List[AnswerChoiceCreate]
+    answer_choices: List[AnswerChoiceCreateSchema]
     explanation: str
 
-class QuestionUpdate(QuestionBase):
+class QuestionUpdateSchema(QuestionBaseSchema):
     """
     The schema for updating a Question.
 
@@ -37,7 +37,7 @@ class QuestionUpdate(QuestionBase):
     """
     pass
 
-class Question(QuestionBase):
+class QuestionSchema(QuestionBaseSchema):
     """
     The schema representing a stored Question.
 
@@ -51,7 +51,7 @@ class Question(QuestionBase):
     id: int
     subtopic_id: int
     question_set_id: int
-    answer_choices: List[AnswerChoice]
+    answer_choices: List[AnswerChoiceSchema]
 
     class Config:
         from_attributes = True

@@ -8,11 +8,10 @@ The UserResponse model represents a user's response to a question in the quiz ap
 from sqlalchemy import Column, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from sqlalchemy.sql.schema import Column
 from sqlalchemy.sql.sqltypes import DateTime
 from app.db.base_class import Base
 
-class UserResponse(Base):
+class UserResponseModel(Base):
     """
     The UserResponse model.
 
@@ -35,7 +34,7 @@ class UserResponse(Base):
     answer_choice_id = Column(Integer, ForeignKey('answer_choices.id'))
     is_correct = Column(Boolean)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    
-    user = relationship("User", back_populates="responses")
-    question = relationship("Question")
-    answer_choice = relationship("AnswerChoice")
+
+    user = relationship("UserModel", back_populates="responses")
+    question = relationship("QuestionModel")
+    answer_choice = relationship("AnswerChoiceModel")

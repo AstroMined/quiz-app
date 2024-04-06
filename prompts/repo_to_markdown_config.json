@@ -3,7 +3,7 @@
   "file_extensions": [".py"],
   "specific_files": {},
   "ignore_directories": [
-    "alembic",
-    "utilities"
+    "utilities",
+    "new-work-items"
   ]
 }

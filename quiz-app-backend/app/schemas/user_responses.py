@@ -8,7 +8,7 @@ The schemas are used for input validation and serialization/deserialization of U
 from datetime import datetime
 from pydantic import BaseModel
 
-class UserResponseBase(BaseModel):
+class UserResponseBaseSchema(BaseModel):
     """
     The base schema for a UserResponse.
 
@@ -23,7 +23,7 @@ class UserResponseBase(BaseModel):
     answer_choice_id: int
     is_correct: bool
 
-class UserResponseCreate(UserResponseBase):
+class UserResponseCreateSchema(UserResponseBaseSchema):
     """
     The schema for creating a UserResponse.
 
@@ -31,7 +31,7 @@ class UserResponseCreate(UserResponseBase):
     """
     pass
 
-class UserResponse(UserResponseBase):
+class UserResponseSchema(UserResponseBaseSchema):
     """
     The schema representing a stored UserResponse.
 

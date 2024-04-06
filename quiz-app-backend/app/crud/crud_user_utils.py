@@ -4,9 +4,9 @@ This module provides utility functions for user-related operations.
 """
 
 from sqlalchemy.orm import Session
-from app.models import User
+from app.models import UserModel
 
-def get_user_by_username(db: Session, username: str) -> User:
+def get_user_by_username_crud(db: Session, username: str) -> UserModel:
     """
     Retrieve a user by username.
 
@@ -17,4 +17,4 @@ def get_user_by_username(db: Session, username: str) -> User:
     Returns:
         User: The user with the specified username.
     """
-    return db.query(User).filter(User.username == username).first()
+    return db.query(UserModel).filter(UserModel.username == username).first()

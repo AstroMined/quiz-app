@@ -2,13 +2,13 @@
 
 from pydantic import BaseModel
 
-class SubtopicBase(BaseModel):
+class SubtopicBaseSchema(BaseModel):
     name: str
 
-class SubtopicCreate(SubtopicBase):
+class SubtopicCreateSchema(SubtopicBaseSchema):
     pass
 
-class Subtopic(SubtopicBase):
+class SubtopicSchema(SubtopicBaseSchema):
     id: int
 
     class Config:

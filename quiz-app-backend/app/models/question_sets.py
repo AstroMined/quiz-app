@@ -9,7 +9,7 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 
-class QuestionSet(Base):
+class QuestionSetModel(Base):
     """
     The QuestionSet model.
 
@@ -23,4 +23,4 @@ class QuestionSet(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     
-    questions = relationship("Question", back_populates="question_set")
+    questions = relationship("QuestionModel", back_populates="question_set")

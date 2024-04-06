@@ -7,10 +7,10 @@ It includes functions for creating and retrieving user responses.
 
 from typing import List
 from sqlalchemy.orm import Session
-from app.models import UserResponse
-from app.schemas import UserResponseCreate
+from app.models import UserResponseModel
+from app.schemas import UserResponseCreateSchema
 
-def create_user_response(db: Session, user_response: UserResponseCreate) -> UserResponse:
+def create_user_response_crud(db: Session, user_response: UserResponseCreateSchema) -> UserResponseModel:
     """
     Create a new user response.
 
@@ -21,13 +21,13 @@ def create_user_response(db: Session, user_response: UserResponseCreate) -> User
     Returns:
         UserResponse: The created user response.
     """
-    db_user_response = UserResponse(**user_response.dict())
+    db_user_response = UserResponseModel(**user_response.dict())
     db.add(db_user_response)
     db.commit()
     db.refresh(db_user_response)
     return db_user_response
 
-def get_user_responses(db: Session, skip: int = 0, limit: int = 100) -> List[UserResponse]:
+def get_user_responses_crud(db: Session, skip: int = 0, limit: int = 100) -> List[UserResponseModel]:
     """
     Retrieve a list of user responses.
 
@@ -39,4 +39,4 @@ def get_user_responses(db: Session, skip: int = 0, limit: int = 100) -> List[Use
     Returns:
         List[UserResponse]: The list of user responses.
     """
-    return db.query(UserResponse).offset(skip).limit(limit).all()
+    return db.query(UserResponseModel).offset(skip).limit(limit).all()

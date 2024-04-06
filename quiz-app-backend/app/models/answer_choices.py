@@ -7,9 +7,9 @@ The AnswerChoice model represents an answer choice for a question in the quiz ap
 
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
+from app.db import Base
 
-class AnswerChoice(Base):
+class AnswerChoiceModel(Base):
     """
     The AnswerChoice model.
 
@@ -27,4 +27,4 @@ class AnswerChoice(Base):
     is_correct = Column(Boolean)
     question_id = Column(Integer, ForeignKey('questions.id'))
     
-    question = relationship("Question", back_populates="answer_choices")
+    question = relationship("QuestionModel", back_populates="answer_choices")

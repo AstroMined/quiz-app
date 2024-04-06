@@ -4,11 +4,11 @@ This module provides CRUD operations for users.
 """
 
 from sqlalchemy.orm import Session
-from app.models import User
-from app.schemas import UserCreate
-from app.core.security import get_password_hash  # Import from app.core.security
+from app.models import UserModel
+from app.schemas import UserCreateSchema
+from app.core import get_password_hash
 
-def create_user(db: Session, user: UserCreate) -> User:
+def create_user_crud(db: Session, user: UserCreateSchema) -> UserModel:
     """
     Create a new user.
 
@@ -20,13 +20,13 @@ def create_user(db: Session, user: UserCreate) -> User:
         User: The created user.
     """
     hashed_password = get_password_hash(user.password)
-    db_user = User(username=user.username, hashed_password=hashed_password)
+    db_user = UserModel(username=user.username, hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
-def remove_user(db: Session, user_id: int) -> User:
+def remove_user_crud(db: Session, user_id: int) -> UserModel:
     """
     Remove a user.
 
@@ -37,7 +37,7 @@ def remove_user(db: Session, user_id: int) -> User:
     Returns:
         User: The removed user, or None if the user doesn't exist.
     """
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if user:
         db.delete(user)
         db.commit()

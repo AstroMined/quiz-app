@@ -24,75 +24,39 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### Question Set Uploads
+### Database Storage
 
-**ID:** 256
+**ID:** 260
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** json; question-upload
+**Tags:** database; postgresql; sqlite
 
 **Description:**
 
-Implement functionality to allow users to upload question sets in JSON format to the quiz app backend. Provide an API endpoint that accepts a JSON file containing an array of questions, along with their answers, explanations, and metadata. Parse and validate the JSON data, and store the question set in the database for future use.
+<ul><li>Set up the database storage for the quiz app backend to store question sets. </li><li>Use SQLite for the development environment. </li><li>Define the necessary database models and schemas for storing question sets, including fields for question text, answer options, correct answer, explanations, tags, and difficulty level. </li><li>Implement database migrations to manage schema changes. </li> </ul>
 
 **Acceptance Criteria:**
 
-- Question set upload endpoint created
-- Accepts JSON file with questions
-- Parses and validates JSON Data
-- Extracts questions answers metadata
-- stores Question set in the database
-- Returns success/error response
-- Handles file upload and processing
-- tested with different JSON files
+- <ul><li>SQLite set up for development </li><li>database models defined for Question sets </li><li>Question text answers explanations stored </li><li>Tags and difficulty level fields included </li><li>database migrations implemented </li><li>Proper database connection handling
+- tested with different storage scenarios </li> </ul>
 
 
-### Create question_sets.py file
+### Configure SQLite database in database.py
 
-**ID:** 257
+**ID:** 261
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** question-sets
+**Tags:** database
 
 **Description:**
 
-Create question_sets.py file to handle question set uploads
-
-
-### Define question set model in models.py
-
-**ID:** 258
-
-**Work Item Type:** Task
-
-**State:** Active
-
-**Tags:** models
-
-**Description:**
-
-Update models.py to define the question set model
-
-
-### Create question set schema in schemas.py
-
-**ID:** 259
-
-**Work Item Type:** Task
-
-**State:** Active
-
-**Tags:** schema
-
-**Description:**
-
-Define the question set schema in schemas.py
+Configure SQLite database in database.py for development
 
 
 

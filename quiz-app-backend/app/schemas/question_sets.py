@@ -7,7 +7,7 @@ The schemas are used for input validation and serialization/deserialization of Q
 
 from pydantic import BaseModel
 
-class QuestionSetBase(BaseModel):
+class QuestionSetBaseSchema(BaseModel):
     """
     The base schema for a QuestionSet.
 
@@ -16,7 +16,7 @@ class QuestionSetBase(BaseModel):
     """
     name: str
 
-class QuestionSetCreate(QuestionSetBase):
+class QuestionSetCreateSchema(QuestionSetBaseSchema):
     """
     The schema for creating a QuestionSet.
 
@@ -24,7 +24,7 @@ class QuestionSetCreate(QuestionSetBase):
     """
     pass
 
-class QuestionSetUpdate(QuestionSetBase):
+class QuestionSetUpdateSchema(QuestionSetBaseSchema):
     """
     The schema for updating a QuestionSet.
 
@@ -32,7 +32,7 @@ class QuestionSetUpdate(QuestionSetBase):
     """
     pass
 
-class QuestionSet(QuestionSetBase):
+class QuestionSetSchema(QuestionSetBaseSchema):
     """
     The schema representing a stored QuestionSet.
 

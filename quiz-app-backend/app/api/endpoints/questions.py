@@ -9,21 +9,21 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from app.crud import (
-    create_question,
-    get_question,
-    get_questions,
-    update_question,
-    delete_question
+    create_question_crud,
+    get_question_crud,
+    get_questions_crud,
+    update_question_crud,
+    delete_question_crud
 )
 from app.db import get_db
-from app.schemas import QuestionCreate, Question, QuestionUpdate
+from app.schemas import QuestionCreateSchema, QuestionSchema, QuestionUpdateSchema
 from app.services import get_current_user
-from app.models.users import User
+from app.models.users import UserModel
 
 router = APIRouter()
 
-@router.post("/questions/", response_model=Question, status_code=201)
-def create_question_endpoint(question: QuestionCreate, db: Session = Depends(get_db)):
+@router.post("/questions/", response_model=QuestionSchema, status_code=201)
+def create_question_endpoint(question: QuestionCreateSchema, db: Session = Depends(get_db)):
     """
     Create a new question.
 
@@ -34,10 +34,10 @@ def create_question_endpoint(question: QuestionCreate, db: Session = Depends(get
     Returns:
         Question: The created question.
     """
-    return create_question(db, question)
+    return create_question_crud(db, question)
 
-@router.get("/questions/{question_id}", response_model=Question)
-def get_question_endpoint(question_id: int, question: QuestionUpdate, db: Session = Depends(get_db)):
+@router.get("/questions/{question_id}", response_model=QuestionSchema)
+def get_question_endpoint(question_id: int, question: QuestionUpdateSchema, db: Session = Depends(get_db)):
     """
     Retrieve a question.
 
@@ -48,11 +48,11 @@ def get_question_endpoint(question_id: int, question: QuestionUpdate, db: Sessio
     Returns:
         Question: The question.
     """
-    question = get_question(db, question_id)
+    question = get_question_crud(db, question_id)
     return question
 
-@router.get("/questions/", response_model=List[Question])
-def get_questions_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/questions/", response_model=List[QuestionSchema])
+def get_questions_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
     """
     Retrieve a list of questions.
 
@@ -65,11 +65,11 @@ def get_questions_endpoint(skip: int = 0, limit: int = 100, db: Session = Depend
     Returns:
         List[Question]: The list of questions.
     """
-    questions = get_questions(db, skip=skip, limit=limit)
+    questions = get_questions_crud(db, skip=skip, limit=limit)
     return questions
 
-@router.put("/questions/{question_id}", response_model=Question)
-def update_question_endpoint(question_id: int, question: QuestionUpdate, db: Session = Depends(get_db)):
+@router.put("/questions/{question_id}", response_model=QuestionSchema)
+def update_question_endpoint(question_id: int, question: QuestionUpdateSchema, db: Session = Depends(get_db)):
     """
     Update a question.
 
@@ -84,7 +84,7 @@ def update_question_endpoint(question_id: int, question: QuestionUpdate, db: Ses
     Raises:
         HTTPException: If the question is not found.
     """
-    db_question = update_question(db, question_id=question_id, question=question)
+    db_question = update_question_crud(db, question_id=question_id, question=question)
     if db_question is None:
         raise HTTPException(status_code=404, detail="Question not found")
     return db_question
@@ -101,7 +101,7 @@ def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
     Raises:
         HTTPException: If the question is not found.
     """
-    deleted = delete_question(db, question_id=question_id)
+    deleted = delete_question_crud(db, question_id=question_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Question not found")
     return Response(status_code=204)

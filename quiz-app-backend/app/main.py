@@ -11,7 +11,7 @@ from app.api.endpoints import (
     user_responses as user_responses_router
 )
 from app.db import get_db, SessionLocal
-from app.models import RevokedToken
+from app.models import RevokedTokenModel
 
 app = FastAPI()
 
@@ -35,11 +35,13 @@ async def check_blacklist(request: Request, call_next):
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
         db = SessionLocal()
-        if db.query(RevokedToken).filter(RevokedToken.token == token).first():
+        if db.query(RevokedTokenModel).filter(RevokedTokenModel.token == token).first():
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
         db.close()
     response = await call_next(request)
     return response
+
+# main.py
 
 @app.middleware("http")
 async def check_revoked_token(request: Request, call_next):
@@ -47,8 +49,15 @@ async def check_revoked_token(request: Request, call_next):
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
         db = next(get_db())
-        revoked_token = db.query(RevokedToken).filter(RevokedToken.token == token).first()
+        revoked_token = db.query(RevokedTokenModel).filter(RevokedTokenModel.token == token).first()
         if revoked_token:
+            # Raise a more specific exception for revoked tokens
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except HTTPException as e:
+        if e.status_code == 401:
+            # Handle invalid token exception
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise e
     return response

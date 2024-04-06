@@ -4,9 +4,9 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose import JWTError
 from app.core import decode_access_token
-from app.crud import get_user_by_username
+from app.crud import get_user_by_username_crud
 from app.db import get_db
-from app.models import RevokedToken
+from app.models import RevokedTokenModel, UserModel
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -34,10 +34,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-        revoked_token = db.query(RevokedToken).filter(RevokedToken.token == token).first()
+        revoked_token = db.query(RevokedTokenModel).filter(RevokedTokenModel.token == token).first()
         if revoked_token:
             raise credentials_exception
-        user = get_user_by_username(db, username=username)
+        user = get_user_by_username_crud(db, username=username)
         if user is None:
             raise credentials_exception
         return user

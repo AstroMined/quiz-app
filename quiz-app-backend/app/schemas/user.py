@@ -6,13 +6,13 @@ This module defines the Pydantic schemas for the User model.
 import string
 from pydantic import BaseModel, validator
 
-class UserBase(BaseModel):
+class UserBaseSchema(BaseModel):
     """
     The base schema for a User.
     """
     username: str
 
-class UserCreate(UserBase):
+class UserCreateSchema(UserBaseSchema):
     """
     The schema for creating a User.
     """
@@ -43,7 +43,7 @@ class UserCreate(UserBase):
             raise ValueError('Password is too common. Please choose a stronger password.')
         return password
 
-class UserLogin(BaseModel):
+class UserLoginSchema(BaseModel):
     """
     The schema for user login.
 
@@ -54,8 +54,9 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
-class User(UserBase):
+class UserSchema(UserBaseSchema):
     id: int
+    is_admin: bool
 
     class Config:
         from_attributes = True

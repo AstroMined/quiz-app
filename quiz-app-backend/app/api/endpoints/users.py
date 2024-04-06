@@ -9,9 +9,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models.users import User as UserModel
-from app.crud.crud_user import create_user as create_user_crud  # Import from crud_user module
-from app.schemas.user import UserCreate as UserCreateSchema, User as UserSchema
+from app.models.users import UserModel
+from app.crud import create_user_crud
+from app.schemas.user import UserCreateSchema, UserSchema
 from app.services import get_current_user
 
 router = APIRouter()

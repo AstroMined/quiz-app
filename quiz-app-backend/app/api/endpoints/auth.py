@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from jose import JWTError
 from app.core import create_access_token, verify_password
 from app.db import get_db
-from app.models import User, RevokedToken
-from app.schemas import Token, LoginForm
+from app.models import UserModel, RevokedTokenModel
+from app.schemas import TokenSchema, LoginFormSchema
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +17,12 @@ blacklist = set()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
-@router.post("/login", response_model=Token)
-async def login_for_access_token(form_data: LoginForm, db: Session = Depends(get_db)):
+@router.post("/login", response_model=TokenSchema)
+async def login_for_access_token(form_data: LoginFormSchema, db: Session = Depends(get_db)):
     """
     Endpoint to authenticate a user and generate an access token.
     """
-    user = db.query(User).filter(User.username == form_data.username).first()
+    user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
 
     if user:
         if not user.is_active:
@@ -49,37 +49,11 @@ async def login_for_access_token(form_data: LoginForm, db: Session = Depends(get
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 async def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    """
-    Endpoint to logout the current user and invalidate the access token.
-    
-    Args:
-        token (str): The access token to be invalidated.
-        db (Session): The database session.
-        
-    Returns:
-        dict: A success message indicating the user has been logged out.
-        
-    Raises:
-        HTTPException: If an error occurs during token decoding or user logout.
-    """
     try:
-        # Check if the token is already revoked
-        revoked_token = db.query(RevokedToken).filter(RevokedToken.token == token).first()
-        if revoked_token:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                detail="Token has been revoked")
-
-        # Revoke the token
-        revoked_token = RevokedToken(token=token)
+        revoked_token = RevokedTokenModel(token=token)
         db.add(revoked_token)
         db.commit()
         return {"message": "Successfully logged out"}
-
-    except JWTError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Invalid token") from exc
-    except HTTPException as exc:
-        raise exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="Failed to logout user") from exc
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to logout user")

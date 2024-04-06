@@ -7,11 +7,11 @@ It includes functions for creating, retrieving, updating, and deleting questions
 
 from typing import List
 from sqlalchemy.orm import Session
-from app.models import Question, AnswerChoice
-from app.schemas import QuestionCreate, QuestionUpdate
+from app.models import QuestionModel, AnswerChoiceModel
+from app.schemas import QuestionCreateSchema, QuestionUpdateSchema
 
-def create_question(db: Session, question: QuestionCreate) -> Question:
-    db_question = Question(
+def create_question_crud(db: Session, question: QuestionCreateSchema) -> QuestionModel:
+    db_question = QuestionModel(
         text=question.text,
         question_set_id=question.question_set_id,
         subtopic_id=question.subtopic_id,
@@ -22,7 +22,7 @@ def create_question(db: Session, question: QuestionCreate) -> Question:
     db.refresh(db_question)
 
     for choice in question.answer_choices:
-        db_choice = AnswerChoice(
+        db_choice = AnswerChoiceModel(
             text=choice.text,
             is_correct=choice.is_correct,
             question=db_question
@@ -32,7 +32,7 @@ def create_question(db: Session, question: QuestionCreate) -> Question:
     db.commit()
     return db_question
 
-def get_questions(db: Session, skip: int = 0, limit: int = 100) -> List[Question]:
+def get_questions_crud(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionModel]:
     """
     Retrieve a list of questions.
 
@@ -44,10 +44,10 @@ def get_questions(db: Session, skip: int = 0, limit: int = 100) -> List[Question
     Returns:
         List[Question]: The list of questions.
     """
-    questions = db.query(Question).offset(skip).limit(limit).all()
+    questions = db.query(QuestionModel).offset(skip).limit(limit).all()
     return questions
 
-def get_question(db: Session, question_id: int) -> Question:
+def get_question_crud(db: Session, question_id: int) -> QuestionModel:
     """
     Retrieve a question by ID.
 
@@ -58,9 +58,9 @@ def get_question(db: Session, question_id: int) -> Question:
     Returns:
         Question: The retrieved question, or None if not found.
     """
-    return db.query(Question).filter(Question.id == question_id).first()
+    return db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
 
-def update_question(db: Session, question_id: int, question: QuestionUpdate) -> Question:
+def update_question_crud(db: Session, question_id: int, question: QuestionUpdateSchema) -> QuestionModel:
     """
     Update a question.
 
@@ -72,7 +72,7 @@ def update_question(db: Session, question_id: int, question: QuestionUpdate) -> 
     Returns:
         Question: The updated question, or None if not found.
     """
-    db_question = db.query(Question).filter(Question.id == question_id).first()
+    db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
     if db_question:
         update_data = question.dict(exclude_unset=True)
         for key, value in update_data.items():
@@ -81,7 +81,7 @@ def update_question(db: Session, question_id: int, question: QuestionUpdate) -> 
         db.refresh(db_question)
     return db_question
 
-def delete_question(db: Session, question_id: int) -> bool:
+def delete_question_crud(db: Session, question_id: int) -> bool:
     """
     Delete a question.
 
@@ -92,7 +92,7 @@ def delete_question(db: Session, question_id: int) -> bool:
     Returns:
         bool: True if the question was deleted, False otherwise.
     """
-    db_question = db.query(Question).filter(Question.id == question_id).first()
+    db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
     if db_question:
         db.delete(db_question)
         db.commit()

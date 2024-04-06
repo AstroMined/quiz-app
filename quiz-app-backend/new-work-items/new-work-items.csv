@@ -1,12 +1,4 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"256","User Story","Question Set Uploads","Active","json; question-upload","Implement functionality to allow users to upload question sets in JSON format to the quiz app backend. Provide an API endpoint that accepts a JSON file containing an array of questions, along with their answers, explanations, and metadata. Parse and validate the JSON data, and store the question set in the database for future use.","Question set upload endpoint created
-Accepts JSON file with questions
-Parses and validates JSON Data
-Extracts questions answers metadata
-stores Question set in the database
-Returns success/error response
-Handles file upload and processing
-tested with different JSON files"
-"257","Task","Create question_sets.py file","Active","question-sets","Create question_sets.py file to handle question set uploads",
-"258","Task","Define question set model in models.py","Active","models","Update models.py to define the question set model",
-"259","Task","Create question set schema in schemas.py","Active","schema","Define the question set schema in schemas.py",
+"260","User Story","Database Storage","Active","database; postgresql; sqlite","<ul><li>Set up the database storage for the quiz app backend to store question sets. </li><li>Use SQLite for the development environment. </li><li>Define the necessary database models and schemas for storing question sets, including fields for question text, answer options, correct answer, explanations, tags, and difficulty level. </li><li>Implement database migrations to manage schema changes. </li> </ul>","<ul><li>SQLite set up for development </li><li>database models defined for Question sets </li><li>Question text answers explanations stored </li><li>Tags and difficulty level fields included </li><li>database migrations implemented </li><li>Proper database connection handling
+tested with different storage scenarios </li> </ul>"
+"261","Task","Configure SQLite database in database.py","Active","database","Configure SQLite database in database.py for development",

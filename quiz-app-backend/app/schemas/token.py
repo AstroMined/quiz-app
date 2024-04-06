@@ -5,7 +5,7 @@ This module defines the Pydantic schema for the Token model.
 
 from pydantic import BaseModel
 
-class Token(BaseModel):
+class TokenSchema(BaseModel):
     """
     The schema representing an access token.
 

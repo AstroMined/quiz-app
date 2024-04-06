@@ -9,7 +9,7 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 
-class Subject(Base):
+class SubjectModel(Base):
     """
     The Subject model.
 
@@ -22,5 +22,5 @@ class Subject(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    
-    topics = relationship("Topic", back_populates="subject")
+
+    topics = relationship("TopicModel", back_populates="subject")

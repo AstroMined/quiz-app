@@ -8,14 +8,14 @@ It defines a route for registering new users by validating the provided data and
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core import get_password_hash
-from app.crud import create_user, get_user_by_username
+from app.crud import create_user_crud, get_user_by_username_crud
 from app.db import get_db
-from app.schemas import UserCreate
+from app.schemas import UserCreateSchema
 
 router = APIRouter()
 
 @router.post("/register/", status_code=201)
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
+def register_user(user: UserCreateSchema, db: Session = Depends(get_db)):
     """
     Endpoint to register a new user.
     
@@ -29,10 +29,10 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     Returns:
         The newly created user object.
     """
-    db_user = get_user_by_username(db, username=user.username)
+    db_user = get_user_by_username_crud(db, username=user.username)
     if db_user:
         raise HTTPException(status_code=422, detail="Username already registered")
     hashed_password = get_password_hash(user.password)
-    user_create = UserCreate(username=user.username, password=hashed_password)
-    created_user = create_user(db=db, user=user_create)
+    user_create = UserCreateSchema(username=user.username, password=hashed_password)
+    created_user = create_user_crud(db=db, user=user_create)
     return created_user

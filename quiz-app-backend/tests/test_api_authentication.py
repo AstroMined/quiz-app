@@ -1,8 +1,10 @@
 # filename: tests/test_api_authentication.py
 
+import pytest
+from fastapi import HTTPException
 from datetime import timedelta
 from app.core import create_access_token
-from app.models import RevokedToken
+from app.models import RevokedTokenModel
 
 def test_user_authentication(client, test_user):
     """Test user authentication and token retrieval."""
@@ -65,10 +67,11 @@ def test_access_protected_endpoint_without_token(client):
     response = client.get("/users/")
     assert response.status_code == 401
 
-def test_access_protected_endpoint_with_invalid_token(client):
+def test_access_protected_endpoint_with_invalid_token(client, db_session):
     headers = {"Authorization": "Bearer invalid_token"}
     response = client.get("/users/", headers=headers)
     assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid token"
 
 def test_register_user_invalid_password(client):
     """Test registration with an invalid password."""
@@ -133,11 +136,11 @@ def test_login_inactive_user(client, test_user, db_session):
     assert response.status_code == 401
     assert "inactive" in response.json()["detail"]
 
-def test_login_invalid_token_format(client):
+def test_login_invalid_token_format(client, db_session):
     headers = {"Authorization": "Bearer invalid_token_format"}
     response = client.get("/users/", headers=headers)
     assert response.status_code == 401
-    assert "Invalid token" in response.json()["detail"]
+    assert response.json()["detail"] == "Invalid token"
 
 def test_login_expired_token(client, test_user):
     """
@@ -160,18 +163,16 @@ def test_login_nonexistent_user(client, db_session):
     assert "Username not found" in response.json()["detail"]
 
 def test_logout_revoked_token(client, test_user, test_token, db_session):
-    """
-    Test logout with an already revoked token.
-    """
     # Revoke the token manually
-    revoked_token = RevokedToken(token=test_token)
+    revoked_token = RevokedTokenModel(token=test_token)
     db_session.add(revoked_token)
     db_session.commit()
 
     headers = {"Authorization": f"Bearer {test_token}"}
-    response = client.post("/logout", headers=headers)
-    assert response.status_code == 401
-    assert "Token has been revoked" in response.json()["detail"]
+    with pytest.raises(HTTPException) as exc_info:
+        client.post("/logout", headers=headers)
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Token has been revoked"
 
 def test_protected_endpoint_expired_token(client, test_user, db_session):
     """
@@ -208,6 +209,7 @@ def test_login_logout_flow(client, test_user):
     assert logout_response.status_code == 200
     
     # Try accessing the protected endpoint again after logout
-    protected_response_after_logout = client.get("/users/", headers=headers)
-    assert protected_response_after_logout.status_code == 401
-    assert "Could not validate credentials" in protected_response_after_logout.json()["detail"]
+    with pytest.raises(HTTPException) as exc_info:
+        client.get("/users/", headers=headers)
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Token has been revoked"

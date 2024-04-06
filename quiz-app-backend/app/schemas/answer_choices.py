@@ -1,7 +1,7 @@
 # app/schemas/answer_choices.py
 from pydantic import BaseModel
 
-class AnswerChoiceBase(BaseModel):
+class AnswerChoiceBaseSchema(BaseModel):
     """
     The base schema for an AnswerChoice.
 
@@ -12,7 +12,7 @@ class AnswerChoiceBase(BaseModel):
     text: str
     is_correct: bool
 
-class AnswerChoiceCreate(AnswerChoiceBase):
+class AnswerChoiceCreateSchema(AnswerChoiceBaseSchema):
     """
     The schema for creating an AnswerChoice.
 
@@ -20,7 +20,7 @@ class AnswerChoiceCreate(AnswerChoiceBase):
     """
     pass
 
-class AnswerChoice(AnswerChoiceBase):
+class AnswerChoiceSchema(AnswerChoiceBaseSchema):
     """
     The schema representing a stored AnswerChoice.
 
