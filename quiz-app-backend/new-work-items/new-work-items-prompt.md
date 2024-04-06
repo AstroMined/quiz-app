@@ -24,39 +24,53 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### Database Storage
+### Public/Private Question Sets
 
-**ID:** 260
+**ID:** 263
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** database; postgresql; sqlite
+**Tags:** question-sets
 
 **Description:**
 
-<ul><li>Set up the database storage for the quiz app backend to store question sets. </li><li>Use SQLite for the development environment. </li><li>Define the necessary database models and schemas for storing question sets, including fields for question text, answer options, correct answer, explanations, tags, and difficulty level. </li><li>Implement database migrations to manage schema changes. </li> </ul>
+Allow users to mark question sets as public or private.
 
 **Acceptance Criteria:**
 
-- <ul><li>SQLite set up for development </li><li>database models defined for Question sets </li><li>Question text answers explanations stored </li><li>Tags and difficulty level fields included </li><li>database migrations implemented </li><li>Proper database connection handling
-- tested with different storage scenarios </li> </ul>
+- Public/private flag added to Question set model and schema
 
 
-### Configure SQLite database in database.py
+### Implement public/private flags in question_sets.py
 
-**ID:** 261
+**ID:** 264
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** database
+**Tags:** question-sets
 
 **Description:**
 
-Configure SQLite database in database.py for development
+Implement public/private flags for question sets in question_sets.py
+
+
+### Update question set model for public/private
+
+**ID:** 265
+
+**Work Item Type:** Task
+
+**State:** Active
+
+**Tags:** models
+
+**Description:**
+
+Update the question set model in models.py to support public/private
 
 
 

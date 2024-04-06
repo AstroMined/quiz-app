@@ -1,4 +1,4 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"260","User Story","Database Storage","Active","database; postgresql; sqlite","<ul><li>Set up the database storage for the quiz app backend to store question sets. </li><li>Use SQLite for the development environment. </li><li>Define the necessary database models and schemas for storing question sets, including fields for question text, answer options, correct answer, explanations, tags, and difficulty level. </li><li>Implement database migrations to manage schema changes. </li> </ul>","<ul><li>SQLite set up for development </li><li>database models defined for Question sets </li><li>Question text answers explanations stored </li><li>Tags and difficulty level fields included </li><li>database migrations implemented </li><li>Proper database connection handling
-tested with different storage scenarios </li> </ul>"
-"261","Task","Configure SQLite database in database.py","Active","database","Configure SQLite database in database.py for development",
+"263","User Story","Public/Private Question Sets","Active","question-sets","Allow users to mark question sets as public or private.","Public/private flag added to Question set model and schema"
+"264","Task","Implement public/private flags in question_sets.py","Active","question-sets","Implement public/private flags for question sets in question_sets.py",
+"265","Task","Update question set model for public/private","Active","models","Update the question set model in models.py to support public/private",

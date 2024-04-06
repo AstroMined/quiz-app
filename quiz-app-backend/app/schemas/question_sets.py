@@ -22,7 +22,7 @@ class QuestionSetCreateSchema(QuestionSetBaseSchema):
 
     Inherits from QuestionSetBase.
     """
-    pass
+    is_public: bool = True
 
 class QuestionSetUpdateSchema(QuestionSetBaseSchema):
     """
@@ -42,6 +42,7 @@ class QuestionSetSchema(QuestionSetBaseSchema):
         id (int): The unique identifier of the question set.
     """
     id: int
+    is_public: bool = True
 
     class Config:
         from_attributes = True

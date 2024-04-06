@@ -146,3 +146,8 @@ def test_delete_question_set(logged_in_client, test_question_set, db_session):
         assert question_sets_after_deletion['detail'] == 'No question sets found.', "Unexpected response after deletion."
     else:
         raise AssertionError("Unexpected response format after attempting to delete the question set.")
+
+def test_create_private_question_set(logged_in_client):
+    response = logged_in_client.post("/question-sets/", json={"name": "Test Private Set", "is_public": False})
+    assert response.status_code == 201
+    assert response.json()["is_public"] == False

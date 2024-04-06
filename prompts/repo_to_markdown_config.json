@@ -4,6 +4,7 @@
   "specific_files": {},
   "ignore_directories": [
     "utilities",
-    "new-work-items"
+    "new-work-items",
+    "alembic"
   ]
 }
