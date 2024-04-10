@@ -6,3 +6,7 @@ from .subtopics import SubtopicSchema, SubtopicBaseSchema, SubtopicCreateSchema
 from .token import TokenSchema
 from .user import UserCreateSchema, UserLoginSchema, UserBaseSchema, UserSchema
 from .user_responses import UserResponseBaseSchema, UserResponseSchema, UserResponseCreateSchema
+from .filters import FilterParamsSchema
+from .subjects import SubjectSchema, SubjectBaseSchema, SubjectCreateSchema
+from .topics import TopicSchema, TopicBaseSchema, TopicCreateSchema
+from .question_tags import QuestionTagSchema, QuestionTagBaseSchema, QuestionTagCreateSchema

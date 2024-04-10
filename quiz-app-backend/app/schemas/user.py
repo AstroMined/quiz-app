@@ -1,31 +1,16 @@
 # filename: app/schemas/user.py
-"""
-This module defines the Pydantic schemas for the User model.
-"""
 
 import string
 from pydantic import BaseModel, validator
 
 class UserBaseSchema(BaseModel):
-    """
-    The base schema for a User.
-    """
     username: str
 
 class UserCreateSchema(UserBaseSchema):
-    """
-    The schema for creating a User.
-    """
     password: str
 
     @validator('password')
     def validate_password(cls, password):
-        """
-        Validate the password.
-
-        The password must be at least 8 characters long and contain at least one digit,
-        one uppercase letter, one lowercase letter, and one special character.
-        """
         if len(password) < 8:
             raise ValueError('Password must be at least 8 characters long')
         if not any(char.isdigit() for char in password):
@@ -44,13 +29,6 @@ class UserCreateSchema(UserBaseSchema):
         return password
 
 class UserLoginSchema(BaseModel):
-    """
-    The schema for user login.
-
-    Attributes:
-        username (str): The username of the user.
-        password (str): The password of the user.
-    """
     username: str
     password: str
 

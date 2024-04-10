@@ -5,7 +5,7 @@ from app.models import SubtopicModel
 from app.schemas import SubtopicCreateSchema
 
 def create_subtopic_crud(db: Session, subtopic: SubtopicCreateSchema) -> SubtopicModel:
-    db_subtopic = SubtopicModel(**subtopic.dict())
+    db_subtopic = SubtopicModel(**subtopic.model_dump())
     db.add(db_subtopic)
     db.commit()
     db.refresh(db_subtopic)

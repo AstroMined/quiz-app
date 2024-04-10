@@ -7,8 +7,12 @@ from app.api.endpoints import (
     token as token_router,
     auth as auth_router,
     question_sets as question_sets_router,
+    question as question_router,
     questions as questions_router,
-    user_responses as user_responses_router
+    user_responses as user_responses_router,
+    filters as filters_router,
+    subjects as subjects_router,
+    topics as topics_router
 )
 from app.db import get_db, SessionLocal
 from app.models import RevokedTokenModel
@@ -21,8 +25,12 @@ app.include_router(register_router.router, tags=["Authentication"])
 app.include_router(token_router.router, tags=["Authentication"])
 app.include_router(auth_router.router, tags=["Authentication"])
 app.include_router(question_sets_router.router, tags=["Question Sets"])
+app.include_router(question_router.router, tags=["Question"])
 app.include_router(questions_router.router, tags=["Questions"])
 app.include_router(user_responses_router.router, tags=["User Responses"])
+app.include_router(filters_router.router, tags=["Filters"])
+app.include_router(topics_router.router, tags=["Topics"])
+app.include_router(subjects_router.router, tags=["Subjects"])
 
 @app.get("/")
 def read_root():

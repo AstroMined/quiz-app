@@ -1,9 +1,4 @@
 # filename: app/api/endpoints/question_sets.py
-"""
-This module provides endpoints for managing question sets.
-
-It defines routes for uploading question sets and retrieving question sets from the database.
-"""
 
 import json
 from typing import List
@@ -40,9 +35,6 @@ router = APIRouter()
 
 @router.post("/upload-questions/")
 async def upload_question_set_endpoint(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
-    """
-    Endpoint to upload a question set in JSON format.
-    """
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can upload question sets")
 
@@ -73,38 +65,18 @@ async def upload_question_set_endpoint(file: UploadFile = File(...), db: Session
 
 @router.get("/question-set/", response_model=List[QuestionSetSchema])
 def read_questions_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """
-    Endpoint to retrieve question sets from the database.
-
-    Args:
-        skip: The number of question sets to skip (for pagination).
-        limit: The maximum number of question sets to retrieve (for pagination).
-        db: A database session dependency injected by FastAPI.
-
-    Returns:
-        A list of question set objects.
-    """
     questions = read_question_sets_crud(db, skip=skip, limit=limit)
     return questions
 
 @router.post("/question-sets/", response_model=QuestionSetSchema, status_code=201)
 def create_question_set_endpoint(question_set: QuestionSetCreateSchema, db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
-    """
-    Create a new question set.
-    """
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can create question sets")
-
-    if len(question_set.name) < 3:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Question set name must be at least 3 characters long")
 
     return create_question_set_crud(db=db, question_set=question_set)
 
 @router.get("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
 def get_question_set_endpoint(question_set_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieve a question set by ID.
-    """
     question_set = read_question_set_crud(db, question_set_id=question_set_id)
     if not question_set:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Question set with ID {question_set_id} not found")
@@ -112,36 +84,23 @@ def get_question_set_endpoint(question_set_id: int, db: Session = Depends(get_db
 
 @router.get("/question-sets/", response_model=List[QuestionSetSchema])
 def read_question_sets_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """
-    Retrieve a list of question sets.
-    """
     question_sets = read_question_sets_crud(db, skip=skip, limit=limit)
     return question_sets
 
 @router.put("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
 def update_question_set_endpoint(question_set_id: int, question_set: QuestionSetUpdateSchema, db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
-    """
-    Update a question set.
-
-    Args:
-        question_set_id (int): The ID of the question set to update.
-        question_set (QuestionSetUpdate): The updated question set data.
-        db (Session): The database session.
-        current_user (User): The current authenticated user.
-
-    Returns:
-        QuestionSet: The updated question set.
-
-    Raises:
-        HTTPException: If the question set is not found or the user is not an admin.
-    """
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can update question sets")
 
     db_question_set = update_question_set_crud(db, question_set_id=question_set_id, question_set=question_set)
     if db_question_set is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question set not found")
-    return db_question_set
+    return QuestionSetSchema(
+        id=db_question_set.id,
+        name=db_question_set.name,
+        is_public=db_question_set.is_public,
+        question_ids=db_question_set.question_ids
+    )
 
 @router.delete("/question-sets/{question_set_id}", status_code=204)
 def delete_question_set_endpoint(question_set_id: int, db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):

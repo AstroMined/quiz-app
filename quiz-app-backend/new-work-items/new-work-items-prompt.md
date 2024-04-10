@@ -24,43 +24,48 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### Public/Private Question Sets
+### Filtering Options
 
-**ID:** 263
+**ID:** 267
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** question-sets
+**Tags:** criteria; filtering
 
 **Description:**
 
-Allow users to mark question sets as public or private.
+Implement filtering options in the quiz app backend to allow users to narrow down the question pool based on specific criteria. Provide API endpoints that accept filtering parameters such as subject, topic, subtopic, difficulty level, or tags. Retrieve questions from the database that match the specified criteria and return them in a structured format for the frontend to display.
 
 **Acceptance Criteria:**
 
-- Public/private flag added to Question set model and schema
+- Filtering API endpoints created
+- Accepts subject topic subtopic difficulty
+- Accepts Tags for advanced Filtering
+- Retrieves matching questions from database
+- Returns Filtered questions in structured format
+- Proper validation and error handling
 
 
-### Implement public/private flags in question_sets.py
+### Create filters.py file
 
-**ID:** 264
+**ID:** 268
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** question-sets
+**Tags:** filters
 
 **Description:**
 
-Implement public/private flags for question sets in question_sets.py
+Create filters.py file to handle question filtering
 
 
-### Update question set model for public/private
+### Implement question filtering in models.py
 
-**ID:** 265
+**ID:** 269
 
 **Work Item Type:** Task
 
@@ -70,7 +75,7 @@ Implement public/private flags for question sets in question_sets.py
 
 **Description:**
 
-Update the question set model in models.py to support public/private
+Implement question filtering capabilities in models.py
 
 
 

@@ -1,21 +1,19 @@
 # filename: app/crud/crud_questions.py
-"""
-This module provides CRUD operations for questions.
-
-It includes functions for creating, retrieving, updating, and deleting questions.
-"""
 
 from typing import List
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+from fastapi import HTTPException
 from app.models import QuestionModel, AnswerChoiceModel
 from app.schemas import QuestionCreateSchema, QuestionUpdateSchema
 
 def create_question_crud(db: Session, question: QuestionCreateSchema) -> QuestionModel:
     db_question = QuestionModel(
         text=question.text,
-        question_set_id=question.question_set_id,
+        subject_id=question.subject_id,
+        topic_id=question.topic_id,
         subtopic_id=question.subtopic_id,
-        explanation=question.explanation
+        explanation=question.explanation,
+        difficulty=question.difficulty
     )
     db.add(db_question)
     db.commit()
@@ -25,74 +23,50 @@ def create_question_crud(db: Session, question: QuestionCreateSchema) -> Questio
         db_choice = AnswerChoiceModel(
             text=choice.text,
             is_correct=choice.is_correct,
-            question=db_question
+            question_id=db_question.id
         )
         db.add(db_choice)
+
+    db_question.question_set_ids = question.question_set_ids
 
     db.commit()
     return db_question
 
 def get_questions_crud(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionModel]:
-    """
-    Retrieve a list of questions.
-
-    Args:
-        db (Session): The database session.
-        skip (int): The number of questions to skip.
-        limit (int): The maximum number of questions to retrieve.
-
-    Returns:
-        List[Question]: The list of questions.
-    """
     questions = db.query(QuestionModel).offset(skip).limit(limit).all()
     return questions
 
 def get_question_crud(db: Session, question_id: int) -> QuestionModel:
-    """
-    Retrieve a question by ID.
-
-    Args:
-        db (Session): The database session.
-        question_id (int): The ID of the question.
-
-    Returns:
-        Question: The retrieved question, or None if not found.
-    """
-    return db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
+    return db.query(QuestionModel).options(
+        joinedload(QuestionModel.subject),
+        joinedload(QuestionModel.topic),
+        joinedload(QuestionModel.subtopic),
+        joinedload(QuestionModel.tags),
+        joinedload(QuestionModel.answer_choices)
+    ).filter(QuestionModel.id == question_id).first()
 
 def update_question_crud(db: Session, question_id: int, question: QuestionUpdateSchema) -> QuestionModel:
-    """
-    Update a question.
-
-    Args:
-        db (Session): The database session.
-        question_id (int): The ID of the question to update.
-        question (QuestionUpdate): The updated question data.
-
-    Returns:
-        Question: The updated question, or None if not found.
-    """
     db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
-    if db_question:
-        update_data = question.dict(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(db_question, key, value)
-        db.commit()
-        db.refresh(db_question)
+    if not db_question:
+        return None
+        # raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+
+    update_data = question.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_question, field, value)
+
+    if question.question_set_ids is not None:
+        db_question.question_set_ids = question.question_set_ids
+
+    db.commit()
+    db.refresh(db_question)
     return db_question
 
 def delete_question_crud(db: Session, question_id: int) -> bool:
-    """
-    Delete a question.
-
-    Args:
-        db (Session): The database session.
-        question_id (int): The ID of the question to delete.
-
-    Returns:
-        bool: True if the question was deleted, False otherwise.
-    """
     db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
+    # if not db_question:
+    #     return False
+        # raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
     if db_question:
         db.delete(db_question)
         db.commit()

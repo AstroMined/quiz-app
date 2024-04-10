@@ -5,6 +5,20 @@ import pytest
 from jose import JWTError
 from app.core import create_access_token, verify_token
 
+@pytest.fixture
+def test_data():
+    return {"sub": "testuser"}
+
+def test_jwt_token_generation_and_validation(test_data):
+    """Test JWT token generation and subsequent validation."""
+    # Generate a token
+    token = create_access_token(data=test_data, expires_delta=timedelta(minutes=15))
+    assert token is not None, "Failed to generate JWT token."
+    
+    # Validate the token
+    decoded_username = verify_token(token, credentials_exception=Exception("Invalid token"))
+    assert decoded_username == test_data["sub"], "JWT token validation failed. Username mismatch."
+
 def test_jwt_token_creation_and_verification():
     """
     Test the JWT token creation and verification process.

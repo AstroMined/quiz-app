@@ -28,3 +28,4 @@ class TopicModel(Base):
 
     subject = relationship("SubjectModel", back_populates="topics")
     subtopics = relationship("SubtopicModel", back_populates="topic")
+    questions = relationship("QuestionModel", back_populates="topic")
