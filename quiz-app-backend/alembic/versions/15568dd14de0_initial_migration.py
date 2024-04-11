@@ -1,8 +1,8 @@
-"""User story 260
+"""Initial migration
 
-Revision ID: 9264884a8e59
-Revises: be0e168b5404
-Create Date: 2024-04-06 04:38:26.049088
+Revision ID: 15568dd14de0
+Revises: 
+Create Date: 2024-04-10 16:49:19.021645
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '9264884a8e59'
-down_revision: Union[str, None] = 'be0e168b5404'
+revision: str = '15568dd14de0'
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -23,10 +23,18 @@ def upgrade() -> None:
     op.create_table('question_sets',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
+    sa.Column('is_public', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_question_sets_id'), 'question_sets', ['id'], unique=False)
     op.create_index(op.f('ix_question_sets_name'), 'question_sets', ['name'], unique=False)
+    op.create_table('question_tags',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('tag', sa.String(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_question_tags_id'), 'question_tags', ['id'], unique=False)
+    op.create_index(op.f('ix_question_tags_tag'), 'question_tags', ['tag'], unique=True)
     op.create_table('revoked_tokens',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('token', sa.String(), nullable=True),
@@ -35,6 +43,10 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_revoked_tokens_id'), 'revoked_tokens', ['id'], unique=False)
     op.create_index(op.f('ix_revoked_tokens_token'), 'revoked_tokens', ['token'], unique=True)
+    op.create_table('sessions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('subjects',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
@@ -52,6 +64,14 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
     op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
+    op.create_table('session_question_set',
+    sa.Column('session_id', sa.Integer(), nullable=False),
+    sa.Column('question_set_id', sa.Integer(), nullable=False),
+    sa.Column('question_limit', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['question_set_id'], ['question_sets.id'], ),
+    sa.ForeignKeyConstraint(['session_id'], ['sessions.id'], ),
+    sa.PrimaryKeyConstraint('session_id', 'question_set_id')
+    )
     op.create_table('topics',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
@@ -73,11 +93,14 @@ def upgrade() -> None:
     op.create_table('questions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('text', sa.String(), nullable=True),
+    sa.Column('subject_id', sa.Integer(), nullable=True),
+    sa.Column('topic_id', sa.Integer(), nullable=True),
     sa.Column('subtopic_id', sa.Integer(), nullable=True),
-    sa.Column('question_set_id', sa.Integer(), nullable=True),
+    sa.Column('difficulty', sa.String(), nullable=True),
     sa.Column('explanation', sa.String(), nullable=True),
-    sa.ForeignKeyConstraint(['question_set_id'], ['question_sets.id'], ),
+    sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], ),
     sa.ForeignKeyConstraint(['subtopic_id'], ['subtopics.id'], ),
+    sa.ForeignKeyConstraint(['topic_id'], ['topics.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_questions_id'), 'questions', ['id'], unique=False)
@@ -92,6 +115,30 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_answer_choices_id'), 'answer_choices', ['id'], unique=False)
     op.create_index(op.f('ix_answer_choices_text'), 'answer_choices', ['text'], unique=False)
+    op.create_table('question_set_question',
+    sa.Column('question_id', sa.Integer(), nullable=False),
+    sa.Column('question_set_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['question_id'], ['questions.id'], ),
+    sa.ForeignKeyConstraint(['question_set_id'], ['question_sets.id'], ),
+    sa.PrimaryKeyConstraint('question_id', 'question_set_id')
+    )
+    op.create_table('question_tag_association',
+    sa.Column('question_id', sa.Integer(), nullable=False),
+    sa.Column('tag_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['question_id'], ['questions.id'], ),
+    sa.ForeignKeyConstraint(['tag_id'], ['question_tags.id'], ),
+    sa.PrimaryKeyConstraint('question_id', 'tag_id')
+    )
+    op.create_table('session_question',
+    sa.Column('session_id', sa.Integer(), nullable=False),
+    sa.Column('question_id', sa.Integer(), nullable=False),
+    sa.Column('answered', sa.Boolean(), nullable=True),
+    sa.Column('correct', sa.Boolean(), nullable=True),
+    sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['question_id'], ['questions.id'], ),
+    sa.ForeignKeyConstraint(['session_id'], ['sessions.id'], ),
+    sa.PrimaryKeyConstraint('session_id', 'question_id')
+    )
     op.create_table('user_responses',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
@@ -112,6 +159,9 @@ def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_index(op.f('ix_user_responses_id'), table_name='user_responses')
     op.drop_table('user_responses')
+    op.drop_table('session_question')
+    op.drop_table('question_tag_association')
+    op.drop_table('question_set_question')
     op.drop_index(op.f('ix_answer_choices_text'), table_name='answer_choices')
     op.drop_index(op.f('ix_answer_choices_id'), table_name='answer_choices')
     op.drop_table('answer_choices')
@@ -124,15 +174,20 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_topics_name'), table_name='topics')
     op.drop_index(op.f('ix_topics_id'), table_name='topics')
     op.drop_table('topics')
+    op.drop_table('session_question_set')
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_table('users')
     op.drop_index(op.f('ix_subjects_name'), table_name='subjects')
     op.drop_index(op.f('ix_subjects_id'), table_name='subjects')
     op.drop_table('subjects')
+    op.drop_table('sessions')
     op.drop_index(op.f('ix_revoked_tokens_token'), table_name='revoked_tokens')
     op.drop_index(op.f('ix_revoked_tokens_id'), table_name='revoked_tokens')
     op.drop_table('revoked_tokens')
+    op.drop_index(op.f('ix_question_tags_tag'), table_name='question_tags')
+    op.drop_index(op.f('ix_question_tags_id'), table_name='question_tags')
+    op.drop_table('question_tags')
     op.drop_index(op.f('ix_question_sets_name'), table_name='question_sets')
     op.drop_index(op.f('ix_question_sets_id'), table_name='question_sets')
     op.drop_table('question_sets')

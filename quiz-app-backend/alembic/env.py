@@ -9,13 +9,15 @@ from app.db import Base
 
 from app.models import (
     answer_choices,
+    question_sets,
+    question_tags,
     questions,
+    sessions,
     subjects,
     subtopics,
     topics,
     user_responses,
-    users,
-    question_sets
+    users
 )
 
 # this is the Alembic Config object, which provides
