@@ -1,6 +1,6 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"273","User Story","Track User Answers","Active","response-tracking","Design a system to record user answers with timestamps and correctness.","User response model created with fields for User ID Question ID selected answer Correctness and timestamp
-CRUD functions implemented for User responses"
-"274","Task","Create crud functions and endpoints to track user responses","Active","responses","<div>Create crud functions and endpoints to track user responses to questions. </div>",
-"275","Task","Define user response models","Active","models","<div>Update models to properly define the user response model </div>",
-"276","Task","Define the user response schemas","Active","schema","<div>Define the user response schemas </div>",
+"280","User Story","Question Set Endpoints","Active","api; question-sets","Develop endpoints for question set CRUD operations.","Question set creation endpoint
+Question set retrieval update delete endpoints
+Proper validation and error handling
+Authentication and authorization"
+"281","Task","Implement question set endpoints","Active","api","Implement question set API endpoints in main.py",

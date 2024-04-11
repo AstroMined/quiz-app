@@ -24,69 +24,41 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### Track User Answers
+### Question Set Endpoints
 
-**ID:** 273
+**ID:** 280
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** response-tracking
+**Tags:** api; question-sets
 
 **Description:**
 
-Design a system to record user answers with timestamps and correctness.
+Develop endpoints for question set CRUD operations.
 
 **Acceptance Criteria:**
 
-- User response model created with fields for User ID Question ID selected answer Correctness and timestamp
-- CRUD functions implemented for User responses
+- Question set creation endpoint
+- Question set retrieval update delete endpoints
+- Proper validation and error handling
+- Authentication and authorization
 
 
-### Create crud functions and endpoints to track user responses
+### Implement question set endpoints
 
-**ID:** 274
-
-**Work Item Type:** Task
-
-**State:** Active
-
-**Tags:** responses
-
-**Description:**
-
-<div>Create crud functions and endpoints to track user responses to questions. </div>
-
-
-### Define user response models
-
-**ID:** 275
+**ID:** 281
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** models
+**Tags:** api
 
 **Description:**
 
-<div>Update models to properly define the user response model </div>
-
-
-### Define the user response schemas
-
-**ID:** 276
-
-**Work Item Type:** Task
-
-**State:** Active
-
-**Tags:** schema
-
-**Description:**
-
-<div>Define the user response schemas </div>
+Implement question set API endpoints in main.py
 
 
 
