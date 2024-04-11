@@ -25,10 +25,9 @@ def test_question_create_schema():
         "question_set_ids": [1],
         "difficulty": "Easy",
         "answer_choices": [
-            {"text": "Answer 1", "is_correct": True},
-            {"text": "Answer 2", "is_correct": False}
-        ],
-        "explanation": "Test explanation"
+            {"text": "Answer 1", "is_correct": True, "explanation": "Test explanation 1"},
+            {"text": "Answer 2", "is_correct": False, "explanation": "Test explanation 2"}
+        ]
     }
     question_schema = QuestionCreateSchema(**question_data)
     assert question_schema.text == "Test question"
@@ -38,4 +37,3 @@ def test_question_create_schema():
     assert question_schema.question_set_ids == [1]
     assert question_schema.difficulty == "Easy"
     assert len(question_schema.answer_choices) == 2
-    assert question_schema.explanation == "Test explanation"

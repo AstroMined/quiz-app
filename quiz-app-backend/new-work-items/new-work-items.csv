@@ -1,9 +1,6 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"267","User Story","Filtering Options","Active","criteria; filtering","Implement filtering options in the quiz app backend to allow users to narrow down the question pool based on specific criteria. Provide API endpoints that accept filtering parameters such as subject, topic, subtopic, difficulty level, or tags. Retrieve questions from the database that match the specified criteria and return them in a structured format for the frontend to display.","Filtering API endpoints created
-Accepts subject topic subtopic difficulty
-Accepts Tags for advanced Filtering
-Retrieves matching questions from database
-Returns Filtered questions in structured format
-Proper validation and error handling"
-"268","Task","Create filters.py file","Active","filters","Create filters.py file to handle question filtering",
-"269","Task","Implement question filtering in models.py","Active","models","Implement question filtering capabilities in models.py",
+"273","User Story","Track User Answers","Active","response-tracking","Design a system to record user answers with timestamps and correctness.","User response model created with fields for User ID Question ID selected answer Correctness and timestamp
+CRUD functions implemented for User responses"
+"274","Task","Create crud functions and endpoints to track user responses","Active","responses","<div>Create crud functions and endpoints to track user responses to questions. </div>",
+"275","Task","Define user response models","Active","models","<div>Update models to properly define the user response model </div>",
+"276","Task","Define the user response schemas","Active","schema","<div>Define the user response schemas </div>",

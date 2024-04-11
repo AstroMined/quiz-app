@@ -32,7 +32,6 @@ def create_question_endpoint(question: QuestionCreateSchema, db: Session = Depen
         topic_id=question_db.topic_id,
         subtopic_id=question_db.subtopic_id,
         difficulty=question_db.difficulty,
-        explanation=question_db.explanation,
         tags=[QuestionTagSchema.model_validate(tag) for tag in question_db.tags],
         answer_choices=[AnswerChoiceSchema.model_validate(choice) for choice in question_db.answer_choices],
         question_set_ids=question_db.question_set_ids
@@ -55,7 +54,6 @@ def update_question_endpoint(question_id: int, question: QuestionUpdateSchema, d
         topic_id=db_question.topic_id,
         subtopic_id=db_question.subtopic_id,
         difficulty=db_question.difficulty,
-        explanation=db_question.explanation,
         tags=[QuestionTagSchema.model_validate(tag) for tag in db_question.tags],
         answer_choices=[AnswerChoiceSchema.model_validate(choice) for choice in db_question.answer_choices],
         question_set_ids=db_question.question_set_ids

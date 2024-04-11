@@ -24,48 +24,44 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### Filtering Options
+### Track User Answers
 
-**ID:** 267
+**ID:** 273
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** criteria; filtering
+**Tags:** response-tracking
 
 **Description:**
 
-Implement filtering options in the quiz app backend to allow users to narrow down the question pool based on specific criteria. Provide API endpoints that accept filtering parameters such as subject, topic, subtopic, difficulty level, or tags. Retrieve questions from the database that match the specified criteria and return them in a structured format for the frontend to display.
+Design a system to record user answers with timestamps and correctness.
 
 **Acceptance Criteria:**
 
-- Filtering API endpoints created
-- Accepts subject topic subtopic difficulty
-- Accepts Tags for advanced Filtering
-- Retrieves matching questions from database
-- Returns Filtered questions in structured format
-- Proper validation and error handling
+- User response model created with fields for User ID Question ID selected answer Correctness and timestamp
+- CRUD functions implemented for User responses
 
 
-### Create filters.py file
+### Create crud functions and endpoints to track user responses
 
-**ID:** 268
+**ID:** 274
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** filters
+**Tags:** responses
 
 **Description:**
 
-Create filters.py file to handle question filtering
+<div>Create crud functions and endpoints to track user responses to questions. </div>
 
 
-### Implement question filtering in models.py
+### Define user response models
 
-**ID:** 269
+**ID:** 275
 
 **Work Item Type:** Task
 
@@ -75,7 +71,22 @@ Create filters.py file to handle question filtering
 
 **Description:**
 
-Implement question filtering capabilities in models.py
+<div>Update models to properly define the user response model </div>
+
+
+### Define the user response schemas
+
+**ID:** 276
+
+**Work Item Type:** Task
+
+**State:** Active
+
+**Tags:** schema
+
+**Description:**
+
+<div>Define the user response schemas </div>
 
 
 

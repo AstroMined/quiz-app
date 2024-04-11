@@ -2,7 +2,6 @@
 
 from typing import List
 from sqlalchemy.orm import Session, joinedload
-from fastapi import HTTPException
 from app.models import QuestionModel, AnswerChoiceModel
 from app.schemas import QuestionCreateSchema, QuestionUpdateSchema
 
@@ -12,7 +11,6 @@ def create_question_crud(db: Session, question: QuestionCreateSchema) -> Questio
         subject_id=question.subject_id,
         topic_id=question.topic_id,
         subtopic_id=question.subtopic_id,
-        explanation=question.explanation,
         difficulty=question.difficulty
     )
     db.add(db_question)
@@ -23,6 +21,7 @@ def create_question_crud(db: Session, question: QuestionCreateSchema) -> Questio
         db_choice = AnswerChoiceModel(
             text=choice.text,
             is_correct=choice.is_correct,
+            explanation=choice.explanation,
             question_id=db_question.id
         )
         db.add(db_choice)
@@ -49,11 +48,24 @@ def update_question_crud(db: Session, question_id: int, question: QuestionUpdate
     db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
     if not db_question:
         return None
-        # raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
 
     update_data = question.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(db_question, field, value)
+        if field == "answer_choices":
+            # Remove existing answer choices
+            db_question.answer_choices = []
+            db.commit()
+
+            for choice_data in value:
+                db_choice = AnswerChoiceModel(
+                    text=choice_data["text"],
+                    is_correct=choice_data["is_correct"],
+                    explanation=choice_data["explanation"],
+                    question_id=db_question.id
+                )
+                db.add(db_choice)
+        else:
+            setattr(db_question, field, value)
 
     if question.question_set_ids is not None:
         db_question.question_set_ids = question.question_set_ids
@@ -64,9 +76,7 @@ def update_question_crud(db: Session, question_id: int, question: QuestionUpdate
 
 def delete_question_crud(db: Session, question_id: int) -> bool:
     db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
-    # if not db_question:
-    #     return False
-        # raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+
     if db_question:
         db.delete(db_question)
         db.commit()

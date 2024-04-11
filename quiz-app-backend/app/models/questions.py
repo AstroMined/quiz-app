@@ -19,7 +19,6 @@ class QuestionModel(Base):
     topic_id = Column(Integer, ForeignKey("topics.id"))
     subtopic_id = Column(Integer, ForeignKey("subtopics.id"))
     difficulty = Column(String)
-    explanation = Column(String)
 
     subject = relationship("SubjectModel", back_populates="questions")
     topic = relationship("TopicModel", back_populates="questions")

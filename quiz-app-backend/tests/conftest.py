@@ -123,8 +123,8 @@ def test_subtopic(db_session, test_topic):
 
 @pytest.fixture(scope="function")
 def test_question(db_session, test_question_set, test_subtopic, test_topic, test_subject):
-    answer_choice_1 = AnswerChoiceCreateSchema(text="Test Answer 1", is_correct=True)
-    answer_choice_2 = AnswerChoiceCreateSchema(text="Test Answer 2", is_correct=False)
+    answer_choice_1 = AnswerChoiceCreateSchema(text="Test Answer 1", is_correct=True, explanation="Test Explanation 1")
+    answer_choice_2 = AnswerChoiceCreateSchema(text="Test Answer 2", is_correct=False, explanation="Test Explanation 2")
     question_data = QuestionCreateSchema(
         text="Test Question",
         subject_id=test_subject.id,
@@ -132,7 +132,6 @@ def test_question(db_session, test_question_set, test_subtopic, test_topic, test
         subtopic_id=test_subtopic.id,
         difficulty="Easy",
         answer_choices=[answer_choice_1, answer_choice_2],
-        explanation="Test Explanation",
         question_set_ids=[test_question_set.id]
     )
     question = create_question_crud(db_session, question_data)
@@ -205,7 +204,6 @@ def setup_filter_questions_data(db_session):
         topic=topic1,
         subtopic=subtopic1,
         difficulty="Easy",
-        explanation="Solve the equation",
         tags=[tag1, tag2]
     )
     question2 = QuestionModel(
@@ -214,7 +212,6 @@ def setup_filter_questions_data(db_session):
         topic=topic1,
         subtopic=subtopic2,
         difficulty="Medium",
-        explanation="Use the quadratic formula",
         tags=[tag1, tag2]
     )
     question3 = QuestionModel(
@@ -223,7 +220,6 @@ def setup_filter_questions_data(db_session):
         topic=topic2,
         subtopic=subtopic3,
         difficulty="Easy",
-        explanation="Area = (base * height) / 2",
         tags=[tag3]
     )
     question4 = QuestionModel(
@@ -232,7 +228,6 @@ def setup_filter_questions_data(db_session):
         topic=topic3,
         subtopic=subtopic4,
         difficulty="Medium",
-        explanation="v = u + at",
         tags=[tag4]
     )
     db_session.add_all([question1, question2, question3, question4])

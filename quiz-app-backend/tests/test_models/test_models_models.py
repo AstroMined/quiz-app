@@ -34,11 +34,12 @@ def test_question_model_creation(db_session):
 
 def test_question_model_with_answers(db_session):
     question = QuestionModel(text="What is the capital of France?", difficulty="Easy")
-    answer = AnswerChoiceModel(text="Paris", is_correct=True, question=question)
+    answer = AnswerChoiceModel(text="Paris", is_correct=True, explanation="Paris is the capital and largest city of France.", question=question)
     db_session.add_all([question, answer])
     db_session.commit()
     assert len(question.answer_choices) == 1
     assert question.answer_choices[0].text == "Paris"
+    assert question.answer_choices[0].explanation == "Paris is the capital and largest city of France."
 
 def test_question_model_deletion_cascades_to_answers(db_session):
     question = QuestionModel(text="What is the capital of France?", difficulty="Easy")

@@ -93,7 +93,7 @@ from .question_sets import QuestionSetCreateSchema, QuestionSetBaseSchema, Quest
 from .subtopics import SubtopicSchema, SubtopicBaseSchema, SubtopicCreateSchema
 from .token import TokenSchema
 from .user import UserCreateSchema, UserLoginSchema, UserBaseSchema, UserSchema
-from .user_responses import UserResponseBaseSchema, UserResponseSchema, UserResponseCreateSchema
+from .user_responses import UserResponseBaseSchema, UserResponseSchema, UserResponseCreateSchema, UserResponseUpdateSchema
 from .filters import FilterParamsSchema
 from .subjects import SubjectSchema, SubjectBaseSchema, SubjectCreateSchema
 from .topics import TopicSchema, TopicBaseSchema, TopicCreateSchema
@@ -109,6 +109,7 @@ from pydantic import BaseModel
 class AnswerChoiceBaseSchema(BaseModel):
     text: str
     is_correct: bool
+    explanation: str
 
 class AnswerChoiceCreateSchema(AnswerChoiceBaseSchema):
     pass
@@ -117,6 +118,7 @@ class AnswerChoiceSchema(BaseModel):
     id: int
     text: str
     is_correct: bool
+    explanation: str
 
     class Config:
         from_attributes = True
@@ -216,7 +218,6 @@ class QuestionBaseSchema(BaseModel):
 class QuestionCreateSchema(QuestionBaseSchema):
     text: Optional[str] = Field(None, description="The text of the question")
     difficulty: Optional[str] = Field(None, description="The difficulty level of the question")
-    explanation: Optional[str] = Field(None, description="An explanation for the question")
     subject_id: Optional[int] = Field(None, description="ID of the subject associated with the question")
     topic_id: Optional[int] = Field(None, description="ID of the topic associated with the question")
     subtopic_id: Optional[int] = Field(None, description="ID of the subtopic associated with the question")
@@ -227,7 +228,6 @@ class QuestionCreateSchema(QuestionBaseSchema):
 class QuestionUpdateSchema(BaseModel):
     text: Optional[str] = Field(None, description="The text of the question")
     difficulty: Optional[str] = Field(None, description="The difficulty level of the question")
-    explanation: Optional[str] = Field(None, description="An explanation for the question")
     subject_id: Optional[int] = Field(None, description="ID of the subject associated with the question")
     topic_id: Optional[int] = Field(None, description="ID of the topic associated with the question")
     subtopic_id: Optional[int] = Field(None, description="ID of the subtopic associated with the question")
@@ -242,7 +242,6 @@ class QuestionSchema(BaseModel):
     topic_id: int
     subtopic_id: int
     difficulty: Optional[str] = None
-    explanation: Optional[str] = None
     tags: Optional[List[QuestionTagSchema]] = []
     answer_choices: List[AnswerChoiceSchema] = []
     question_set_ids: Optional[List[int]] = []
@@ -422,6 +421,7 @@ class UserSchema(UserBaseSchema):
 ```py
 # filename: app/schemas/user_responses.py
 
+from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -433,6 +433,9 @@ class UserResponseBaseSchema(BaseModel):
 
 class UserResponseCreateSchema(UserResponseBaseSchema):
     pass
+
+class UserResponseUpdateSchema(BaseModel):
+    is_correct: Optional[bool] = None
 
 class UserResponseSchema(UserResponseBaseSchema):
     id: int
@@ -549,7 +552,7 @@ from .crud_filters import filter_questions
 from .crud_question_sets import create_question_set_crud, read_question_sets_crud, read_question_set_crud, update_question_set_crud, delete_question_set_crud
 from .crud_questions import create_question_crud, get_question_crud, get_questions_crud, update_question_crud, delete_question_crud
 from .crud_user import create_user_crud, remove_user_crud
-from .crud_user_responses import create_user_response_crud, get_user_responses_crud
+from .crud_user_responses import create_user_response_crud, get_user_response_crud, get_user_responses_crud, update_user_response_crud, delete_user_response_crud
 from .crud_user_utils import get_user_by_username_crud
 from .crud_subtopics import create_subtopic_crud
 from .crud_subjects import create_subject_crud, read_subject_crud, update_subject_crud, delete_subject_crud
@@ -672,7 +675,6 @@ def delete_question_set_crud(db: Session, question_set_id: int) -> bool:
 
 from typing import List
 from sqlalchemy.orm import Session, joinedload
-from fastapi import HTTPException
 from app.models import QuestionModel, AnswerChoiceModel
 from app.schemas import QuestionCreateSchema, QuestionUpdateSchema
 
@@ -682,7 +684,6 @@ def create_question_crud(db: Session, question: QuestionCreateSchema) -> Questio
         subject_id=question.subject_id,
         topic_id=question.topic_id,
         subtopic_id=question.subtopic_id,
-        explanation=question.explanation,
         difficulty=question.difficulty
     )
     db.add(db_question)
@@ -693,6 +694,7 @@ def create_question_crud(db: Session, question: QuestionCreateSchema) -> Questio
         db_choice = AnswerChoiceModel(
             text=choice.text,
             is_correct=choice.is_correct,
+            explanation=choice.explanation,
             question_id=db_question.id
         )
         db.add(db_choice)
@@ -719,11 +721,24 @@ def update_question_crud(db: Session, question_id: int, question: QuestionUpdate
     db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
     if not db_question:
         return None
-        # raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
 
     update_data = question.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(db_question, field, value)
+        if field == "answer_choices":
+            # Remove existing answer choices
+            db_question.answer_choices = []
+            db.commit()
+
+            for choice_data in value:
+                db_choice = AnswerChoiceModel(
+                    text=choice_data["text"],
+                    is_correct=choice_data["is_correct"],
+                    explanation=choice_data["explanation"],
+                    question_id=db_question.id
+                )
+                db.add(db_choice)
+        else:
+            setattr(db_question, field, value)
 
     if question.question_set_ids is not None:
         db_question.question_set_ids = question.question_set_ids
@@ -734,9 +749,7 @@ def update_question_crud(db: Session, question_id: int, question: QuestionUpdate
 
 def delete_question_crud(db: Session, question_id: int) -> bool:
     db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
-    # if not db_question:
-    #     return False
-        # raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+
     if db_question:
         db.delete(db_question)
         db.commit()
@@ -887,47 +900,43 @@ def remove_user_crud(db: Session, user_id: int) -> UserModel:
 ## File: crud_user_responses.py
 ```py
 # filename: app/crud/crud_user_responses.py
-"""
-This module provides CRUD operations for user responses.
 
-It includes functions for creating and retrieving user responses.
-"""
-
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 from app.models import UserResponseModel
-from app.schemas import UserResponseCreateSchema
+from app.schemas import UserResponseCreateSchema, UserResponseUpdateSchema
 
 def create_user_response_crud(db: Session, user_response: UserResponseCreateSchema) -> UserResponseModel:
-    """
-    Create a new user response.
-
-    Args:
-        db (Session): The database session.
-        user_response (UserResponseCreate): The user response data.
-
-    Returns:
-        UserResponse: The created user response.
-    """
-    db_user_response = UserResponseModel(**user_response.dict())
+    db_user_response = UserResponseModel(**user_response.model_dump())
     db.add(db_user_response)
     db.commit()
     db.refresh(db_user_response)
     return db_user_response
 
+def get_user_response_crud(db: Session, user_response_id: int) -> Optional[UserResponseModel]:
+    return db.query(UserResponseModel).filter(UserResponseModel.id == user_response_id).first()
+
 def get_user_responses_crud(db: Session, skip: int = 0, limit: int = 100) -> List[UserResponseModel]:
-    """
-    Retrieve a list of user responses.
-
-    Args:
-        db (Session): The database session.
-        skip (int): The number of user responses to skip.
-        limit (int): The maximum number of user responses to retrieve.
-
-    Returns:
-        List[UserResponse]: The list of user responses.
-    """
     return db.query(UserResponseModel).offset(skip).limit(limit).all()
+
+def update_user_response_crud(db: Session, user_response_id: int, user_response: UserResponseUpdateSchema) -> UserResponseModel:
+    db_user_response = db.query(UserResponseModel).filter(UserResponseModel.id == user_response_id).first()
+    if not db_user_response:
+        raise HTTPException(status_code=404, detail="User response not found")
+    update_data = user_response.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_user_response, key, value)
+    db.commit()
+    db.refresh(db_user_response)
+    return db_user_response
+
+def delete_user_response_crud(db: Session, user_response_id: int) -> None:
+    db_user_response = db.query(UserResponseModel).filter(UserResponseModel.id == user_response_id).first()
+    if not db_user_response:
+        raise HTTPException(status_code=404, detail="User response not found")
+    db.delete(db_user_response)
+    db.commit()
 ```
 
 ## File: crud_user_utils.py
@@ -1161,7 +1170,6 @@ def create_question_endpoint(question: QuestionCreateSchema, db: Session = Depen
         topic_id=question_db.topic_id,
         subtopic_id=question_db.subtopic_id,
         difficulty=question_db.difficulty,
-        explanation=question_db.explanation,
         tags=[QuestionTagSchema.model_validate(tag) for tag in question_db.tags],
         answer_choices=[AnswerChoiceSchema.model_validate(choice) for choice in question_db.answer_choices],
         question_set_ids=question_db.question_set_ids
@@ -1184,7 +1192,6 @@ def update_question_endpoint(question_id: int, question: QuestionUpdateSchema, d
         topic_id=db_question.topic_id,
         subtopic_id=db_question.subtopic_id,
         difficulty=db_question.difficulty,
-        explanation=db_question.explanation,
         tags=[QuestionTagSchema.model_validate(tag) for tag in db_question.tags],
         answer_choices=[AnswerChoiceSchema.model_validate(choice) for choice in db_question.answer_choices],
         question_set_ids=db_question.question_set_ids
@@ -1507,71 +1514,60 @@ def delete_topic_endpoint(topic_id: int, db: Session = Depends(get_db)):
 ## File: user_responses.py
 ```py
 # filename: app/api/endpoints/user_responses.py
-"""
-This module provides endpoints for managing user responses.
-
-It defines routes for creating and retrieving user responses.
-"""
 
 from typing import List
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Response
 from sqlalchemy.orm import Session
-from app.crud.crud_user_responses import create_user_response_crud, get_user_responses_crud
-from app.db.session import get_db
-from app.schemas.user_responses import UserResponseSchema, UserResponseCreateSchema
-from app.models.users import UserModel
-from app.models.questions import QuestionModel
-from app.models.answer_choices import AnswerChoiceModel
+from app.crud import (
+    create_user_response_crud,
+    get_user_response_crud,
+    get_user_responses_crud,
+    update_user_response_crud,
+    delete_user_response_crud
+)
+from app.db import get_db
+from app.schemas import UserResponseSchema, UserResponseCreateSchema, UserResponseUpdateSchema
+from app.models import AnswerChoiceModel, UserModel, QuestionModel
 
 router = APIRouter()
 
 @router.post("/user-responses/", response_model=UserResponseSchema, status_code=status.HTTP_201_CREATED)
 def create_user_response_endpoint(user_response: UserResponseCreateSchema, db: Session = Depends(get_db)):
-    """
-    Create a new user response.
-
-    Args:
-        user_response (UserResponseCreate): The user response data.
-        db (Session): The database session.
-
-    Returns:
-        UserResponse: The created user response.
-
-    Raises:
-        HTTPException: If the provided data is invalid or any referenced entities do not exist.
-    """
-    # Validate the user_id
     user = db.query(UserModel).filter(UserModel.id == user_response.user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id")
 
-    # Validate the question_id
     question = db.query(QuestionModel).filter(QuestionModel.id == user_response.question_id).first()
     if not question:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid question_id")
 
-    # Validate the answer_choice_id
     answer_choice = db.query(AnswerChoiceModel).filter(AnswerChoiceModel.id == user_response.answer_choice_id).first()
     if not answer_choice:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid answer_choice_id")
 
     return create_user_response_crud(db=db, user_response=user_response)
 
+@router.get("/user-responses/{user_response_id}", response_model=UserResponseSchema)
+def get_user_response_endpoint(user_response_id: int, db: Session = Depends(get_db)):
+    user_response = get_user_response_crud(db, user_response_id)
+    if not user_response:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User response not found")
+    return user_response
+
 @router.get("/user-responses/", response_model=List[UserResponseSchema])
 def get_user_responses_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """
-    Retrieve a list of user responses.
-
-    Args:
-        skip (int): The number of user responses to skip.
-        limit (int): The maximum number of user responses to retrieve.
-        db (Session): The database session.
-
-    Returns:
-        List[UserResponse]: The list of user responses.
-    """
     user_responses = get_user_responses_crud(db, skip=skip, limit=limit)
     return user_responses
+
+@router.put("/user-responses/{user_response_id}", response_model=UserResponseSchema)
+def update_user_response_endpoint(user_response_id: int, user_response: UserResponseUpdateSchema, db: Session = Depends(get_db)):
+    updated_user_response = update_user_response_crud(db, user_response_id, user_response)
+    return updated_user_response
+
+@router.delete("/user-responses/{user_response_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user_response_endpoint(user_response_id: int, db: Session = Depends(get_db)):
+    delete_user_response_crud(db, user_response_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 ```
 
@@ -1633,7 +1629,7 @@ from .users import UserModel
 ```py
 # filename: app/models/answer_choices.py
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.db import Base
 
@@ -1643,6 +1639,7 @@ class AnswerChoiceModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     text = Column(String, index=True)
     is_correct = Column(Boolean)
+    explanation = Column(Text)  # Add the explanation field
     question_id = Column(Integer, ForeignKey('questions.id'))
 
     question = relationship("QuestionModel", back_populates="answer_choices")
@@ -1717,7 +1714,6 @@ class QuestionModel(Base):
     topic_id = Column(Integer, ForeignKey("topics.id"))
     subtopic_id = Column(Integer, ForeignKey("subtopics.id"))
     difficulty = Column(String)
-    explanation = Column(String)
 
     subject = relationship("SubjectModel", back_populates="questions")
     topic = relationship("TopicModel", back_populates="questions")
@@ -2174,8 +2170,8 @@ def test_subtopic(db_session, test_topic):
 
 @pytest.fixture(scope="function")
 def test_question(db_session, test_question_set, test_subtopic, test_topic, test_subject):
-    answer_choice_1 = AnswerChoiceCreateSchema(text="Test Answer 1", is_correct=True)
-    answer_choice_2 = AnswerChoiceCreateSchema(text="Test Answer 2", is_correct=False)
+    answer_choice_1 = AnswerChoiceCreateSchema(text="Test Answer 1", is_correct=True, explanation="Test Explanation 1")
+    answer_choice_2 = AnswerChoiceCreateSchema(text="Test Answer 2", is_correct=False, explanation="Test Explanation 2")
     question_data = QuestionCreateSchema(
         text="Test Question",
         subject_id=test_subject.id,
@@ -2183,7 +2179,6 @@ def test_question(db_session, test_question_set, test_subtopic, test_topic, test
         subtopic_id=test_subtopic.id,
         difficulty="Easy",
         answer_choices=[answer_choice_1, answer_choice_2],
-        explanation="Test Explanation",
         question_set_ids=[test_question_set.id]
     )
     question = create_question_crud(db_session, question_data)
@@ -2256,7 +2251,6 @@ def setup_filter_questions_data(db_session):
         topic=topic1,
         subtopic=subtopic1,
         difficulty="Easy",
-        explanation="Solve the equation",
         tags=[tag1, tag2]
     )
     question2 = QuestionModel(
@@ -2265,7 +2259,6 @@ def setup_filter_questions_data(db_session):
         topic=topic1,
         subtopic=subtopic2,
         difficulty="Medium",
-        explanation="Use the quadratic formula",
         tags=[tag1, tag2]
     )
     question3 = QuestionModel(
@@ -2274,7 +2267,6 @@ def setup_filter_questions_data(db_session):
         topic=topic2,
         subtopic=subtopic3,
         difficulty="Easy",
-        explanation="Area = (base * height) / 2",
         tags=[tag3]
     )
     question4 = QuestionModel(
@@ -2283,7 +2275,6 @@ def setup_filter_questions_data(db_session):
         topic=topic3,
         subtopic=subtopic4,
         difficulty="Medium",
-        explanation="v = u + at",
         tags=[tag4]
     )
     db_session.add_all([question1, question2, question3, question4])
@@ -2356,10 +2347,9 @@ def test_question_create_schema():
         "question_set_ids": [1],
         "difficulty": "Easy",
         "answer_choices": [
-            {"text": "Answer 1", "is_correct": True},
-            {"text": "Answer 2", "is_correct": False}
-        ],
-        "explanation": "Test explanation"
+            {"text": "Answer 1", "is_correct": True, "explanation": "Test explanation 1"},
+            {"text": "Answer 2", "is_correct": False, "explanation": "Test explanation 2"}
+        ]
     }
     question_schema = QuestionCreateSchema(**question_data)
     assert question_schema.text == "Test question"
@@ -2369,7 +2359,6 @@ def test_question_create_schema():
     assert question_schema.question_set_ids == [1]
     assert question_schema.difficulty == "Easy"
     assert len(question_schema.answer_choices) == 2
-    assert question_schema.explanation == "Test explanation"
 
 ```
 
@@ -2896,6 +2885,8 @@ def test_create_private_question_set(logged_in_client):
 ```py
 # filename: tests/test_api_questions.py
 
+from app.schemas import AnswerChoiceCreateSchema
+
 def test_create_question_endpoint(logged_in_client, test_subject, test_topic, test_subtopic, test_question_set):
     data = {
         "text": "Test Question",
@@ -2904,10 +2895,9 @@ def test_create_question_endpoint(logged_in_client, test_subject, test_topic, te
         "subtopic_id": test_subtopic.id,
         "difficulty": "Easy",
         "answer_choices": [
-            {"text": "Answer 1", "is_correct": True},
-            {"text": "Answer 2", "is_correct": False}
+            {"text": "Answer 1", "is_correct": True, "explanation": "Answer 1 is correct."},
+            {"text": "Answer 2", "is_correct": False, "explanation": "Answer 2 is incorrect."}
         ],
-        "explanation": "Test Explanation",
         "question_set_ids": [test_question_set.id]
     }
     response = logged_in_client.post("/question/", json=data)
@@ -2931,7 +2921,6 @@ def test_read_questions_with_token(logged_in_client, db_session, test_question):
     assert found_test_question["subtopic_id"] == test_question.subtopic_id
     assert found_test_question["topic_id"] == test_question.topic_id
     assert found_test_question["difficulty"] == test_question.difficulty
-    assert found_test_question["explanation"] == test_question.explanation
 
 def test_update_question_not_found(logged_in_client, db_session):
     question_id = 999  # Assuming this ID does not exist
@@ -2950,15 +2939,19 @@ def test_update_question_endpoint(logged_in_client, test_question, test_question
     data = {
         "text": "Updated Question",
         "difficulty": "Medium",
-        "explanation": "Updated Explanation",
+        "answer_choices": [
+            {"text": "Updated Answer 1", "is_correct": True, "explanation": "Updated Answer 1 is correct."},
+            {"text": "Updated Answer 2", "is_correct": False, "explanation": "Updated Answer 2 is incorrect."}
+        ],
         "question_set_ids": [test_question_set.id]
     }
     response = logged_in_client.put(f"/question/{test_question.id}", json=data)
     assert response.status_code == 200
     assert response.json()["text"] == "Updated Question"
     assert response.json()["difficulty"] == "Medium"
-    assert response.json()["explanation"] == "Updated Explanation"
     assert test_question_set.id in response.json()["question_set_ids"]
+    assert any(choice["text"] == "Updated Answer 1" and choice["explanation"] == "Updated Answer 1 is correct." for choice in response.json()["answer_choices"])
+    assert any(choice["text"] == "Updated Answer 2" and choice["explanation"] == "Updated Answer 2 is incorrect." for choice in response.json()["answer_choices"])
 
 ```
 
@@ -3087,6 +3080,23 @@ def test_create_user_response_invalid_data(client, db_session):
     response = client.post("/user-responses/", json=invalid_data)
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid user_id"
+
+def test_update_user_response(logged_in_client, db_session, test_user, test_question, test_answer_choice_1):
+    response_data = {"user_id": test_user.id, "question_id": test_question.id, "answer_choice_id": test_answer_choice_1.id, "is_correct": True}
+    created_response = logged_in_client.post("/user-responses/", json=response_data).json()
+    update_data = {"is_correct": False}
+    response = logged_in_client.put(f"/user-responses/{created_response['id']}", json=update_data)
+    assert response.status_code == 200
+    assert response.json()["is_correct"] is False
+
+def test_delete_user_response(logged_in_client, db_session, test_user, test_question, test_answer_choice_1):
+    response_data = {"user_id": test_user.id, "question_id": test_question.id, "answer_choice_id": test_answer_choice_1.id, "is_correct": True}
+    created_response = logged_in_client.post("/user-responses/", json=response_data).json()
+    response = logged_in_client.delete(f"/user-responses/{created_response['id']}")
+    assert response.status_code == 204
+    response = logged_in_client.get(f"/user-responses/{created_response['id']}")
+    assert response.status_code == 404
+
 ```
 
 ## File: test_api_users.py
@@ -3199,6 +3209,7 @@ def test_update_question_set_crud(db_session, test_question_set, test_question):
 ## File: test_crud_questions.py
 ```py
 # filename: tests/test_crud_questions.py
+
 from app.schemas import (
     QuestionCreateSchema,
     QuestionUpdateSchema,
@@ -3222,17 +3233,15 @@ def test_create_and_retrieve_question(db_session, test_question_set, test_subtop
     subject = create_subject_crud(db_session, subject_data)
     topic_data = TopicCreateSchema(name="Test Topic", subject_id=subject.id)
     topic = create_topic_crud(db_session, topic_data)
-    answer_choice_1 = AnswerChoiceCreateSchema(text="Test Answer 1", is_correct=True)
-    answer_choice_2 = AnswerChoiceCreateSchema(text="Test Answer 2", is_correct=False)
+    answer_choice_1 = AnswerChoiceCreateSchema(text="Test Answer 1", is_correct=True, explanation="Answer 1 is correct.")
+    answer_choice_2 = AnswerChoiceCreateSchema(text="Test Answer 2", is_correct=False, explanation="Answer 2 is incorrect.")
     question_data = QuestionCreateSchema(
         text="Sample Question?",
         subject_id=subject.id,
         topic_id=topic.id,
         subtopic_id=test_subtopic.id,
-        question_set_id=test_question_set.id,
         difficulty="Easy",
-        answer_choices=[answer_choice_1, answer_choice_2],
-        explanation="Test Explanation"
+        answer_choices=[answer_choice_1, answer_choice_2]
     )
     created_question = create_question_crud(db=db_session, question=question_data)
     retrieved_question = get_question_crud(db_session, question_id=created_question.id)
@@ -3240,6 +3249,8 @@ def test_create_and_retrieve_question(db_session, test_question_set, test_subtop
     assert retrieved_question.text == "Sample Question?", "Question text does not match."
     assert retrieved_question.difficulty == "Easy", "Question difficulty level does not match."
     assert len(retrieved_question.answer_choices) == 2, "Answer choices not created correctly."
+    assert any(choice.text == "Test Answer 1" and choice.explanation == "Answer 1 is correct." for choice in retrieved_question.answer_choices)
+    assert any(choice.text == "Test Answer 2" and choice.explanation == "Answer 2 is incorrect." for choice in retrieved_question.answer_choices)
 
 def test_get_nonexistent_question(db_session):
     """Test retrieval of a non-existent question."""
@@ -3272,15 +3283,19 @@ def test_update_question_crud(db_session, test_question, test_question_set):
     question_update = QuestionUpdateSchema(
         text="Updated Question",
         difficulty="Medium",
-        explanation="Updated Explanation",
+        answer_choices=[
+            {"text": "Updated Answer 1", "is_correct": True, "explanation": "Updated Answer 1 is correct."},
+            {"text": "Updated Answer 2", "is_correct": False, "explanation": "Updated Answer 2 is incorrect."}
+        ],
         question_set_ids=[test_question_set.id]
     )
     updated_question = update_question_crud(db_session, test_question.id, question_update)
 
     assert updated_question.text == "Updated Question"
     assert updated_question.difficulty == "Medium"
-    assert updated_question.explanation == "Updated Explanation"
     assert test_question_set.id in updated_question.question_set_ids
+    assert any(choice.text == "Updated Answer 1" and choice.explanation == "Updated Answer 1 is correct." for choice in updated_question.answer_choices)
+    assert any(choice.text == "Updated Answer 2" and choice.explanation == "Updated Answer 2 is incorrect." for choice in updated_question.answer_choices)
 
 ```
 
@@ -3330,8 +3345,9 @@ def test_create_user(db_session, random_username):
 ## File: test_crud_user_responses.py
 ```py
 # filename: tests/test_crud_user_responses.py
-from app.schemas import UserResponseCreateSchema
+from app.schemas import UserResponseCreateSchema, UserResponseUpdateSchema
 from app.crud import crud_user_responses
+from app.models import UserResponseModel
 
 def test_create_and_retrieve_user_response(db_session, test_user, test_question, test_answer_choice_1):
     """Test creation and retrieval of a user response."""
@@ -3339,6 +3355,20 @@ def test_create_and_retrieve_user_response(db_session, test_user, test_question,
     created_response = crud_user_responses.create_user_response_crud(db=db_session, user_response=response_data)
     assert created_response is not None, "Failed to create user response."
     assert created_response.is_correct is True, "User response correctness does not match."
+
+def test_update_user_response(db_session, test_user, test_question, test_answer_choice_1):
+    response_data = UserResponseCreateSchema(user_id=test_user.id, question_id=test_question.id, answer_choice_id=test_answer_choice_1.id, is_correct=True)
+    created_response = crud_user_responses.create_user_response_crud(db=db_session, user_response=response_data)
+    update_data = UserResponseUpdateSchema(is_correct=False)
+    updated_response = crud_user_responses.update_user_response_crud(db=db_session, user_response_id=created_response.id, user_response=update_data)
+    assert updated_response.is_correct is False
+
+def test_delete_user_response(db_session, test_user, test_question, test_answer_choice_1):
+    response_data = UserResponseCreateSchema(user_id=test_user.id, question_id=test_question.id, answer_choice_id=test_answer_choice_1.id, is_correct=True)
+    created_response = crud_user_responses.create_user_response_crud(db=db_session, user_response=response_data)
+    crud_user_responses.delete_user_response_crud(db=db_session, user_response_id=created_response.id)
+    deleted_response = db_session.query(UserResponseModel).filter(UserResponseModel.id == created_response.id).first()
+    assert deleted_response is None
 
 ```
 
@@ -3382,11 +3412,12 @@ def test_question_model_creation(db_session):
 
 def test_question_model_with_answers(db_session):
     question = QuestionModel(text="What is the capital of France?", difficulty="Easy")
-    answer = AnswerChoiceModel(text="Paris", is_correct=True, question=question)
+    answer = AnswerChoiceModel(text="Paris", is_correct=True, explanation="Paris is the capital and largest city of France.", question=question)
     db_session.add_all([question, answer])
     db_session.commit()
     assert len(question.answer_choices) == 1
     assert question.answer_choices[0].text == "Paris"
+    assert question.answer_choices[0].explanation == "Paris is the capital and largest city of France."
 
 def test_question_model_deletion_cascades_to_answers(db_session):
     question = QuestionModel(text="What is the capital of France?", difficulty="Easy")

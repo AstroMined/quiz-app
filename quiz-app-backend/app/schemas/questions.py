@@ -14,7 +14,6 @@ class QuestionBaseSchema(BaseModel):
 class QuestionCreateSchema(QuestionBaseSchema):
     text: Optional[str] = Field(None, description="The text of the question")
     difficulty: Optional[str] = Field(None, description="The difficulty level of the question")
-    explanation: Optional[str] = Field(None, description="An explanation for the question")
     subject_id: Optional[int] = Field(None, description="ID of the subject associated with the question")
     topic_id: Optional[int] = Field(None, description="ID of the topic associated with the question")
     subtopic_id: Optional[int] = Field(None, description="ID of the subtopic associated with the question")
@@ -25,7 +24,6 @@ class QuestionCreateSchema(QuestionBaseSchema):
 class QuestionUpdateSchema(BaseModel):
     text: Optional[str] = Field(None, description="The text of the question")
     difficulty: Optional[str] = Field(None, description="The difficulty level of the question")
-    explanation: Optional[str] = Field(None, description="An explanation for the question")
     subject_id: Optional[int] = Field(None, description="ID of the subject associated with the question")
     topic_id: Optional[int] = Field(None, description="ID of the topic associated with the question")
     subtopic_id: Optional[int] = Field(None, description="ID of the subtopic associated with the question")
@@ -40,7 +38,6 @@ class QuestionSchema(BaseModel):
     topic_id: int
     subtopic_id: int
     difficulty: Optional[str] = None
-    explanation: Optional[str] = None
     tags: Optional[List[QuestionTagSchema]] = []
     answer_choices: List[AnswerChoiceSchema] = []
     question_set_ids: Optional[List[int]] = []
