@@ -4,7 +4,7 @@ from .questions import QuestionBaseSchema, QuestionSchema, QuestionCreateSchema,
 from .question_sets import QuestionSetCreateSchema, QuestionSetBaseSchema, QuestionSetSchema, QuestionSetUpdateSchema
 from .subtopics import SubtopicSchema, SubtopicBaseSchema, SubtopicCreateSchema
 from .token import TokenSchema
-from .user import UserCreateSchema, UserLoginSchema, UserBaseSchema, UserSchema
+from .user import UserCreateSchema, UserLoginSchema, UserBaseSchema, UserSchema, UserUpdateSchema
 from .user_responses import UserResponseBaseSchema, UserResponseSchema, UserResponseCreateSchema, UserResponseUpdateSchema
 from .filters import FilterParamsSchema
 from .subjects import SubjectSchema, SubjectBaseSchema, SubjectCreateSchema

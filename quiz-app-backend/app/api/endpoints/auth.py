@@ -19,9 +19,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 @router.post("/login", response_model=TokenSchema)
 async def login_for_access_token(form_data: LoginFormSchema, db: Session = Depends(get_db)):
-    """
-    Endpoint to authenticate a user and generate an access token.
-    """
     user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
 
     if user:
@@ -56,4 +53,7 @@ async def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
         return {"message": "Successfully logged out"}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to logout user")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to logout user"
+        ) from e

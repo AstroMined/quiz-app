@@ -1,6 +1,7 @@
 # filename: app/schemas/user.py
 
 import string
+from typing import Optional
 from pydantic import BaseModel, validator
 
 class UserBaseSchema(BaseModel):
@@ -38,3 +39,7 @@ class UserSchema(UserBaseSchema):
 
     class Config:
         from_attributes = True
+
+class UserUpdateSchema(BaseModel):
+    username: Optional[str] = None
+    password: Optional[str] = None

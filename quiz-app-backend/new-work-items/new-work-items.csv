@@ -1,6 +1,6 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"280","User Story","Question Set Endpoints","Active","api; question-sets","Develop endpoints for question set CRUD operations.","Question set creation endpoint
-Question set retrieval update delete endpoints
-Proper validation and error handling
-Authentication and authorization"
-"281","Task","Implement question set endpoints","Active","api","Implement question set API endpoints in main.py",
+"278","User Story","User Management Endpoints","Active","api; user-management","Develop endpoints for user registration and management.","User registration endpoint
+User profile retrieval and update endpoints
+Proper Authentication and authorization
+validation and error handling"
+"279","Task","Implement user endpoints","Active","api","<div>Implement user management API endpoints </div>",

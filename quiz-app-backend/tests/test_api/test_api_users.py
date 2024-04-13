@@ -17,4 +17,15 @@ def test_read_users(client, db_session, test_user):
     assert response.status_code == 200
     assert test_user.username in [user["username"] for user in response.json()]
 
-# Add more tests for user API endpoints
+def test_read_user_me(client, test_user, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.get("/users/me", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["username"] == test_user.username
+
+def test_update_user_me(client, test_user, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    updated_data = {"username": "updated_username"}
+    response = client.put("/users/me", json=updated_data, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["username"] == "updated_username"

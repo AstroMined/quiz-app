@@ -92,7 +92,7 @@ from .questions import QuestionBaseSchema, QuestionSchema, QuestionCreateSchema,
 from .question_sets import QuestionSetCreateSchema, QuestionSetBaseSchema, QuestionSetSchema, QuestionSetUpdateSchema
 from .subtopics import SubtopicSchema, SubtopicBaseSchema, SubtopicCreateSchema
 from .token import TokenSchema
-from .user import UserCreateSchema, UserLoginSchema, UserBaseSchema, UserSchema
+from .user import UserCreateSchema, UserLoginSchema, UserBaseSchema, UserSchema, UserUpdateSchema
 from .user_responses import UserResponseBaseSchema, UserResponseSchema, UserResponseCreateSchema, UserResponseUpdateSchema
 from .filters import FilterParamsSchema
 from .subjects import SubjectSchema, SubjectBaseSchema, SubjectCreateSchema
@@ -377,6 +377,7 @@ class TopicSchema(TopicBaseSchema):
 # filename: app/schemas/user.py
 
 import string
+from typing import Optional
 from pydantic import BaseModel, validator
 
 class UserBaseSchema(BaseModel):
@@ -414,6 +415,10 @@ class UserSchema(UserBaseSchema):
 
     class Config:
         from_attributes = True
+
+class UserUpdateSchema(BaseModel):
+    username: Optional[str] = None
+    password: Optional[str] = None
 
 ```
 
@@ -551,7 +556,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 from .crud_filters import filter_questions
 from .crud_question_sets import create_question_set_crud, read_question_sets_crud, read_question_set_crud, update_question_set_crud, delete_question_set_crud
 from .crud_questions import create_question_crud, get_question_crud, get_questions_crud, update_question_crud, delete_question_crud
-from .crud_user import create_user_crud, remove_user_crud
+from .crud_user import create_user_crud, delete_user_crud, update_user_crud
 from .crud_user_responses import create_user_response_crud, get_user_response_crud, get_user_responses_crud, update_user_response_crud, delete_user_response_crud
 from .crud_user_utils import get_user_by_username_crud
 from .crud_subtopics import create_subtopic_crud
@@ -850,26 +855,13 @@ def delete_topic_crud(db: Session, topic_id: int) -> bool:
 ## File: crud_user.py
 ```py
 # filename: app/crud/crud_user.py
-"""
-This module provides CRUD operations for users.
-"""
 
 from sqlalchemy.orm import Session
 from app.models import UserModel
-from app.schemas import UserCreateSchema
+from app.schemas import UserCreateSchema, UserUpdateSchema
 from app.core import get_password_hash
 
 def create_user_crud(db: Session, user: UserCreateSchema) -> UserModel:
-    """
-    Create a new user.
-
-    Args:
-        db (Session): The database session.
-        user (UserCreate): The user data.
-
-    Returns:
-        User: The created user.
-    """
     hashed_password = get_password_hash(user.password)
     db_user = UserModel(username=user.username, hashed_password=hashed_password)
     db.add(db_user)
@@ -877,17 +869,22 @@ def create_user_crud(db: Session, user: UserCreateSchema) -> UserModel:
     db.refresh(db_user)
     return db_user
 
-def remove_user_crud(db: Session, user_id: int) -> UserModel:
-    """
-    Remove a user.
+def update_user_crud(db: Session, user_id: int, updated_user: UserUpdateSchema) -> UserModel:
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not user:
+        return None
+    update_data = updated_user.dict(exclude_unset=True)
+    if "password" in update_data:
+        hashed_password = get_password_hash(update_data["password"])
+        del update_data["password"]
+        update_data["hashed_password"] = hashed_password
+    for key, value in update_data.items():
+        setattr(user, key, value)
+    db.commit()
+    db.refresh(user)
+    return user
 
-    Args:
-        db (Session): The database session.
-        user_id (int): The ID of the user to remove.
-
-    Returns:
-        User: The removed user, or None if the user doesn't exist.
-    """
+def delete_user_crud(db: Session, user_id: int) -> UserModel:
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if user:
         db.delete(user)
@@ -1060,9 +1057,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 @router.post("/login", response_model=TokenSchema)
 async def login_for_access_token(form_data: LoginFormSchema, db: Session = Depends(get_db)):
-    """
-    Endpoint to authenticate a user and generate an access token.
-    """
     user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
 
     if user:
@@ -1097,7 +1091,10 @@ async def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
         return {"message": "Successfully logged out"}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to logout user")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to logout user"
+        ) from e
 
 ```
 
@@ -1580,8 +1577,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.users import UserModel
-from app.crud import create_user_crud
-from app.schemas.user import UserCreateSchema, UserSchema
+from app.crud import create_user_crud, update_user_crud
+from app.schemas.user import UserCreateSchema, UserSchema, UserUpdateSchema
 from app.services import get_current_user
 
 router = APIRouter()
@@ -1602,6 +1599,14 @@ def create_user(user: UserCreateSchema, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Failed to create user. ' + str(e)
             ) from e
+
+@router.get("/users/me", response_model=UserSchema)
+def read_user_me(current_user: UserModel = Depends(get_current_user)):
+    return current_user
+
+@router.put("/users/me", response_model=UserSchema)
+def update_user_me(updated_user: UserUpdateSchema, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+    return update_user_crud(db=db, user_id=current_user.id, updated_user=updated_user)
 
 ```
 
@@ -3120,7 +3125,18 @@ def test_read_users(client, db_session, test_user):
     assert response.status_code == 200
     assert test_user.username in [user["username"] for user in response.json()]
 
-# Add more tests for user API endpoints
+def test_read_user_me(client, test_user, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.get("/users/me", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["username"] == test_user.username
+
+def test_update_user_me(client, test_user, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    updated_data = {"username": "updated_username"}
+    response = client.put("/users/me", json=updated_data, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["username"] == "updated_username"
 
 ```
 
@@ -3316,8 +3332,8 @@ def test_create_subject(db_session):
 ## File: test_crud_user.py
 ```py
 # filename: tests/test_crud_user.py
-from app.crud import remove_user_crud, create_user_crud
-from app.schemas import UserCreateSchema
+from app.crud import delete_user_crud, create_user_crud, update_user_crud
+from app.schemas import UserCreateSchema, UserUpdateSchema
 from app.services import authenticate_user
 
 def test_remove_user_not_found(db_session):
@@ -3325,7 +3341,7 @@ def test_remove_user_not_found(db_session):
     Test removing a user that does not exist.
     """
     user_id = 999  # Assuming this ID does not exist
-    removed_user = remove_user_crud(db_session, user_id)
+    removed_user = delete_user_crud(db_session, user_id)
     assert removed_user is None
 
 def test_authenticate_user(db_session, random_username):
@@ -3340,6 +3356,10 @@ def test_create_user(db_session, random_username):
     created_user = create_user_crud(db_session, user_data)
     assert created_user.username == random_username
 
+def test_update_user(db_session, test_user):
+    updated_data = UserUpdateSchema(username="updated_username")
+    updated_user = update_user_crud(db=db_session, user_id=test_user.id, updated_user=updated_data)
+    assert updated_user.username == "updated_username"
 ```
 
 ## File: test_crud_user_responses.py

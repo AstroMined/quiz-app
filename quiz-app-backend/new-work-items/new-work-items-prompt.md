@@ -24,31 +24,31 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### Question Set Endpoints
+### User Management Endpoints
 
-**ID:** 280
+**ID:** 278
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** api; question-sets
+**Tags:** api; user-management
 
 **Description:**
 
-Develop endpoints for question set CRUD operations.
+Develop endpoints for user registration and management.
 
 **Acceptance Criteria:**
 
-- Question set creation endpoint
-- Question set retrieval update delete endpoints
-- Proper validation and error handling
-- Authentication and authorization
+- User registration endpoint
+- User profile retrieval and update endpoints
+- Proper Authentication and authorization
+- validation and error handling
 
 
-### Implement question set endpoints
+### Implement user endpoints
 
-**ID:** 281
+**ID:** 279
 
 **Work Item Type:** Task
 
@@ -58,7 +58,7 @@ Develop endpoints for question set CRUD operations.
 
 **Description:**
 
-Implement question set API endpoints in main.py
+<div>Implement user management API endpoints </div>
 
 
 
