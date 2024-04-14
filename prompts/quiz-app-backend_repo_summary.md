@@ -459,33 +459,19 @@ class UserResponseSchema(UserResponseBaseSchema):
 
 from .auth_service import authenticate_user
 from .user_service import get_current_user, oauth2_scheme
-
+from .randomization_service import randomize_answer_choices, randomize_questions
 ```
 
 ## File: auth_service.py
 ```py
 # filename: app/services/auth_service.py
-"""
-This module provides authentication and authorization services.
-"""
 
 from sqlalchemy.orm import Session
-from app.crud import get_user_by_username_crud
+from app.crud.crud_user_utils import get_user_by_username_crud
 from app.core import verify_password
 from app.models import UserModel
 
 def authenticate_user(db: Session, username: str, password: str) -> UserModel:
-    """
-    Authenticate a user.
-
-    Args:
-        db (Session): The database session.
-        username (str): The username of the user.
-        password (str): The password of the user.
-
-    Returns:
-        User: The authenticated user, or False if authentication fails.
-    """
     user = get_user_by_username_crud(db, username)
     if not user:
         return False
@@ -497,34 +483,36 @@ def authenticate_user(db: Session, username: str, password: str) -> UserModel:
 
 ```
 
+## File: randomization_service.py
+```py
+# filename: app/utils/randomization.py
+
+import random
+
+def randomize_questions(questions):
+    return random.sample(questions, len(questions))
+
+def randomize_answer_choices(answer_choices):
+    return random.sample(answer_choices, len(answer_choices))
+
+```
+
 ## File: user_service.py
 ```py
 # filename: app/services/user_service.py
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose import JWTError
 from app.core import decode_access_token
-from app.crud import get_user_by_username_crud
+from app.crud.crud_user_utils import get_user_by_username_crud
 from app.db import get_db
-from app.models import RevokedTokenModel, UserModel
+from app.models import RevokedTokenModel
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    """
-    Dependency to get the current authenticated user.
-
-    Args:
-        token (str): The JWT access token.
-        db (Session): The database session.
-
-    Returns:
-        User: The authenticated user.
-
-    Raises:
-        HTTPException: If the token is invalid, expired, or revoked, or if the user is not found.
-    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -542,8 +530,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         if user is None:
             raise credentials_exception
         return user
-    except JWTError:
-        raise credentials_exception
+    except JWTError as e:
+        raise credentials_exception from e
 
 ```
 
@@ -682,6 +670,7 @@ from typing import List
 from sqlalchemy.orm import Session, joinedload
 from app.models import QuestionModel, AnswerChoiceModel
 from app.schemas import QuestionCreateSchema, QuestionUpdateSchema
+from app.services import randomize_questions, randomize_answer_choices
 
 def create_question_crud(db: Session, question: QuestionCreateSchema) -> QuestionModel:
     db_question = QuestionModel(
@@ -711,6 +700,9 @@ def create_question_crud(db: Session, question: QuestionCreateSchema) -> Questio
 
 def get_questions_crud(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionModel]:
     questions = db.query(QuestionModel).offset(skip).limit(limit).all()
+    questions = randomize_questions(questions)  # Randomize the order of questions
+    for question in questions:
+        question.answer_choices = randomize_answer_choices(question.answer_choices)  # Randomize the order of answer choices
     return questions
 
 def get_question_crud(db: Session, question_id: int) -> QuestionModel:
@@ -3137,6 +3129,37 @@ def test_update_user_me(client, test_user, test_token):
     response = client.put("/users/me", json=updated_data, headers=headers)
     assert response.status_code == 200
     assert response.json()["username"] == "updated_username"
+
+```
+
+# Directory: /code/quiz-app/quiz-app-backend/tests/test_services
+
+## File: test_randomization_service.py
+```py
+# filename: tests/test_utils/test_randomization.py
+
+from app.services import randomize_questions, randomize_answer_choices
+from app.models import QuestionModel, AnswerChoiceModel
+
+def test_randomize_questions():
+    questions = [
+        QuestionModel(text="Question 1"),
+        QuestionModel(text="Question 2"),
+        QuestionModel(text="Question 3"),
+    ]
+    randomized_questions = randomize_questions(questions)
+    assert len(randomized_questions) == len(questions)
+    assert set(randomized_questions) == set(questions)
+
+def test_randomize_answer_choices():
+    answer_choices = [
+        AnswerChoiceModel(text="Choice 1"),
+        AnswerChoiceModel(text="Choice 2"),
+        AnswerChoiceModel(text="Choice 3"),
+    ]
+    randomized_choices = randomize_answer_choices(answer_choices)
+    assert len(randomized_choices) == len(answer_choices)
+    assert set(randomized_choices) == set(answer_choices)
 
 ```
 

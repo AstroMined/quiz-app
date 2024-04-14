@@ -4,6 +4,7 @@ from typing import List
 from sqlalchemy.orm import Session, joinedload
 from app.models import QuestionModel, AnswerChoiceModel
 from app.schemas import QuestionCreateSchema, QuestionUpdateSchema
+from app.services import randomize_questions, randomize_answer_choices
 
 def create_question_crud(db: Session, question: QuestionCreateSchema) -> QuestionModel:
     db_question = QuestionModel(
@@ -33,6 +34,9 @@ def create_question_crud(db: Session, question: QuestionCreateSchema) -> Questio
 
 def get_questions_crud(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionModel]:
     questions = db.query(QuestionModel).offset(skip).limit(limit).all()
+    questions = randomize_questions(questions)  # Randomize the order of questions
+    for question in questions:
+        question.answer_choices = randomize_answer_choices(question.answer_choices)  # Randomize the order of answer choices
     return questions
 
 def get_question_crud(db: Session, question_id: int) -> QuestionModel:

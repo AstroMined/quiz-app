@@ -24,41 +24,38 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### User Management Endpoints
+### Randomization Logic
 
-**ID:** 278
+**ID:** 270
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** api; user-management
+**Tags:** randomization
 
 **Description:**
 
-Develop endpoints for user registration and management.
+Implement logic to randomize questions and answer choices.
 
 **Acceptance Criteria:**
 
-- User registration endpoint
-- User profile retrieval and update endpoints
-- Proper Authentication and authorization
-- validation and error handling
+- randomization function for questions and answer choices implemented and tested
 
 
-### Implement user endpoints
+### Create randomization.py file
 
-**ID:** 279
+**ID:** 271
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** api
+**Tags:** randomization
 
 **Description:**
 
-<div>Implement user management API endpoints </div>
+Create randomization.py to handle question/answer randomization
 
 
 

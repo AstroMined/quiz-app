@@ -1,25 +1,11 @@
 # filename: app/services/auth_service.py
-"""
-This module provides authentication and authorization services.
-"""
 
 from sqlalchemy.orm import Session
-from app.crud import get_user_by_username_crud
+from app.crud.crud_user_utils import get_user_by_username_crud
 from app.core import verify_password
 from app.models import UserModel
 
 def authenticate_user(db: Session, username: str, password: str) -> UserModel:
-    """
-    Authenticate a user.
-
-    Args:
-        db (Session): The database session.
-        username (str): The username of the user.
-        password (str): The password of the user.
-
-    Returns:
-        User: The authenticated user, or False if authentication fails.
-    """
     user = get_user_by_username_crud(db, username)
     if not user:
         return False
