@@ -9,7 +9,7 @@ To get started with the Quiz App Backend, follow these steps:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/quiz-app-backend.git
+   git clone https://github.com/AstroMined/quiz-app/quiz-app-backend.git
    ```
 
 2. Install the required dependencies:
