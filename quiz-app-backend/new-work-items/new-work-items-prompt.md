@@ -24,38 +24,43 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### Randomization Logic
+### Filtering Endpoints
 
-**ID:** 270
+**ID:** 282
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** randomization
+**Tags:** api; filtering
 
 **Description:**
 
-Implement logic to randomize questions and answer choices.
+Develop API endpoints for filtering questions based on various criteria such as subject, topic, subtopic, difficulty level, or tags. The endpoints should accept filtering parameters, query the database efficiently, and return the filtered results in a paginated manner. Proper validation and error handling should be implemented.
 
 **Acceptance Criteria:**
 
-- randomization function for questions and answer choices implemented and tested
+- Filtering endpoints implemented
+- Accepts Filtering parameters
+- Queries database efficiently
+- Returns paginated Results
+- Proper validation and error handling
+- tested with different Filtering scenarios
 
 
-### Create randomization.py file
+### Implement filtering endpoints
 
-**ID:** 271
+**ID:** 283
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** randomization
+**Tags:** api
 
 **Description:**
 
-Create randomization.py to handle question/answer randomization
+<div>Implement question filtering API endpoints </div>
 
 
 

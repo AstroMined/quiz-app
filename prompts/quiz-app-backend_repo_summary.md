@@ -143,11 +143,22 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 class FilterParamsSchema(BaseModel):
-    subject: Optional[str] = None
-    topic: Optional[str] = None
-    subtopic: Optional[str] = None
-    difficulty: Optional[str] = None
-    tags: Optional[List[str]] = Field(None, description="List of tags")
+    subject: Optional[str] = Field(None, description="Filter questions by subject")
+    topic: Optional[str] = Field(None, description="Filter questions by topic")
+    subtopic: Optional[str] = Field(None, description="Filter questions by subtopic")
+    difficulty: Optional[str] = Field(None, description="Filter questions by difficulty level")
+    tags: Optional[List[str]] = Field(None, description="Filter questions by tags")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "subject": "Math",
+                "topic": "Algebra",
+                "subtopic": "Linear Equations",
+                "difficulty": "Easy",
+                "tags": ["equations", "solving"]
+            }
+        }
 
 ```
 
@@ -555,8 +566,10 @@ from .crud_topics import create_topic_crud, read_topic_crud, update_topic_crud, 
 
 ## File: crud_filters.py
 ```py
+# filename: app/crud/crud_filters.py
+
 from typing import List, Optional
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models import (
     QuestionModel,
@@ -565,34 +578,33 @@ from app.models import (
     SubtopicModel,
     QuestionTagModel
 )
-from app.schemas import QuestionSchema
+from app.schemas import QuestionSchema, FilterParamsSchema
 
 def filter_questions(
     db: Session,
-    subject: Optional[str] = None,
-    topic: Optional[str] = None,
-    subtopic: Optional[str] = None,
-    difficulty: Optional[str] = None,
-    tags: Optional[List[str]] = None
-) -> List[QuestionSchema]:
+    filters: FilterParamsSchema,
+    skip: int = 0,
+    limit: int = 100
+) -> Optional[List[QuestionSchema]]:
     query = db.query(QuestionModel).join(SubjectModel).join(TopicModel).join(SubtopicModel).outerjoin(QuestionModel.tags)
 
-    if subject:
-        query = query.filter(func.lower(SubjectModel.name) == func.lower(subject))
-    if topic:
-        query = query.filter(func.lower(TopicModel.name) == func.lower(topic))
-    if subtopic:
-        query = query.filter(func.lower(SubtopicModel.name) == func.lower(subtopic))
-    if difficulty:
-        query = query.filter(func.lower(QuestionModel.difficulty) == func.lower(difficulty))
-    if tags:
-        query = query.filter(func.lower(QuestionTagModel.tag).in_([tag.lower() for tag in tags]))
+    if filters.subject:
+        query = query.filter(func.lower(SubjectModel.name) == func.lower(filters.subject))
+    if filters.topic:
+        query = query.filter(func.lower(TopicModel.name) == func.lower(filters.topic))
+    if filters.subtopic:
+        query = query.filter(func.lower(SubtopicModel.name) == func.lower(filters.subtopic))
+    if filters.difficulty:
+        query = query.filter(func.lower(QuestionModel.difficulty) == func.lower(filters.difficulty))
+    if filters.tags:
+        query = query.filter(func.lower(QuestionTagModel.tag).in_([tag.lower() for tag in filters.tags]))
 
-    questions = query.all()
+    questions = query.offset(skip).limit(limit).all()
+
     if not questions:
         return []
 
-    return [QuestionSchema(**question.__dict__) for question in questions]
+    return [QuestionSchema.model_validate(question) for question in questions]
 
 ```
 
@@ -931,24 +943,11 @@ def delete_user_response_crud(db: Session, user_response_id: int) -> None:
 ## File: crud_user_utils.py
 ```py
 # filename: app/crud/crud_user_utils.py
-"""
-This module provides utility functions for user-related operations.
-"""
 
 from sqlalchemy.orm import Session
 from app.models import UserModel
 
 def get_user_by_username_crud(db: Session, username: str) -> UserModel:
-    """
-    Retrieve a user by username.
-
-    Args:
-        db (Session): The database session.
-        username (str): The username of the user.
-
-    Returns:
-        User: The user with the specified username.
-    """
     return db.query(UserModel).filter(UserModel.username == username).first()
 
 ```
@@ -1099,27 +1098,23 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.schemas import QuestionSchema, FilterParamsSchema
-from app.crud import filter_questions
+from app.crud import filter_questions, get_questions_crud
 
 router = APIRouter()
 
 @router.get("/questions/filter", response_model=List[QuestionSchema])
 def filter_questions_endpoint(
     filters: FilterParamsSchema = Depends(),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
 ):
-    filtered_questions = filter_questions(
-        db=db,
-        subject=filters.subject,
-        topic=filters.topic,
-        subtopic=filters.subtopic,
-        difficulty=filters.difficulty,
-        tags=filters.tags
-    )
-
-    if filtered_questions is None:
-        return []
-    return filtered_questions
+    if not any(filter_value for filter_value in filters.model_dump().values()):
+        questions = get_questions_crud(db=db, skip=skip, limit=limit)
+        return questions
+    else:
+        filtered_questions = filter_questions(db=db, filters=filters, skip=skip, limit=limit)
+        return filtered_questions
 
 ```
 
@@ -2763,6 +2758,45 @@ def test_filter_questions_by_multiple_criteria(logged_in_client, db_session):
         assert question["subject_id"] == subject.id
         assert question["topic_id"] == topic.id
         assert question["difficulty"] == "Easy"
+
+def test_filter_questions_with_pagination(logged_in_client, db_session, setup_filter_questions_data):
+    response = logged_in_client.get(
+        "/questions/filter",
+        params={
+            "subject": "Math",
+            "skip": 1,
+            "limit": 2
+        }
+    )
+    assert response.status_code == 200
+    questions = response.json()
+    assert len(questions) <= 2
+    assert all(question["subject_id"] == 1 for question in questions)
+
+def test_filter_questions_no_results(logged_in_client, db_session, setup_filter_questions_data):
+    response = logged_in_client.get(
+        "/questions/filter",
+        params={
+            "subject": "NonexistentSubject"
+        }
+    )
+    assert response.status_code == 200
+    questions = response.json()
+    assert len(questions) == 0
+
+def test_filter_questions_invalid_params(logged_in_client, db_session):
+    response = logged_in_client.get(
+        "/questions/filter",
+        params={"invalid_param": "value"}
+    )
+    assert response.status_code == 422
+    assert "Unknown field" in response.json()["detail"][0]["msg"]
+
+def test_filter_questions_no_params(logged_in_client, db_session):
+    response = logged_in_client.get("/questions/filter")
+    assert response.status_code == 200
+    questions = response.json()
+    assert isinstance(questions, list)
 
 ```
 

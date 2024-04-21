@@ -137,3 +137,42 @@ def test_filter_questions_by_multiple_criteria(logged_in_client, db_session):
         assert question["subject_id"] == subject.id
         assert question["topic_id"] == topic.id
         assert question["difficulty"] == "Easy"
+
+def test_filter_questions_with_pagination(logged_in_client, db_session, setup_filter_questions_data):
+    response = logged_in_client.get(
+        "/questions/filter",
+        params={
+            "subject": "Math",
+            "skip": 1,
+            "limit": 2
+        }
+    )
+    assert response.status_code == 200
+    questions = response.json()
+    assert len(questions) <= 2
+    assert all(question["subject_id"] == 1 for question in questions)
+
+def test_filter_questions_no_results(logged_in_client, db_session, setup_filter_questions_data):
+    response = logged_in_client.get(
+        "/questions/filter",
+        params={
+            "subject": "NonexistentSubject"
+        }
+    )
+    assert response.status_code == 200
+    questions = response.json()
+    assert len(questions) == 0
+
+def test_filter_questions_invalid_params(logged_in_client, db_session):
+    response = logged_in_client.get(
+        "/questions/filter",
+        params={"invalid_param": "value"}
+    )
+    assert response.status_code == 422
+    assert "Unknown field" in response.json()["detail"][0]["msg"]
+
+def test_filter_questions_no_params(logged_in_client, db_session):
+    response = logged_in_client.get("/questions/filter")
+    assert response.status_code == 200
+    questions = response.json()
+    assert isinstance(questions, list)
