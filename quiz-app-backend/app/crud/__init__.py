@@ -1,6 +1,6 @@
 # filename: app/crud/__init__.py
 
-from .crud_filters import filter_questions
+from .crud_filters import filter_questions_crud
 from .crud_question_sets import create_question_set_crud, read_question_sets_crud, read_question_set_crud, update_question_set_crud, delete_question_set_crud
 from .crud_questions import create_question_crud, get_question_crud, get_questions_crud, update_question_crud, delete_question_crud
 from .crud_user import create_user_crud, delete_user_crud, update_user_crud

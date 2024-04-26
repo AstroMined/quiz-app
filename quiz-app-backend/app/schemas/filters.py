@@ -1,7 +1,7 @@
 # filename: app/schemas/filters.py
 
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator, ValidationError
 
 class FilterParamsSchema(BaseModel):
     subject: Optional[str] = Field(None, description="Filter questions by subject")
@@ -11,6 +11,7 @@ class FilterParamsSchema(BaseModel):
     tags: Optional[List[str]] = Field(None, description="Filter questions by tags")
 
     class Config:
+        extra = 'forbid'  # Allows extra fields but you can manually handle them
         json_schema_extra = {
             "example": {
                 "subject": "Math",

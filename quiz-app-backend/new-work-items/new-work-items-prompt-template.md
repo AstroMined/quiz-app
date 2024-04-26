@@ -33,3 +33,4 @@ Your duties for the current sprint have been assigned as below:
 - If the requirements have been satisfied for a user story or task, please indicate so.
 - You are also responsible for ensuring there is complete pytest test coverage for each user story and task you work on.
 - When recommending new code or code changes, ensure you follow the guidelines outlined above.
+- If you deem that all of the user stories and task are already satisfied by the current codebase, provide a descriptive git commit message alond with a descriptive comment to close the user story

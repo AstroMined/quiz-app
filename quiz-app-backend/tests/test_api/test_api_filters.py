@@ -1,5 +1,6 @@
 # filename: tests/test_api_filters.py
 
+import pytest
 from app.models import (
     SubjectModel,
     TopicModel,
@@ -8,6 +9,7 @@ from app.models import (
     QuestionSetModel,
     QuestionModel
 )
+from app.api.endpoints.filters import filter_questions_endpoint
 
 def test_setup_filter_questions_data(db_session, setup_filter_questions_data):
     # Check if the required data is created in the database
@@ -39,7 +41,7 @@ def test_filter_questions(logged_in_client, db_session):
             "tags": ["equations", "solving"]
         }
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     if questions:
@@ -59,7 +61,7 @@ def test_filter_questions_by_subject(logged_in_client, db_session):
         "/questions/filter",
         params={"subject": "Math"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     subject = db_session.query(SubjectModel).filter(SubjectModel.name == "Math").first()
@@ -70,7 +72,7 @@ def test_filter_questions_by_topic(logged_in_client, db_session):
         "/questions/filter",
         params={"topic": "Algebra"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     topic = db_session.query(TopicModel).filter(TopicModel.name == "Algebra").first()
@@ -81,7 +83,7 @@ def test_filter_questions_by_subtopic(logged_in_client, db_session):
         "/questions/filter",
         params={"subtopic": "Linear Equations"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Linear Equations").first()
@@ -92,7 +94,7 @@ def test_filter_questions_by_difficulty(logged_in_client, db_session):
         "/questions/filter",
         params={"difficulty": "Easy"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     assert all(question["difficulty"] == "Easy" for question in questions)
@@ -102,7 +104,7 @@ def test_filter_questions_by_single_tag(logged_in_client, db_session):
         "/questions/filter",
         params={"tags": ["equations"]}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     tag = db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "equations").first()
@@ -113,7 +115,7 @@ def test_filter_questions_by_tags(logged_in_client, db_session):
         "/questions/filter",
         params={"tags": ["geometry"]}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     tag = db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "geometry").first()
@@ -128,7 +130,7 @@ def test_filter_questions_by_multiple_criteria(logged_in_client, db_session):
             "difficulty": "Easy"
         }
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     subject = db_session.query(SubjectModel).filter(SubjectModel.name == "Math").first()
@@ -147,7 +149,7 @@ def test_filter_questions_with_pagination(logged_in_client, db_session, setup_fi
             "limit": 2
         }
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert len(questions) <= 2
     assert all(question["subject_id"] == 1 for question in questions)
@@ -159,20 +161,33 @@ def test_filter_questions_no_results(logged_in_client, db_session, setup_filter_
             "subject": "NonexistentSubject"
         }
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert len(questions) == 0
 
-def test_filter_questions_invalid_params(logged_in_client, db_session):
-    response = logged_in_client.get(
-        "/questions/filter",
-        params={"invalid_param": "value"}
-    )
-    assert response.status_code == 422
-    assert "Unknown field" in response.json()["detail"][0]["msg"]
-
 def test_filter_questions_no_params(logged_in_client, db_session):
     response = logged_in_client.get("/questions/filter")
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
+
+def test_filter_questions_endpoint_invalid_params(logged_in_client, db_session):
+    response = logged_in_client.get("/questions/filter", params={"invalid_param": "value"})
+    assert response.status_code == 422, f"Failed with response: {response.json()}"
+    assert "Unexpected parameters provided" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_filter_questions_endpoint_invalid_params_direct(db_session):
+    invalid_params = {
+        "invalid_param": "value",  # This should cause validation to fail
+        "subject": None,
+        "topic": None,
+        "subtopic": None,
+        "difficulty": None,
+        "tags": None
+    }
+    with pytest.raises(TypeError) as exc_info:
+        # Simulate the endpoint call with invalid parameters
+        # pylint: disable=unexpected-keyword-arg
+        await filter_questions_endpoint(db=db_session, **invalid_params)
+    assert "got an unexpected keyword argument" in str(exc_info.value)

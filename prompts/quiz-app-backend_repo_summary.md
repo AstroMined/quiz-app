@@ -140,7 +140,7 @@ class LoginFormSchema(BaseModel):
 # filename: app/schemas/filters.py
 
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator, ValidationError
 
 class FilterParamsSchema(BaseModel):
     subject: Optional[str] = Field(None, description="Filter questions by subject")
@@ -150,6 +150,7 @@ class FilterParamsSchema(BaseModel):
     tags: Optional[List[str]] = Field(None, description="Filter questions by tags")
 
     class Config:
+        extra = 'forbid'  # Allows extra fields but you can manually handle them
         json_schema_extra = {
             "example": {
                 "subject": "Math",
@@ -552,7 +553,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 ```py
 # filename: app/crud/__init__.py
 
-from .crud_filters import filter_questions
+from .crud_filters import filter_questions_crud
 from .crud_question_sets import create_question_set_crud, read_question_sets_crud, read_question_set_crud, update_question_set_crud, delete_question_set_crud
 from .crud_questions import create_question_crud, get_question_crud, get_questions_crud, update_question_crud, delete_question_crud
 from .crud_user import create_user_crud, delete_user_crud, update_user_crud
@@ -569,6 +570,7 @@ from .crud_topics import create_topic_crud, read_topic_crud, update_topic_crud, 
 # filename: app/crud/crud_filters.py
 
 from typing import List, Optional
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models import (
@@ -580,30 +582,41 @@ from app.models import (
 )
 from app.schemas import QuestionSchema, FilterParamsSchema
 
-def filter_questions(
+def filter_questions_crud(
     db: Session,
-    filters: FilterParamsSchema,
+    filters: dict,  # Change this parameter to expect a dictionary
     skip: int = 0,
     limit: int = 100
 ) -> Optional[List[QuestionSchema]]:
+    print("Entering filter_questions function")
+    print(f"Received filters: {filters}")
+    try:
+        # Validate filters dictionary against the Pydantic model
+        validated_filters = FilterParamsSchema(**filters)
+    except ValidationError as e:
+        print(f"Invalid filters: {str(e)}")
+        raise e
+
+    if not any(value for value in filters.values()):
+        print("No filters provided")
+        return None
+
     query = db.query(QuestionModel).join(SubjectModel).join(TopicModel).join(SubtopicModel).outerjoin(QuestionModel.tags)
 
-    if filters.subject:
-        query = query.filter(func.lower(SubjectModel.name) == func.lower(filters.subject))
-    if filters.topic:
-        query = query.filter(func.lower(TopicModel.name) == func.lower(filters.topic))
-    if filters.subtopic:
-        query = query.filter(func.lower(SubtopicModel.name) == func.lower(filters.subtopic))
-    if filters.difficulty:
-        query = query.filter(func.lower(QuestionModel.difficulty) == func.lower(filters.difficulty))
-    if filters.tags:
-        query = query.filter(func.lower(QuestionTagModel.tag).in_([tag.lower() for tag in filters.tags]))
+    if validated_filters.subject:
+        query = query.filter(func.lower(SubjectModel.name) == func.lower(validated_filters.subject))
+    if validated_filters.topic:
+        query = query.filter(func.lower(TopicModel.name) == func.lower(validated_filters.topic))
+    if validated_filters.subtopic:
+        query = query.filter(func.lower(SubtopicModel.name) == func.lower(validated_filters.subtopic))
+    if validated_filters.difficulty:
+        query = query.filter(func.lower(QuestionModel.difficulty) == func.lower(validated_filters.difficulty))
+    if validated_filters.tags:
+        query = query.filter(QuestionTagModel.tag.in_([tag.lower() for tag in validated_filters.tags]))
 
     questions = query.offset(skip).limit(limit).all()
 
-    if not questions:
-        return []
-
+    print("Returning filtered questions")
     return [QuestionSchema.model_validate(question) for question in questions]
 
 ```
@@ -1093,28 +1106,54 @@ async def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
 ```py
 # filename: app/api/endpoints/filters.py
 
-from typing import List
-from fastapi import APIRouter, Depends
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from sqlalchemy.orm import Session
-from app.db import get_db
+from pydantic import ValidationError
 from app.schemas import QuestionSchema, FilterParamsSchema
-from app.crud import filter_questions, get_questions_crud
+from app.crud import filter_questions_crud
+from app.db import get_db
 
 router = APIRouter()
 
-@router.get("/questions/filter", response_model=List[QuestionSchema])
-def filter_questions_endpoint(
-    filters: FilterParamsSchema = Depends(),
+async def forbid_extra_params(request: Request):
+    allowed_params = {'subject', 'topic', 'subtopic', 'difficulty', 'tags', 'skip', 'limit'}
+    actual_params = set(request.query_params.keys())
+    extra_params = actual_params - allowed_params
+    if extra_params:
+        raise HTTPException(status_code=422, detail=f"Unexpected parameters provided: {extra_params}")
+
+@router.get("/questions/filter", response_model=List[QuestionSchema], status_code=200)
+async def filter_questions_endpoint(
+    request: Request,
+    subject: Optional[str] = Query(None),
+    topic: Optional[str] = Query(None),
+    subtopic: Optional[str] = Query(None),
+    difficulty: Optional[str] = Query(None),
+    tags: Optional[List[str]] = Query(None),
     db: Session = Depends(get_db),
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 100
 ):
-    if not any(filter_value for filter_value in filters.model_dump().values()):
-        questions = get_questions_crud(db=db, skip=skip, limit=limit)
-        return questions
-    else:
-        filtered_questions = filter_questions(db=db, filters=filters, skip=skip, limit=limit)
-        return filtered_questions
+    await forbid_extra_params(request)
+    try:
+        # Constructing the filters model from the query parameters directly
+        filters = FilterParamsSchema(
+            subject=subject,
+            topic=topic,
+            subtopic=subtopic,
+            difficulty=difficulty,
+            tags=tags
+        )
+        questions = filter_questions_crud(
+            db=db,
+            filters=filters.model_dump(),
+            skip=skip,
+            limit=limit
+        )
+        return questions if questions else []
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
 ```
 
@@ -2310,6 +2349,29 @@ def test_protected_route_with_revoked_token(client, test_user, test_token, db_se
 
 # Directory: /code/quiz-app/quiz-app-backend/tests/test_schemas
 
+## File: test_schemas_filters.py
+```py
+import pytest
+from pydantic import ValidationError
+from app.schemas import FilterParamsSchema
+
+def test_filter_params_schema_invalid_params():
+    invalid_data = {
+        "subject": "Math",
+        "topic": "Algebra",
+        "subtopic": "Linear Equations",
+        "difficulty": "Easy",
+        "tags": ["equations", "solving"],
+        "invalid_param": "value"  # Invalid parameter
+    }
+    
+    with pytest.raises(ValidationError) as exc_info:
+        FilterParamsSchema(**invalid_data)
+    
+    assert "Extra inputs are not permitted" in str(exc_info.value)
+
+```
+
 ## File: test_schemas_schemas.py
 ```py
 # filename: tests/test_schemas.py
@@ -2621,6 +2683,7 @@ def test_login_logout_flow(client, test_user):
 ```py
 # filename: tests/test_api_filters.py
 
+import pytest
 from app.models import (
     SubjectModel,
     TopicModel,
@@ -2629,6 +2692,7 @@ from app.models import (
     QuestionSetModel,
     QuestionModel
 )
+from app.api.endpoints.filters import filter_questions_endpoint
 
 def test_setup_filter_questions_data(db_session, setup_filter_questions_data):
     # Check if the required data is created in the database
@@ -2660,7 +2724,7 @@ def test_filter_questions(logged_in_client, db_session):
             "tags": ["equations", "solving"]
         }
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     if questions:
@@ -2680,7 +2744,7 @@ def test_filter_questions_by_subject(logged_in_client, db_session):
         "/questions/filter",
         params={"subject": "Math"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     subject = db_session.query(SubjectModel).filter(SubjectModel.name == "Math").first()
@@ -2691,7 +2755,7 @@ def test_filter_questions_by_topic(logged_in_client, db_session):
         "/questions/filter",
         params={"topic": "Algebra"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     topic = db_session.query(TopicModel).filter(TopicModel.name == "Algebra").first()
@@ -2702,7 +2766,7 @@ def test_filter_questions_by_subtopic(logged_in_client, db_session):
         "/questions/filter",
         params={"subtopic": "Linear Equations"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Linear Equations").first()
@@ -2713,7 +2777,7 @@ def test_filter_questions_by_difficulty(logged_in_client, db_session):
         "/questions/filter",
         params={"difficulty": "Easy"}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     assert all(question["difficulty"] == "Easy" for question in questions)
@@ -2723,7 +2787,7 @@ def test_filter_questions_by_single_tag(logged_in_client, db_session):
         "/questions/filter",
         params={"tags": ["equations"]}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     tag = db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "equations").first()
@@ -2734,7 +2798,7 @@ def test_filter_questions_by_tags(logged_in_client, db_session):
         "/questions/filter",
         params={"tags": ["geometry"]}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     tag = db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "geometry").first()
@@ -2749,7 +2813,7 @@ def test_filter_questions_by_multiple_criteria(logged_in_client, db_session):
             "difficulty": "Easy"
         }
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
     subject = db_session.query(SubjectModel).filter(SubjectModel.name == "Math").first()
@@ -2768,7 +2832,7 @@ def test_filter_questions_with_pagination(logged_in_client, db_session, setup_fi
             "limit": 2
         }
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert len(questions) <= 2
     assert all(question["subject_id"] == 1 for question in questions)
@@ -2780,23 +2844,36 @@ def test_filter_questions_no_results(logged_in_client, db_session, setup_filter_
             "subject": "NonexistentSubject"
         }
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert len(questions) == 0
 
-def test_filter_questions_invalid_params(logged_in_client, db_session):
-    response = logged_in_client.get(
-        "/questions/filter",
-        params={"invalid_param": "value"}
-    )
-    assert response.status_code == 422
-    assert "Unknown field" in response.json()["detail"][0]["msg"]
-
 def test_filter_questions_no_params(logged_in_client, db_session):
     response = logged_in_client.get("/questions/filter")
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
+
+def test_filter_questions_endpoint_invalid_params(logged_in_client, db_session):
+    response = logged_in_client.get("/questions/filter", params={"invalid_param": "value"})
+    assert response.status_code == 422, f"Failed with response: {response.json()}"
+    assert "Unexpected parameters provided" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_filter_questions_endpoint_invalid_params_direct(db_session):
+    invalid_params = {
+        "invalid_param": "value",  # This should cause validation to fail
+        "subject": None,
+        "topic": None,
+        "subtopic": None,
+        "difficulty": None,
+        "tags": None
+    }
+    with pytest.raises(TypeError) as exc_info:
+        # Simulate the endpoint call with invalid parameters
+        # pylint: disable=unexpected-keyword-arg
+        await filter_questions_endpoint(db=db_session, **invalid_params)
+    assert "got an unexpected keyword argument" in str(exc_info.value)
 
 ```
 
@@ -3219,6 +3296,109 @@ def test_database_session_lifecycle(db_session):
 ```
 
 # Directory: /code/quiz-app/quiz-app-backend/tests/test_crud
+
+## File: test_crud_filters.py
+```py
+import pytest
+from pydantic import ValidationError
+from app.crud.crud_filters import filter_questions_crud
+from app.schemas.filters import FilterParamsSchema
+
+def test_filter_questions_extra_invalid_parameter(db_session):
+    # Test case: Extra invalid parameter
+    filters = {
+        "subject": "Math",
+        "invalid_param": "InvalidValue"
+    }
+    with pytest.raises(ValidationError) as exc_info:
+        filter_questions_crud(db=db_session, filters=filters)
+    assert "Extra inputs are not permitted" in str(exc_info.value)
+
+def test_filter_questions_invalid_parameter_type(db_session):
+    # Test case: Invalid parameter type
+    filters = {
+        "subject": 123,  # Invalid type, should be a string
+        "topic": "Geometry"
+    }
+    with pytest.raises(ValidationError) as exc_info:
+        filter_questions_crud(db=db_session, filters=filters)
+    assert "Input should be a valid string" in str(exc_info.value)
+
+def test_filter_questions_invalid_tag_type(db_session):
+    # Test case: Invalid tag type
+    filters = {
+        "tags": "InvalidTag"  # Invalid type, should be a list of strings
+    }
+    with pytest.raises(ValidationError) as exc_info:
+        filter_questions_crud(db=db_session, filters=filters)
+    assert "Input should be a valid list" in str(exc_info.value)
+
+def test_filter_questions_no_filters(db_session):
+    # Test case: No filters provided
+    filters = {}
+    result = filter_questions_crud(db=db_session, filters=filters)
+    assert result is None
+
+def test_filter_questions_invalid_subject(db_session):
+    # Test case: Invalid subject filter
+    filters = {
+        "subject": "InvalidSubject"
+    }
+    result = filter_questions_crud(db=db_session, filters=filters)
+    assert result == []
+
+def test_filter_questions_invalid_topic(db_session):
+    # Test case: Invalid topic filter
+    filters = {
+        "topic": "InvalidTopic"
+    }
+    result = filter_questions_crud(db=db_session, filters=filters)
+    assert result == []
+
+def test_filter_questions_invalid_subtopic(db_session):
+    # Test case: Invalid subtopic filter
+    filters = {
+        "subtopic": "InvalidSubtopic"
+    }
+    result = filter_questions_crud(db=db_session, filters=filters)
+    assert result == []
+
+def test_filter_questions_invalid_difficulty(db_session):
+    # Test case: Invalid difficulty filter
+    filters = {
+        "difficulty": "InvalidDifficulty"
+    }
+    result = filter_questions_crud(db=db_session, filters=filters)
+    assert result == []
+
+def test_filter_questions_invalid_tags(db_session):
+    # Test case: Invalid tags filter
+    filters = {
+        "tags": ["InvalidTag"]
+    }
+    result = filter_questions_crud(db=db_session, filters=filters)
+    assert result == []
+
+def test_filter_questions_valid_filters(db_session, test_question):
+    # Test case: Valid filters
+    subject = test_question.subject
+    topic = test_question.topic
+    subtopic = test_question.subtopic
+    difficulty = test_question.difficulty
+    tags = [tag.tag for tag in test_question.tags]
+
+    filters = {
+        "subject": subject.name,
+        "topic": topic.name,
+        "subtopic": subtopic.name,
+        "difficulty": difficulty,
+        "tags": tags
+    }
+    result = filter_questions_crud(db=db_session, filters=filters)
+    assert len(result) == 1
+    assert result[0].id == test_question.id
+
+```
 
 ## File: test_crud_question_sets.py
 ```py
