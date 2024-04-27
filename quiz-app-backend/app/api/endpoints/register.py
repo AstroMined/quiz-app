@@ -2,7 +2,8 @@
 """
 This module provides an endpoint for user registration.
 
-It defines a route for registering new users by validating the provided data and creating a new user in the database.
+It defines a route for registering new users by validating 
+the provided data and creating a new user in the database.
 """
 
 from fastapi import APIRouter, Depends, HTTPException

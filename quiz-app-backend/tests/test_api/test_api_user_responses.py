@@ -1,6 +1,6 @@
 # filename: tests/test_api_user_responses.py
 
-def test_create_user_response_invalid_data(client, db_session):
+def test_create_user_response_invalid_data(logged_in_client, db_session):
     """
     Test creating a user response with invalid data.
     """
@@ -10,7 +10,7 @@ def test_create_user_response_invalid_data(client, db_session):
         "answer_choice_id": 999,  # Assuming this answer choice ID does not exist
         "is_correct": True
     }
-    response = client.post("/user-responses/", json=invalid_data)
+    response = logged_in_client.post("/user-responses/", json=invalid_data)
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid user_id"
 
