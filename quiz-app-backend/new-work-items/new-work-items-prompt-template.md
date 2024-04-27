@@ -27,10 +27,11 @@ Your duties for the current sprint have been assigned as below:
 <details from /code/quiz-app/quiz-app-backend/new-work-items/new-work-items.csv>
 
 ## Final Instructions:
+
 - First verify if the user story and associated tasks are completed in the current codebase.
 - If the requirements are not a direct match, please make suggestions to whether the user story, task, or the codebase needs modified.
 - Please ask clarifying questions where necessary to facilitate mutual understanding of the user story and tasks.
 - If the requirements have been satisfied for a user story or task, please indicate so.
 - You are also responsible for ensuring there is complete pytest test coverage for each user story and task you work on.
 - When recommending new code or code changes, ensure you follow the guidelines outlined above.
-- If you deem that all of the user stories and task are already satisfied by the current codebase, provide a descriptive git commit message alond with a descriptive comment to close the user story
+- If you deem that all of the user stories and task are already satisfied by the current codebase, provide a descriptive git commit message along with a descriptive comment to close the user story

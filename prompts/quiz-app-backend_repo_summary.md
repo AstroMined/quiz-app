@@ -1041,11 +1041,36 @@ It imports the router objects from each endpoint file and makes them available f
 ## File: auth.py
 ```py
 # filename: app/api/endpoints/auth.py
+"""
+This module defines the API endpoints for user authentication in the application.
+
+It includes the OAuth2PasswordBearer for token authentication, 
+a login endpoint to authenticate users and generate access tokens, 
+and a set to store blacklisted tokens.
+
+Imports:
+----------
+logging: For logging any exceptions or important actions.
+fastapi: For creating API routes and handling HTTP exceptions.
+sqlalchemy.orm: For handling database sessions.
+jose: For handling JWT errors.
+app.core: For creating access tokens and verifying passwords.
+app.db: For getting the database session.
+app.models: For accessing the user and revoked token models.
+app.schemas: For validating and deserializing data.
+
+Variables:
+----------
+logger: The logger instance.
+router: The API router instance.
+blacklist: A set to store blacklisted tokens.
+oauth2_scheme: The OAuth2PasswordBearer instance for token authentication.
+"""
+
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from jose import JWTError
 from app.core import create_access_token, verify_password
 from app.db import get_db
 from app.models import UserModel, RevokedTokenModel
@@ -1060,7 +1085,27 @@ blacklist = set()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 @router.post("/login", response_model=TokenSchema)
-async def login_for_access_token(form_data: LoginFormSchema, db: Session = Depends(get_db)):
+async def login_endpoint(form_data: LoginFormSchema, db: Session = Depends(get_db)):
+    """
+    This function authenticates a user and generates an access token.
+
+    Parameters:
+    ----------
+    form_data: LoginFormSchema
+        The login form data containing the username and password.
+    db: Session
+        The database session.
+
+    Raises:
+    ----------
+    HTTPException
+        If the user account is inactive or the password is incorrect.
+
+    Returns:
+    ----------
+    TokenSchema
+        The access token for the authenticated user.
+    """
     user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
 
     if user:
@@ -1087,7 +1132,27 @@ async def login_for_access_token(form_data: LoginFormSchema, db: Session = Depen
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
-async def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def logout_endpoint(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    This function logs out a user by adding their token to the revoked tokens list.
+
+    Parameters:
+    ----------
+    token: str
+        The token of the user who is logging out.
+    db: Session
+        The database session.
+
+    Raises:
+    ----------
+    HTTPException
+        If there is an error while revoking the token.
+
+    Returns:
+    ----------
+    dict
+        A message indicating that the user has been successfully logged out.
+    """
     try:
         revoked_token = RevokedTokenModel(token=token)
         db.add(revoked_token)
@@ -1105,6 +1170,32 @@ async def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_
 ## File: filters.py
 ```py
 # filename: app/api/endpoints/filters.py
+"""
+This module defines the API endpoints for filtering questions in the application.
+
+It includes a function to forbid extra parameters in the request, and an endpoint 
+to filter questions based on various parameters like subject, topic, subtopic, 
+difficulty, tags, skip and limit.
+
+Functions:
+----------
+forbid_extra_params(request: Request) -> None:
+    Checks if the request contains any extra parameters that are not allowed.
+    If found, raises an HTTPException.
+
+filter_questions_endpoint(
+    request: Request,
+    subject: Optional[str] = Query(None),
+    topic: Optional[str] = Query(None),
+    subtopic: Optional[str] = Query(None),
+    difficulty: Optional[str] = Query(None),
+    tags: Optional[List[str]] = Query(None),
+    db: Session = Depends(get_db),
+    skip: int = 0, limit: int = 100
+) -> List[QuestionSchema]:
+    Filters questions based on the provided parameters.
+    Returns a list of questions that match the filters.
+"""
 
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, Depends, Request
@@ -1113,17 +1204,38 @@ from pydantic import ValidationError
 from app.schemas import QuestionSchema, FilterParamsSchema
 from app.crud import filter_questions_crud
 from app.db import get_db
+from app.services import get_current_user
+from app.models.users import UserModel
 
 router = APIRouter()
 
+
 async def forbid_extra_params(request: Request):
-    allowed_params = {'subject', 'topic', 'subtopic', 'difficulty', 'tags', 'skip', 'limit'}
+    """
+    This function checks if the request contains any extra parameters that are not allowed.
+    If found, it raises an HTTPException.
+
+    Parameters:
+    ----------
+    request: Request
+        The request object containing all the parameters.
+
+    Raises:
+    ----------
+    HTTPException
+        If any extra parameters are found in the request.
+    """
+    allowed_params = {'subject', 'topic', 'subtopic',
+                      'difficulty', 'tags', 'skip', 'limit'}
     actual_params = set(request.query_params.keys())
     extra_params = actual_params - allowed_params
     if extra_params:
-        raise HTTPException(status_code=422, detail=f"Unexpected parameters provided: {extra_params}")
+        raise HTTPException(
+            status_code=422, detail=f"Unexpected parameters provided: {extra_params}")
+
 
 @router.get("/questions/filter", response_model=List[QuestionSchema], status_code=200)
+# pylint: disable=unused-argument
 async def filter_questions_endpoint(
     request: Request,
     subject: Optional[str] = Query(None),
@@ -1133,8 +1245,39 @@ async def filter_questions_endpoint(
     tags: Optional[List[str]] = Query(None),
     db: Session = Depends(get_db),
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    current_user: UserModel = Depends(get_current_user)
 ):
+    """
+    This function filters questions based on the provided parameters.
+    Returns a list of questions that match the filters.
+
+    Parameters:
+    ----------
+    request: Request
+        The request object containing all the parameters.
+    subject: Optional[str]
+        The subject to filter the questions by.
+    topic: Optional[str]
+        The topic to filter the questions by.
+    subtopic: Optional[str]
+        The subtopic to filter the questions by.
+    difficulty: Optional[str]
+        The difficulty level to filter the questions by.
+    tags: Optional[List[str]]
+        The tags to filter the questions by.
+    db: Session
+        The database session.
+    skip: int
+        The number of records to skip.
+    limit: int
+        The maximum number of records to return.
+
+    Returns:
+    ----------
+    List[QuestionSchema]
+        A list of questions that match the filters.
+    """
     await forbid_extra_params(request)
     try:
         # Constructing the filters model from the query parameters directly
@@ -1157,9 +1300,25 @@ async def filter_questions_endpoint(
 
 ```
 
+## File: openapi.json
+```json
+{"openapi":"3.1.0","info":{"title":"FastAPI","version":"0.1.0"},"paths":{"/users/":{"get":{"tags":["User Management"],"summary":"Read Users","description":"Retrieve a list of all users.\n\nParameters:\n    db (Session): The database session.\n    current_user (UserModel): The current user.\n\nReturns:\n    List[UserSchema]: A list of user objects.","operationId":"read_users_users__get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"items":{"$ref":"#/components/schemas/UserSchema"},"type":"array","title":"Response Read Users Users  Get"}}}}},"security":[{"OAuth2PasswordBearer":[]}]},"post":{"tags":["User Management"],"summary":"Create User","description":"Create a new user.\n\nParameters:\n    user (UserCreateSchema): The user data to be created.\n    db (Session): The database session.\n\nReturns:\n    UserSchema: The created user object.\n\nRaises:\n    HTTPException: If there's an error creating the user.","operationId":"create_user_users__post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserCreateSchema"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/users/me":{"get":{"tags":["User Management"],"summary":"Read User Me","description":"Retrieve the current user.\n\nParameters:\n    current_user (UserModel): The current user.\n\nReturns:\n    UserSchema: The current user object.","operationId":"read_user_me_users_me_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserSchema"}}}}},"security":[{"OAuth2PasswordBearer":[]}]},"put":{"tags":["User Management"],"summary":"Update User Me","description":"Update the current user.\n\nParameters:\n    updated_user (UserUpdateSchema): The updated user data.\n    current_user (UserModel): The current user.\n    db (Session): The database session.\n\nReturns:\n    UserSchema: The updated user object.","operationId":"update_user_me_users_me_put","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserUpdateSchema"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/register/":{"post":{"tags":["Authentication"],"summary":"Register User","description":"Endpoint to register a new user.\n\nArgs:\n    user: A UserCreate schema object containing the user's registration information.\n    db: A database session dependency injected by FastAPI.\n    \nRaises:\n    HTTPException: If the username is already registered.\n    \nReturns:\n    The newly created user object.","operationId":"register_user_register__post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserCreateSchema"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/token":{"post":{"tags":["Authentication"],"summary":"Login For Access Token","description":"Endpoint to authenticate a user and issue a JWT access token.\n\nArgs:\n    form_data (OAuth2PasswordRequestForm):\n        An OAuth2PasswordRequestForm object containing the user's login credentials.\n    db (Session):\n        A database session dependency injected by FastAPI.\n\nRaises:\n    HTTPException:\n        If the username or password is incorrect, or if an internal server error occurs.\n\nReturns:\n    TokenSchema:\n        A TokenSchema object containing the access token and token type.","operationId":"login_for_access_token_token_post","requestBody":{"content":{"application/x-www-form-urlencoded":{"schema":{"$ref":"#/components/schemas/Body_login_for_access_token_token_post"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TokenSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/login":{"post":{"tags":["Authentication"],"summary":"Login Endpoint","description":"This function authenticates a user and generates an access token.\n\nParameters:\n----------\nform_data: LoginFormSchema\n    The login form data containing the username and password.\ndb: Session\n    The database session.\n\nRaises:\n----------\nHTTPException\n    If the user account is inactive or the password is incorrect.\n\nReturns:\n----------\nTokenSchema\n    The access token for the authenticated user.","operationId":"login_endpoint_login_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/LoginFormSchema"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TokenSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/logout":{"post":{"tags":["Authentication"],"summary":"Logout Endpoint","description":"This function logs out a user by adding their token to the revoked tokens list.\n\nParameters:\n----------\ntoken: str\n    The token of the user who is logging out.\ndb: Session\n    The database session.\n\nRaises:\n----------\nHTTPException\n    If there is an error while revoking the token.\n\nReturns:\n----------\ndict\n    A message indicating that the user has been successfully logged out.","operationId":"logout_endpoint_logout_post","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/upload-questions/":{"post":{"tags":["Question Sets"],"summary":"Upload Question Set Endpoint","description":"This function uploads a question set to the database.\n\nParameters:\n----------\nfile: UploadFile\n    The file containing the question set to be uploaded.\ndb: Session\n    The database session.\n\nRaises:\n----------\nHTTPException\n    If there is an error while uploading the question set.\n\nReturns:\n----------\ndict\n    A message indicating that the question set has been successfully uploaded.","operationId":"upload_question_set_endpoint_upload_questions__post","requestBody":{"content":{"multipart/form-data":{"schema":{"$ref":"#/components/schemas/Body_upload_question_set_endpoint_upload_questions__post"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/question-set/":{"get":{"tags":["Question Sets"],"summary":"Read Questions Endpoint","description":"This function retrieves a list of questions from the database.\n\nParameters:\n----------\nskip: int\n    The number of records to skip.\nlimit: int\n    The maximum number of records to return.\ndb: Session\n    The database session.\n\nReturns:\n----------\nList[QuestionSetSchema]\n    A list of questions.","operationId":"read_questions_endpoint_question_set__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/QuestionSetSchema"},"title":"Response Read Questions Endpoint Question Set  Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/question-sets/":{"post":{"tags":["Question Sets"],"summary":"Create Question Set Endpoint","description":"This function retrieves a list of questions from the database.\n\nParameters:\n----------\nskip: int\n    The number of records to skip.\nlimit: int\n    The maximum number of records to return.\ndb: Session\n    The database session.\n\nReturns:\n----------\nList[QuestionSetSchema]\n    A list of questions.","operationId":"create_question_set_endpoint_question_sets__post","security":[{"OAuth2PasswordBearer":[]}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSetCreateSchema"}}}},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSetSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"get":{"tags":["Question Sets"],"summary":"Read Question Sets Endpoint","description":"This function retrieves a list of question sets from the database.\n\nParameters:\n----------\nskip: int\n    The number of records to skip.\nlimit: int\n    The maximum number of records to return.\ndb: Session\n    The database session.\n\nReturns:\n----------\nList[QuestionSetSchema]\n    A list of question sets.","operationId":"read_question_sets_endpoint_question_sets__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/QuestionSetSchema"},"title":"Response Read Question Sets Endpoint Question Sets  Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/question-sets/{question_set_id}":{"get":{"tags":["Question Sets"],"summary":"Get Question Set Endpoint","description":"This function retrieves a question set from the database by its ID.\n\nParameters:\n----------\nquestion_set_id: int\n    The ID of the question set to retrieve.\ndb: Session\n    The database session.\n\nRaises:\n----------\nHTTPException\n    If the question set with the provided ID is not found.\n\nReturns:\n----------\nQuestionSetSchema\n    The retrieved question set.","operationId":"get_question_set_endpoint_question_sets__question_set_id__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_set_id","in":"path","required":true,"schema":{"type":"integer","title":"Question Set Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSetSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"put":{"tags":["Question Sets"],"summary":"Update Question Set Endpoint","description":"This function updates a question set in the database.\n\nParameters:\n----------\nquestion_set_id: int\n    The ID of the question set to update.\nquestion_set: QuestionSetUpdateSchema\n    The updated question set.\ndb: Session\n    The database session.\ncurrent_user: UserModel\n    The current user.\n\nRaises:\n----------\nHTTPException\n    If the current user is not an admin or the question set with the provided ID is not found.\n\nReturns:\n----------\nQuestionSetSchema\n    The updated question set.","operationId":"update_question_set_endpoint_question_sets__question_set_id__put","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_set_id","in":"path","required":true,"schema":{"type":"integer","title":"Question Set Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSetUpdateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSetSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Question Sets"],"summary":"Delete Question Set Endpoint","description":"This function deletes a question set from the database.\n\nParameters:\n----------\nquestion_set_id: int\n    The ID of the question set to delete.\ndb: Session\n    The database session.\ncurrent_user: UserModel\n    The current user.\n\nRaises:\n----------\nHTTPException\n    If the current user is not an admin or the question set with the provided ID is not found.\n\nReturns:\n----------\nResponse\n    An HTTP response with a 204 status code.","operationId":"delete_question_set_endpoint_question_sets__question_set_id__delete","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_set_id","in":"path","required":true,"schema":{"type":"integer","title":"Question Set Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/question":{"post":{"tags":["Question"],"summary":"Create Question Endpoint","description":"Create a new question.\n\nArgs:\n    question (QuestionCreateSchema): The question data to be created.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    QuestionSchema: The created question.\n\nRaises:\n    HTTPException: If subject_id, topic_id, or subtopic_id are missing.","operationId":"create_question_endpoint_question_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionCreateSchema"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/question/question_id}":{"get":{"tags":["Question"],"summary":"Get Question Endpoint","description":"Retrieve a question by its ID.\n\nArgs:\n    question_id (int): The ID of the question to retrieve.\n    question (QuestionUpdateSchema): The updated question data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    Question: The retrieved question.","operationId":"get_question_endpoint_question_question_id__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_id","in":"query","required":true,"schema":{"type":"integer","title":"Question Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionUpdateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/question/{question_id}":{"put":{"tags":["Question"],"summary":"Update Question Endpoint","description":"Update a question in the database.\n\nArgs:\n    question_id (int): The ID of the question to be updated.\n    question (QuestionUpdateSchema): The updated question data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    QuestionSchema: The updated question.\n\nRaises:\n    HTTPException: If the question with the specified ID is not found.","operationId":"update_question_endpoint_question__question_id__put","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_id","in":"path","required":true,"schema":{"type":"integer","title":"Question Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionUpdateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Question"],"summary":"Delete Question Endpoint","description":"Delete a question with the given question_id from the database.\n\nArgs:\n    question_id (int): The ID of the question to be deleted.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    Response: A response with status code 204 indicating successful deletion.\n\nRaises:\n    HTTPException: If the question with the given question_id is not found in the database.","operationId":"delete_question_endpoint_question__question_id__delete","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_id","in":"path","required":true,"schema":{"type":"integer","title":"Question Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/questions/":{"get":{"tags":["Questions"],"summary":"Get Questions Endpoint","description":"Retrieve a list of questions.\n\nParameters:\n- skip (int): Number of questions to skip (default: 0)\n- limit (int): Maximum number of questions to retrieve (default: 100)\n- db (Session): SQLAlchemy database session dependency\n- current_user (UserModel): Current authenticated user dependency\n\nReturns:\n- List[QuestionSchema]: List of questions retrieved from the database","operationId":"get_questions_endpoint_questions__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/QuestionSchema"},"title":"Response Get Questions Endpoint Questions  Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/user-responses/":{"post":{"tags":["User Responses"],"summary":"Create User Response Endpoint","description":"Create a new user response.\n\nArgs:\n    user_response (UserResponseCreateSchema): The user response data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    UserResponseSchema: The created user response.","operationId":"create_user_response_endpoint_user_responses__post","security":[{"OAuth2PasswordBearer":[]}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserResponseCreateSchema"}}}},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserResponseSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"get":{"tags":["User Responses"],"summary":"Get User Responses Endpoint","description":"Get a list of user responses.\n\nArgs:\n    skip (int, optional): The number of user responses to skip. Defaults to 0.\n    limit (int, optional): The maximum number of user responses to retrieve. Defaults to 100.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    List[UserResponseSchema]: The list of user responses.","operationId":"get_user_responses_endpoint_user_responses__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/UserResponseSchema"},"title":"Response Get User Responses Endpoint User Responses  Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/user-responses/{user_response_id}":{"get":{"tags":["User Responses"],"summary":"Get User Response Endpoint","description":"Get a user response by ID.\n\nArgs:\n    user_response_id (int): The ID of the user response.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    UserResponseSchema: The user response with the specified ID.\n\nRaises:\n    HTTPException: If the user response is not found.","operationId":"get_user_response_endpoint_user_responses__user_response_id__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"user_response_id","in":"path","required":true,"schema":{"type":"integer","title":"User Response Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserResponseSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"put":{"tags":["User Responses"],"summary":"Update User Response Endpoint","description":"Update a user response.\n\nArgs:\n    user_response_id (int): The ID of the user response to update.\n    user_response (UserResponseUpdateSchema): The updated user response data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    UserResponseSchema: The updated user response.","operationId":"update_user_response_endpoint_user_responses__user_response_id__put","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"user_response_id","in":"path","required":true,"schema":{"type":"integer","title":"User Response Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserResponseUpdateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserResponseSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["User Responses"],"summary":"Delete User Response Endpoint","description":"Delete a user response.\n\nArgs:\n    user_response_id (int): The ID of the user response to delete.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    Response: The HTTP response with status code 204 (No Content).","operationId":"delete_user_response_endpoint_user_responses__user_response_id__delete","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"user_response_id","in":"path","required":true,"schema":{"type":"integer","title":"User Response Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/questions/filter":{"get":{"tags":["Filters"],"summary":"Filter Questions Endpoint","description":"This function filters questions based on the provided parameters.\nReturns a list of questions that match the filters.\n\nParameters:\n----------\nrequest: Request\n    The request object containing all the parameters.\nsubject: Optional[str]\n    The subject to filter the questions by.\ntopic: Optional[str]\n    The topic to filter the questions by.\nsubtopic: Optional[str]\n    The subtopic to filter the questions by.\ndifficulty: Optional[str]\n    The difficulty level to filter the questions by.\ntags: Optional[List[str]]\n    The tags to filter the questions by.\ndb: Session\n    The database session.\nskip: int\n    The number of records to skip.\nlimit: int\n    The maximum number of records to return.\n\nReturns:\n----------\nList[QuestionSchema]\n    A list of questions that match the filters.","operationId":"filter_questions_endpoint_questions_filter_get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"subject","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Subject"}},{"name":"topic","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Topic"}},{"name":"subtopic","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Subtopic"}},{"name":"difficulty","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Difficulty"}},{"name":"tags","in":"query","required":false,"schema":{"anyOf":[{"type":"array","items":{"type":"string"}},{"type":"null"}],"title":"Tags"}},{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/QuestionSchema"},"title":"Response Filter Questions Endpoint Questions Filter Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/topics/":{"post":{"tags":["Topics"],"summary":"Create Topic Endpoint","description":"Create a new topic.\n\nArgs:\n    topic (TopicCreateSchema): The topic data to be created.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    TopicSchema: The created topic.","operationId":"create_topic_endpoint_topics__post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/TopicCreateSchema"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TopicSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/topics/{topic_id}":{"get":{"tags":["Topics"],"summary":"Read Topic Endpoint","description":"Read a topic by its ID.\n\nArgs:\n    topic_id (int): The ID of the topic to be read.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    TopicSchema: The read topic.\n\nRaises:\n    HTTPException: If the topic is not found.","operationId":"read_topic_endpoint_topics__topic_id__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"topic_id","in":"path","required":true,"schema":{"type":"integer","title":"Topic Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TopicSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"put":{"tags":["Topics"],"summary":"Update Topic Endpoint","description":"Update a topic by its ID.\n\nArgs:\n    topic_id (int): The ID of the topic to be updated.\n    topic (TopicCreateSchema): The updated topic data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    TopicSchema: The updated topic.\n\nRaises:\n    HTTPException: If the topic is not found.","operationId":"update_topic_endpoint_topics__topic_id__put","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"topic_id","in":"path","required":true,"schema":{"type":"integer","title":"Topic Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/TopicCreateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TopicSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Topics"],"summary":"Delete Topic Endpoint","description":"Delete a topic by its ID.\n\nArgs:\n    topic_id (int): The ID of the topic to be deleted.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nRaises:\n    HTTPException: If the topic is not found.","operationId":"delete_topic_endpoint_topics__topic_id__delete","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"topic_id","in":"path","required":true,"schema":{"type":"integer","title":"Topic Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/subjects/":{"post":{"tags":["Subjects"],"summary":"Create Subject Endpoint","description":"Create a new subject.\n\nArgs:\n    subject (SubjectCreateSchema): The subject data to be created.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    SubjectSchema: The created subject.","operationId":"create_subject_endpoint_subjects__post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubjectCreateSchema"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubjectSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/subjects/{subject_id}":{"get":{"tags":["Subjects"],"summary":"Read Subject Endpoint","description":"Read a subject by ID.\n\nArgs:\n    subject_id (int): The ID of the subject to be read.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    SubjectSchema: The read subject.\n\nRaises:\n    HTTPException: If the subject is not found.","operationId":"read_subject_endpoint_subjects__subject_id__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"subject_id","in":"path","required":true,"schema":{"type":"integer","title":"Subject Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubjectSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"put":{"tags":["Subjects"],"summary":"Update Subject Endpoint","description":"Update a subject by ID.\n\nArgs:\n    subject_id (int): The ID of the subject to be updated.\n    subject (SubjectCreateSchema): The updated subject data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    SubjectSchema: The updated subject.\n\nRaises:\n    HTTPException: If the subject is not found.","operationId":"update_subject_endpoint_subjects__subject_id__put","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"subject_id","in":"path","required":true,"schema":{"type":"integer","title":"Subject Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubjectCreateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubjectSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Subjects"],"summary":"Delete Subject Endpoint","description":"Delete a subject by ID.\n\nArgs:\n    subject_id (int): The ID of the subject to be deleted.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nRaises:\n    HTTPException: If the subject is not found.","operationId":"delete_subject_endpoint_subjects__subject_id__delete","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"subject_id","in":"path","required":true,"schema":{"type":"integer","title":"Subject Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/":{"get":{"summary":"Read Root","operationId":"read_root__get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}}}}}},"components":{"schemas":{"AnswerChoiceCreateSchema":{"properties":{"text":{"type":"string","title":"Text"},"is_correct":{"type":"boolean","title":"Is Correct"},"explanation":{"type":"string","title":"Explanation"}},"type":"object","required":["text","is_correct","explanation"],"title":"AnswerChoiceCreateSchema"},"AnswerChoiceSchema":{"properties":{"id":{"type":"integer","title":"Id"},"text":{"type":"string","title":"Text"},"is_correct":{"type":"boolean","title":"Is Correct"},"explanation":{"type":"string","title":"Explanation"}},"type":"object","required":["id","text","is_correct","explanation"],"title":"AnswerChoiceSchema"},"Body_login_for_access_token_token_post":{"properties":{"grant_type":{"anyOf":[{"type":"string","pattern":"password"},{"type":"null"}],"title":"Grant Type"},"username":{"type":"string","title":"Username"},"password":{"type":"string","title":"Password"},"scope":{"type":"string","title":"Scope","default":""},"client_id":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Client Id"},"client_secret":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Client Secret"}},"type":"object","required":["username","password"],"title":"Body_login_for_access_token_token_post"},"Body_upload_question_set_endpoint_upload_questions__post":{"properties":{"file":{"type":"string","format":"binary","title":"File"}},"type":"object","required":["file"],"title":"Body_upload_question_set_endpoint_upload_questions__post"},"HTTPValidationError":{"properties":{"detail":{"items":{"$ref":"#/components/schemas/ValidationError"},"type":"array","title":"Detail"}},"type":"object","title":"HTTPValidationError"},"LoginFormSchema":{"properties":{"username":{"type":"string","maxLength":50,"minLength":3,"title":"Username"},"password":{"type":"string","minLength":8,"title":"Password"}},"type":"object","required":["username","password"],"title":"LoginFormSchema"},"QuestionCreateSchema":{"properties":{"text":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Text","description":"The text of the question"},"subject_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Subject Id","description":"ID of the subject associated with the question"},"topic_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Topic Id","description":"ID of the topic associated with the question"},"subtopic_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Subtopic Id","description":"ID of the subtopic associated with the question"},"difficulty":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Difficulty","description":"The difficulty level of the question"},"answer_choices":{"anyOf":[{"items":{"$ref":"#/components/schemas/AnswerChoiceCreateSchema"},"type":"array"},{"type":"null"}],"title":"Answer Choices","description":"A list of answer choices"},"tags":{"anyOf":[{"items":{"$ref":"#/components/schemas/QuestionTagSchema"},"type":"array"},{"type":"null"}],"title":"Tags","description":"A list of tags associated with the question"},"question_set_ids":{"anyOf":[{"items":{"type":"integer"},"type":"array"},{"type":"null"}],"title":"Question Set Ids","description":"Updated list of question set IDs the question belongs to"}},"type":"object","title":"QuestionCreateSchema"},"QuestionSchema":{"properties":{"id":{"type":"integer","title":"Id"},"text":{"type":"string","title":"Text"},"subject_id":{"type":"integer","title":"Subject Id"},"topic_id":{"type":"integer","title":"Topic Id"},"subtopic_id":{"type":"integer","title":"Subtopic Id"},"difficulty":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Difficulty"},"tags":{"anyOf":[{"items":{"$ref":"#/components/schemas/QuestionTagSchema"},"type":"array"},{"type":"null"}],"title":"Tags","default":[]},"answer_choices":{"items":{"$ref":"#/components/schemas/AnswerChoiceSchema"},"type":"array","title":"Answer Choices","default":[]},"question_set_ids":{"anyOf":[{"items":{"type":"integer"},"type":"array"},{"type":"null"}],"title":"Question Set Ids","default":[]}},"type":"object","required":["id","text","subject_id","topic_id","subtopic_id"],"title":"QuestionSchema"},"QuestionSetCreateSchema":{"properties":{"name":{"type":"string","title":"Name"},"is_public":{"type":"boolean","title":"Is Public","default":true}},"type":"object","required":["name"],"title":"QuestionSetCreateSchema"},"QuestionSetSchema":{"properties":{"name":{"type":"string","title":"Name"},"id":{"type":"integer","title":"Id"},"is_public":{"type":"boolean","title":"Is Public","default":true},"question_ids":{"items":{"type":"integer"},"type":"array","title":"Question Ids","default":[]}},"type":"object","required":["name","id"],"title":"QuestionSetSchema"},"QuestionSetUpdateSchema":{"properties":{"name":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Name"},"is_public":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Is Public"},"question_ids":{"anyOf":[{"items":{"type":"integer"},"type":"array"},{"type":"null"}],"title":"Question Ids"}},"type":"object","title":"QuestionSetUpdateSchema"},"QuestionTagSchema":{"properties":{"tag":{"type":"string","title":"Tag"},"id":{"type":"integer","title":"Id"}},"type":"object","required":["tag","id"],"title":"QuestionTagSchema"},"QuestionUpdateSchema":{"properties":{"text":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Text","description":"The text of the question"},"difficulty":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Difficulty","description":"The difficulty level of the question"},"subject_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Subject Id","description":"ID of the subject associated with the question"},"topic_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Topic Id","description":"ID of the topic associated with the question"},"subtopic_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Subtopic Id","description":"ID of the subtopic associated with the question"},"answer_choices":{"anyOf":[{"items":{"$ref":"#/components/schemas/AnswerChoiceCreateSchema"},"type":"array"},{"type":"null"}],"title":"Answer Choices","description":"A list of answer choices"},"tags":{"anyOf":[{"items":{"$ref":"#/components/schemas/QuestionTagSchema"},"type":"array"},{"type":"null"}],"title":"Tags","description":"A list of tags associated with the question"},"question_set_ids":{"anyOf":[{"items":{"type":"integer"},"type":"array"},{"type":"null"}],"title":"Question Set Ids","description":"Updated list of question set IDs the question belongs to"}},"type":"object","title":"QuestionUpdateSchema"},"SubjectCreateSchema":{"properties":{"name":{"type":"string","title":"Name"}},"type":"object","required":["name"],"title":"SubjectCreateSchema"},"SubjectSchema":{"properties":{"name":{"type":"string","title":"Name"},"id":{"type":"integer","title":"Id"}},"type":"object","required":["name","id"],"title":"SubjectSchema"},"TokenSchema":{"properties":{"access_token":{"type":"string","title":"Access Token"},"token_type":{"type":"string","title":"Token Type"}},"type":"object","required":["access_token","token_type"],"title":"TokenSchema"},"TopicCreateSchema":{"properties":{"name":{"type":"string","title":"Name"},"subject_id":{"type":"integer","title":"Subject Id"}},"type":"object","required":["name","subject_id"],"title":"TopicCreateSchema"},"TopicSchema":{"properties":{"name":{"type":"string","title":"Name"},"subject_id":{"type":"integer","title":"Subject Id"},"id":{"type":"integer","title":"Id"}},"type":"object","required":["name","subject_id","id"],"title":"TopicSchema"},"UserCreateSchema":{"properties":{"username":{"type":"string","title":"Username"},"password":{"type":"string","title":"Password"}},"type":"object","required":["username","password"],"title":"UserCreateSchema"},"UserResponseCreateSchema":{"properties":{"user_id":{"type":"integer","title":"User Id"},"question_id":{"type":"integer","title":"Question Id"},"answer_choice_id":{"type":"integer","title":"Answer Choice Id"},"is_correct":{"type":"boolean","title":"Is Correct"}},"type":"object","required":["user_id","question_id","answer_choice_id","is_correct"],"title":"UserResponseCreateSchema"},"UserResponseSchema":{"properties":{"user_id":{"type":"integer","title":"User Id"},"question_id":{"type":"integer","title":"Question Id"},"answer_choice_id":{"type":"integer","title":"Answer Choice Id"},"is_correct":{"type":"boolean","title":"Is Correct"},"id":{"type":"integer","title":"Id"},"timestamp":{"type":"string","format":"date-time","title":"Timestamp"}},"type":"object","required":["user_id","question_id","answer_choice_id","is_correct","id","timestamp"],"title":"UserResponseSchema"},"UserResponseUpdateSchema":{"properties":{"is_correct":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Is Correct"}},"type":"object","title":"UserResponseUpdateSchema"},"UserSchema":{"properties":{"username":{"type":"string","title":"Username"},"id":{"type":"integer","title":"Id"},"is_admin":{"type":"boolean","title":"Is Admin"}},"type":"object","required":["username","id","is_admin"],"title":"UserSchema"},"UserUpdateSchema":{"properties":{"username":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Username"},"password":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Password"}},"type":"object","title":"UserUpdateSchema"},"ValidationError":{"properties":{"loc":{"items":{"anyOf":[{"type":"string"},{"type":"integer"}]},"type":"array","title":"Location"},"msg":{"type":"string","title":"Message"},"type":{"type":"string","title":"Error Type"}},"type":"object","required":["loc","msg","type"],"title":"ValidationError"}},"securitySchemes":{"OAuth2PasswordBearer":{"type":"oauth2","flows":{"password":{"scopes":{},"tokenUrl":"login"}}}}}}
+```
+
 ## File: question.py
 ```py
 # filename: app/api/endpoints/question.py
+"""
+This module contains the API endpoints for managing questions in the quiz app.
+
+It provides the following endpoints:
+- POST /question: Create a new question.
+- GET /question/{question_id}: Retrieve a question by its ID.
+- PUT /question/{question_id}: Update a question.
+- DELETE /question/{question_id}: Delete a question.
+
+The module uses FastAPI for building the API and SQLAlchemy for interacting with the db.
+"""
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
@@ -1177,13 +1336,35 @@ from app.schemas import (
     QuestionSchema,
     QuestionTagSchema
 )
+from app.services import get_current_user
+from app.models.users import UserModel
 
 router = APIRouter()
 
+
 @router.post("/question", response_model=QuestionSchema, status_code=201)
-def create_question_endpoint(question: QuestionCreateSchema, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def create_question_endpoint(
+    question: QuestionCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Create a new question.
+
+    Args:
+        question (QuestionCreateSchema): The question data to be created.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        QuestionSchema: The created question.
+
+    Raises:
+        HTTPException: If subject_id, topic_id, or subtopic_id are missing.
+    """
     if not all([question.subject_id, question.topic_id, question.subtopic_id]):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="subject_id, topic_id, and subtopic_id are required")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="subject_id, topic_id, and subtopic_id are required")
 
     question_db = create_question_crud(db, question)
     return QuestionSchema(
@@ -1193,21 +1374,65 @@ def create_question_endpoint(question: QuestionCreateSchema, db: Session = Depen
         topic_id=question_db.topic_id,
         subtopic_id=question_db.subtopic_id,
         difficulty=question_db.difficulty,
-        tags=[QuestionTagSchema.model_validate(tag) for tag in question_db.tags],
-        answer_choices=[AnswerChoiceSchema.model_validate(choice) for choice in question_db.answer_choices],
+        tags=[QuestionTagSchema.model_validate(
+            tag) for tag in question_db.tags],
+        answer_choices=[AnswerChoiceSchema.model_validate(
+            choice) for choice in question_db.answer_choices],
         question_set_ids=question_db.question_set_ids
     )
 
+
 @router.get("/question/question_id}", response_model=QuestionSchema)
-def get_question_endpoint(question_id: int, question: QuestionUpdateSchema, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def get_question_endpoint(
+    question_id: int,
+    question: QuestionUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Retrieve a question by its ID.
+
+    Args:
+        question_id (int): The ID of the question to retrieve.
+        question (QuestionUpdateSchema): The updated question data.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        Question: The retrieved question.
+
+    """
     question = get_question_crud(db, question_id)
     return question
 
+
 @router.put("/question/{question_id}", response_model=QuestionSchema)
-def update_question_endpoint(question_id: int, question: QuestionUpdateSchema, db: Session = Depends(get_db)):
-    db_question = update_question_crud(db, question_id=question_id, question=question)
+# pylint: disable=unused-argument
+def update_question_endpoint(
+    question_id: int,
+    question: QuestionUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Update a question in the database.
+
+    Args:
+        question_id (int): The ID of the question to be updated.
+        question (QuestionUpdateSchema): The updated question data.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        QuestionSchema: The updated question.
+
+    Raises:
+        HTTPException: If the question with the specified ID is not found.
+    """
+    db_question = update_question_crud(
+        db, question_id=question_id, question=question)
     if db_question is None:
-        raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Question with ID {question_id} not found")
     return QuestionSchema(
         id=db_question.id,
         text=db_question.text,
@@ -1215,16 +1440,38 @@ def update_question_endpoint(question_id: int, question: QuestionUpdateSchema, d
         topic_id=db_question.topic_id,
         subtopic_id=db_question.subtopic_id,
         difficulty=db_question.difficulty,
-        tags=[QuestionTagSchema.model_validate(tag) for tag in db_question.tags],
-        answer_choices=[AnswerChoiceSchema.model_validate(choice) for choice in db_question.answer_choices],
+        tags=[QuestionTagSchema.model_validate(
+            tag) for tag in db_question.tags],
+        answer_choices=[AnswerChoiceSchema.model_validate(
+            choice) for choice in db_question.answer_choices],
         question_set_ids=db_question.question_set_ids
     )
 
+
 @router.delete("/question/{question_id}", status_code=204)
-def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def delete_question_endpoint(
+    question_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Delete a question with the given question_id from the database.
+
+    Args:
+        question_id (int): The ID of the question to be deleted.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        Response: A response with status code 204 indicating successful deletion.
+
+    Raises:
+        HTTPException: If the question with the given question_id is not found in the database.
+    """
     deleted = delete_question_crud(db, question_id=question_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Question with ID {question_id} not found")
     return Response(status_code=204)
 
 ```
@@ -1232,6 +1479,29 @@ def delete_question_endpoint(question_id: int, db: Session = Depends(get_db)):
 ## File: question_sets.py
 ```py
 # filename: app/api/endpoints/question_sets.py
+"""
+This module defines the API endpoints for managing question sets in the application.
+
+It includes endpoints to create, read, update, and delete question sets.
+It also includes a service to get the current user and a CRUD operation to create a question.
+
+Imports:
+----------
+json: For parsing and generating JSON data.
+typing: For type hinting.
+fastapi: For creating API routes and handling HTTP exceptions.
+sqlalchemy.orm: For handling database sessions.
+pydantic: For data validation and serialization.
+app.db: For getting the database session.
+app.services: For getting the current user.
+app.models: For accessing the user and question set models.
+app.crud: For performing CRUD operations on the question sets.
+app.schemas: For validating and deserializing data.
+
+Variables:
+----------
+router: The API router instance.
+"""
 
 import json
 from typing import List
@@ -1248,7 +1518,7 @@ from sqlalchemy.orm import Session
 from pydantic import ValidationError
 from app.db import get_db
 from app.services import get_current_user
-from app.models import UserModel, QuestionSetModel
+from app.models import UserModel
 from app.crud import (
     create_question_crud,
     read_question_sets_crud,
@@ -1266,10 +1536,36 @@ from app.schemas import (
 
 router = APIRouter()
 
+
 @router.post("/upload-questions/")
-async def upload_question_set_endpoint(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
+async def upload_question_set_endpoint(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    This function uploads a question set to the database.
+
+    Parameters:
+    ----------
+    file: UploadFile
+        The file containing the question set to be uploaded.
+    db: Session
+        The database session.
+
+    Raises:
+    ----------
+    HTTPException
+        If there is an error while uploading the question set.
+
+    Returns:
+    ----------
+    dict
+        A message indicating that the question set has been successfully uploaded.
+    """
     if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can upload question sets")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Only admin users can upload question sets")
 
     try:
         content = await file.read()
@@ -1277,7 +1573,8 @@ async def upload_question_set_endpoint(file: UploadFile = File(...), db: Session
 
         # Validate question data
         for question in question_data:
-            QuestionCreateSchema(**question)  # Validate question against schema
+            # Validate question against schema
+            QuestionCreateSchema(**question)
 
         # Create question set
         question_set = QuestionSetCreateSchema(name=file.filename)
@@ -1291,43 +1588,176 @@ async def upload_question_set_endpoint(file: UploadFile = File(...), db: Session
         return {"message": "Question set uploaded successfully"}
 
     except (json.JSONDecodeError, ValidationError) as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid JSON data: {str(exc)}") from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Invalid JSON data: {str(exc)}") from exc
 
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error uploading question set: {str(exc)}") from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Error uploading question set: {str(exc)}") from exc
+
 
 @router.get("/question-set/", response_model=List[QuestionSetSchema])
-def read_questions_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def read_questions_endpoint(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    This function retrieves a list of questions from the database.
+
+    Parameters:
+    ----------
+    skip: int
+        The number of records to skip.
+    limit: int
+        The maximum number of records to return.
+    db: Session
+        The database session.
+
+    Returns:
+    ----------
+    List[QuestionSetSchema]
+        A list of questions.
+    """
     questions = read_question_sets_crud(db, skip=skip, limit=limit)
     return questions
 
+
 @router.post("/question-sets/", response_model=QuestionSetSchema, status_code=201)
-def create_question_set_endpoint(question_set: QuestionSetCreateSchema, db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
+def create_question_set_endpoint(
+    question_set: QuestionSetCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    This function retrieves a list of questions from the database.
+
+    Parameters:
+    ----------
+    skip: int
+        The number of records to skip.
+    limit: int
+        The maximum number of records to return.
+    db: Session
+        The database session.
+
+    Returns:
+    ----------
+    List[QuestionSetSchema]
+        A list of questions.
+    """
     if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can create question sets")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Only admin users can create question sets")
 
     return create_question_set_crud(db=db, question_set=question_set)
 
+
 @router.get("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
-def get_question_set_endpoint(question_set_id: int, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def get_question_set_endpoint(
+    question_set_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    This function retrieves a question set from the database by its ID.
+
+    Parameters:
+    ----------
+    question_set_id: int
+        The ID of the question set to retrieve.
+    db: Session
+        The database session.
+
+    Raises:
+    ----------
+    HTTPException
+        If the question set with the provided ID is not found.
+
+    Returns:
+    ----------
+    QuestionSetSchema
+        The retrieved question set.
+    """
     question_set = read_question_set_crud(db, question_set_id=question_set_id)
     if not question_set:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Question set with ID {question_set_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Question set with ID {question_set_id} not found")
     return question_set
 
+
 @router.get("/question-sets/", response_model=List[QuestionSetSchema])
-def read_question_sets_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def read_question_sets_endpoint(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    This function retrieves a list of question sets from the database.
+
+    Parameters:
+    ----------
+    skip: int
+        The number of records to skip.
+    limit: int
+        The maximum number of records to return.
+    db: Session
+        The database session.
+
+    Returns:
+    ----------
+    List[QuestionSetSchema]
+        A list of question sets.
+    """
     question_sets = read_question_sets_crud(db, skip=skip, limit=limit)
     return question_sets
 
-@router.put("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
-def update_question_set_endpoint(question_set_id: int, question_set: QuestionSetUpdateSchema, db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
-    if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can update question sets")
 
-    db_question_set = update_question_set_crud(db, question_set_id=question_set_id, question_set=question_set)
+@router.put("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
+def update_question_set_endpoint(
+    question_set_id: int,
+    question_set: QuestionSetUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    This function updates a question set in the database.
+
+    Parameters:
+    ----------
+    question_set_id: int
+        The ID of the question set to update.
+    question_set: QuestionSetUpdateSchema
+        The updated question set.
+    db: Session
+        The database session.
+    current_user: UserModel
+        The current user.
+
+    Raises:
+    ----------
+    HTTPException
+        If the current user is not an admin or the question set with the provided ID is not found.
+
+    Returns:
+    ----------
+    QuestionSetSchema
+        The updated question set.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Only admin users can update question sets")
+
+    db_question_set = update_question_set_crud(
+        db, question_set_id=question_set_id, question_set=question_set)
     if db_question_set is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question set not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Question set not found")
     return QuestionSetSchema(
         id=db_question_set.id,
         name=db_question_set.name,
@@ -1335,14 +1765,43 @@ def update_question_set_endpoint(question_set_id: int, question_set: QuestionSet
         question_ids=db_question_set.question_ids
     )
 
+
 @router.delete("/question-sets/{question_set_id}", status_code=204)
-def delete_question_set_endpoint(question_set_id: int, db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
+def delete_question_set_endpoint(
+    question_set_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    This function deletes a question set from the database.
+
+    Parameters:
+    ----------
+    question_set_id: int
+        The ID of the question set to delete.
+    db: Session
+        The database session.
+    current_user: UserModel
+        The current user.
+
+    Raises:
+    ----------
+    HTTPException
+        If the current user is not an admin or the question set with the provided ID is not found.
+
+    Returns:
+    ----------
+    Response
+        An HTTP response with a 204 status code.
+    """
     if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can delete question sets")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Only admin users can delete question sets")
 
     deleted = delete_question_set_crud(db, question_set_id=question_set_id)
     if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question set not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Question set not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 ```
@@ -1350,6 +1809,27 @@ def delete_question_set_endpoint(question_set_id: int, db: Session = Depends(get
 ## File: questions.py
 ```py
 # filename: app/api/endpoints/questions.py
+"""
+This module defines the API endpoint for retrieving questions in the application.
+
+It includes an endpoint to retrieve a list of questions.
+It also includes services to get the current user and a CRUD operation to get questions.
+
+Imports:
+----------
+typing: For type hinting.
+fastapi: For creating API routes and handling HTTP exceptions.
+sqlalchemy.orm: For handling database sessions.
+app.crud: For performing CRUD operations on the questions.
+app.db: For getting the database session.
+app.schemas: For validating and deserializing data.
+app.services: For getting the current user.
+app.models.users: For accessing the user model.
+
+Variables:
+----------
+router: The API router instance.
+"""
 
 from typing import List
 from fastapi import APIRouter, Depends
@@ -1363,7 +1843,25 @@ from app.models.users import UserModel
 router = APIRouter()
 
 @router.get("/questions/", response_model=List[QuestionSchema])
-def get_questions_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
+# pylint: disable=unused-argument
+def get_questions_endpoint(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Retrieve a list of questions.
+
+    Parameters:
+    - skip (int): Number of questions to skip (default: 0)
+    - limit (int): Maximum number of questions to retrieve (default: 100)
+    - db (Session): SQLAlchemy database session dependency
+    - current_user (UserModel): Current authenticated user dependency
+
+    Returns:
+    - List[QuestionSchema]: List of questions retrieved from the database
+    """
     questions = get_questions_crud(db, skip=skip, limit=limit)
     if not questions:
         return []
@@ -1377,7 +1875,8 @@ def get_questions_endpoint(skip: int = 0, limit: int = 100, db: Session = Depend
 """
 This module provides an endpoint for user registration.
 
-It defines a route for registering new users by validating the provided data and creating a new user in the database.
+It defines a route for registering new users by validating 
+the provided data and creating a new user in the database.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -1417,35 +1916,128 @@ def register_user(user: UserCreateSchema, db: Session = Depends(get_db)):
 ## File: subjects.py
 ```py
 # filename: app/api/endpoints/subjects.py
+"""
+This module defines the API endpoints for managing subjects in the application.
+
+It includes endpoints to create and read subjects.
+It also includes a service to get the database session and CRUD operations to manage subjects.
+
+Imports:
+----------
+fastapi: For creating API routes and handling HTTP exceptions.
+sqlalchemy.orm: For handling database sessions.
+app.db.session: For getting the database session.
+app.schemas.subjects: For validating and deserializing subject data.
+app.crud: For performing CRUD operations on the subjects.
+
+Variables:
+----------
+router: The API router instance.
+"""
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.subjects import SubjectSchema, SubjectCreateSchema
-from app.crud import create_subject_crud, read_subject_crud, update_subject_crud, delete_subject_crud
+from app.crud import (
+    create_subject_crud,
+    read_subject_crud,
+    update_subject_crud,
+    delete_subject_crud
+)
+from app.services import get_current_user
+from app.models.users import UserModel
 
 router = APIRouter()
 
 @router.post("/subjects/", response_model=SubjectSchema, status_code=201)
-def create_subject_endpoint(subject: SubjectCreateSchema, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def create_subject_endpoint(
+    subject: SubjectCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Create a new subject.
+
+    Args:
+        subject (SubjectCreateSchema): The subject data to be created.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        SubjectSchema: The created subject.
+    """
     return create_subject_crud(db=db, subject=subject)
 
 @router.get("/subjects/{subject_id}", response_model=SubjectSchema)
-def read_subject_endpoint(subject_id: int, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def read_subject_endpoint(
+    subject_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Read a subject by ID.
+
+    Args:
+        subject_id (int): The ID of the subject to be read.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        SubjectSchema: The read subject.
+
+    Raises:
+        HTTPException: If the subject is not found.
+    """
     subject = read_subject_crud(db, subject_id)
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
     return subject
 
 @router.put("/subjects/{subject_id}", response_model=SubjectSchema)
-def update_subject_endpoint(subject_id: int, subject: SubjectCreateSchema, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def update_subject_endpoint(
+    subject_id: int,
+    subject: SubjectCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Update a subject by ID.
+
+    Args:
+        subject_id (int): The ID of the subject to be updated.
+        subject (SubjectCreateSchema): The updated subject data.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        SubjectSchema: The updated subject.
+
+    Raises:
+        HTTPException: If the subject is not found.
+    """
     updated_subject = update_subject_crud(db, subject_id, subject)
     if not updated_subject:
         raise HTTPException(status_code=404, detail="Subject not found")
     return updated_subject
 
 @router.delete("/subjects/{subject_id}", status_code=204)
-def delete_subject_endpoint(subject_id: int, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def delete_subject_endpoint(
+    subject_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Delete a subject by ID.
+
+    Args:
+        subject_id (int): The ID of the subject to be deleted.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Raises:
+        HTTPException: If the subject is not found.
+    """
     deleted = delete_subject_crud(db, subject_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Subject not found")
@@ -1457,7 +2049,27 @@ def delete_subject_endpoint(subject_id: int, db: Session = Depends(get_db)):
 ```py
 # filename: app/api/endpoints/token.py
 """
-This module provides an endpoint for user authentication and token generation.
+This module defines the API endpoint for managing user authentication tokens in the application.
+
+It includes an endpoint to authenticate a user and issue a JWT access token.
+It also includes services to authenticate the user, 
+create an access token, and get the database session.
+
+Imports:
+----------
+datetime: For handling date and time related tasks.
+fastapi: For creating API routes and handling HTTP exceptions.
+fastapi.security: For handling OAuth2 password request forms.
+sqlalchemy.orm: For handling database sessions.
+app.services.auth_service: For authenticating the user.
+app.core: For creating an access token and accessing core settings.
+app.db: For getting the database session.
+app.schemas: For validating and deserializing token data.
+
+Variables:
+----------
+router: The API router instance.
+ACCESS_TOKEN_EXPIRE_MINUTES: The expiration time for the access token.
 """
 
 from datetime import timedelta
@@ -1473,26 +2085,37 @@ router = APIRouter()
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+
 @router.post("/token", response_model=TokenSchema)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
     """
     Endpoint to authenticate a user and issue a JWT access token.
-    
+
     Args:
-        form_data: An OAuth2PasswordRequestForm object containing the user's login credentials.
-        db: A database session dependency injected by FastAPI.
-        
+        form_data (OAuth2PasswordRequestForm):
+            An OAuth2PasswordRequestForm object containing the user's login credentials.
+        db (Session):
+            A database session dependency injected by FastAPI.
+
     Raises:
-        HTTPException: If the username or password is incorrect, or if an internal server error occurs.
-        
+        HTTPException:
+            If the username or password is incorrect, or if an internal server error occurs.
+
     Returns:
-        Token: A Token object containing the access token and token type.
+        TokenSchema:
+            A TokenSchema object containing the access token and token type.
     """
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
-    access_token_expires = timedelta(minutes=settings_core.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Incorrect username or password")
+    access_token_expires = timedelta(
+        minutes=settings_core.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
 
 ```
@@ -1500,43 +2123,153 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 ## File: topics.py
 ```py
 # filename: app/api/endpoints/topics.py
+"""
+This module defines the API endpoints for managing topics in the application.
+
+It includes endpoints to create and read topics.
+It also includes a service to get the database session and CRUD operations to manage topics.
+
+Imports:
+----------
+fastapi: For creating API routes and handling HTTP exceptions.
+sqlalchemy.orm: For handling database sessions.
+app.db: For getting the database session.
+app.schemas: For validating and deserializing topic data.
+app.crud: For performing CRUD operations on the topics.
+
+Variables:
+----------
+router: The API router instance.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.schemas import TopicSchema, TopicCreateSchema
 from app.crud import create_topic_crud, read_topic_crud, update_topic_crud, delete_topic_crud
+from app.services import get_current_user
+from app.models.users import UserModel
 
 router = APIRouter()
 
 @router.post("/topics/", response_model=TopicSchema, status_code=201)
-def create_topic_endpoint(topic: TopicCreateSchema, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def create_topic_endpoint(
+    topic: TopicCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Create a new topic.
+
+    Args:
+        topic (TopicCreateSchema): The topic data to be created.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        TopicSchema: The created topic.
+    """
     return create_topic_crud(db=db, topic=topic)
 
 @router.get("/topics/{topic_id}", response_model=TopicSchema)
-def read_topic_endpoint(topic_id: int, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def read_topic_endpoint(
+    topic_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Read a topic by its ID.
+
+    Args:
+        topic_id (int): The ID of the topic to be read.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        TopicSchema: The read topic.
+
+    Raises:
+        HTTPException: If the topic is not found.
+    """
     topic = read_topic_crud(db, topic_id)
     if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
     return topic
 
 @router.put("/topics/{topic_id}", response_model=TopicSchema)
-def update_topic_endpoint(topic_id: int, topic: TopicCreateSchema, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def update_topic_endpoint(
+    topic_id: int,
+    topic: TopicCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Update a topic by its ID.
+
+    Args:
+        topic_id (int): The ID of the topic to be updated.
+        topic (TopicCreateSchema): The updated topic data.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        TopicSchema: The updated topic.
+
+    Raises:
+        HTTPException: If the topic is not found.
+    """
     updated_topic = update_topic_crud(db, topic_id, topic)
     if not updated_topic:
         raise HTTPException(status_code=404, detail="Topic not found")
     return updated_topic
 
 @router.delete("/topics/{topic_id}", status_code=204)
-def delete_topic_endpoint(topic_id: int, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def delete_topic_endpoint(
+    topic_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Delete a topic by its ID.
+
+    Args:
+        topic_id (int): The ID of the topic to be deleted.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Raises:
+        HTTPException: If the topic is not found.
+    """
     deleted = delete_topic_crud(db, topic_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Topic not found")
     return None
+
 ```
 
 ## File: user_responses.py
 ```py
 # filename: app/api/endpoints/user_responses.py
+"""
+This module defines the API endpoints for managing user responses in the application.
+
+It includes endpoints to create, read, update, and delete user responses.
+It also includes a service to get the database session and CRUD operations to manage user responses.
+
+Imports:
+----------
+typing: For type hinting.
+fastapi: For creating API routes and handling HTTP exceptions.
+sqlalchemy.orm: For handling database sessions.
+app.crud: For performing CRUD operations on the user responses.
+app.db: For getting the database session.
+app.schemas: For validating and deserializing user response data.
+app.models: For accessing the user, question, and answer choice models.
+
+Variables:
+----------
+router: The API router instance.
+"""
 
 from typing import List
 from fastapi import APIRouter, Depends, status, HTTPException, Response
@@ -1551,44 +2284,149 @@ from app.crud import (
 from app.db import get_db
 from app.schemas import UserResponseSchema, UserResponseCreateSchema, UserResponseUpdateSchema
 from app.models import AnswerChoiceModel, UserModel, QuestionModel
+from app.services import get_current_user
 
 router = APIRouter()
 
-@router.post("/user-responses/", response_model=UserResponseSchema, status_code=status.HTTP_201_CREATED)
-def create_user_response_endpoint(user_response: UserResponseCreateSchema, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.id == user_response.user_id).first()
+
+@router.post(
+    "/user-responses/",
+    response_model=UserResponseSchema,
+    status_code=status.HTTP_201_CREATED
+)
+# pylint: disable=unused-argument
+def create_user_response_endpoint(
+    user_response: UserResponseCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Create a new user response.
+
+    Args:
+        user_response (UserResponseCreateSchema): The user response data.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        UserResponseSchema: The created user response.
+    """
+    user = db.query(UserModel).filter(
+        UserModel.id == user_response.user_id).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user_id")
 
-    question = db.query(QuestionModel).filter(QuestionModel.id == user_response.question_id).first()
+    question = db.query(QuestionModel).filter(
+        QuestionModel.id == user_response.question_id).first()
     if not question:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid question_id")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid question_id")
 
-    answer_choice = db.query(AnswerChoiceModel).filter(AnswerChoiceModel.id == user_response.answer_choice_id).first()
+    answer_choice = db.query(AnswerChoiceModel).filter(
+        AnswerChoiceModel.id == user_response.answer_choice_id).first()
     if not answer_choice:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid answer_choice_id")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid answer_choice_id"
+        )
 
     return create_user_response_crud(db=db, user_response=user_response)
 
+
 @router.get("/user-responses/{user_response_id}", response_model=UserResponseSchema)
-def get_user_response_endpoint(user_response_id: int, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def get_user_response_endpoint(
+    user_response_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Get a user response by ID.
+
+    Args:
+        user_response_id (int): The ID of the user response.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        UserResponseSchema: The user response with the specified ID.
+
+    Raises:
+        HTTPException: If the user response is not found.
+    """
     user_response = get_user_response_crud(db, user_response_id)
     if not user_response:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User response not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="User response not found")
     return user_response
 
+
 @router.get("/user-responses/", response_model=List[UserResponseSchema])
-def get_user_responses_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def get_user_responses_endpoint(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Get a list of user responses.
+
+    Args:
+        skip (int, optional): The number of user responses to skip. Defaults to 0.
+        limit (int, optional): The maximum number of user responses to retrieve. Defaults to 100.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        List[UserResponseSchema]: The list of user responses.
+
+    """
     user_responses = get_user_responses_crud(db, skip=skip, limit=limit)
     return user_responses
 
+
 @router.put("/user-responses/{user_response_id}", response_model=UserResponseSchema)
-def update_user_response_endpoint(user_response_id: int, user_response: UserResponseUpdateSchema, db: Session = Depends(get_db)):
-    updated_user_response = update_user_response_crud(db, user_response_id, user_response)
+# pylint: disable=unused-argument
+def update_user_response_endpoint(
+    user_response_id: int,
+    user_response: UserResponseUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Update a user response.
+
+    Args:
+        user_response_id (int): The ID of the user response to update.
+        user_response (UserResponseUpdateSchema): The updated user response data.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        UserResponseSchema: The updated user response.
+
+    """
+    updated_user_response = update_user_response_crud(
+        db, user_response_id, user_response)
     return updated_user_response
 
+
 @router.delete("/user-responses/{user_response_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user_response_endpoint(user_response_id: int, db: Session = Depends(get_db)):
+# pylint: disable=unused-argument
+def delete_user_response_endpoint(
+    user_response_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Delete a user response.
+
+    Args:
+        user_response_id (int): The ID of the user response to delete.
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        Response: The HTTP response with status code 204 (No Content).
+
+    """
     delete_user_response_crud(db, user_response_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -1597,6 +2435,28 @@ def delete_user_response_endpoint(user_response_id: int, db: Session = Depends(g
 ## File: users.py
 ```py
 # filename: app/api/endpoints/users.py
+"""
+This module defines the API endpoints for managing users in the application.
+
+It includes endpoints to create and read users.
+It also includes services to get the database session and the current user, 
+and CRUD operations to manage users.
+
+Imports:
+----------
+typing: For type hinting.
+fastapi: For creating API routes and handling HTTP exceptions.
+sqlalchemy.orm: For handling database sessions.
+app.db.session: For getting the database session.
+app.models.users: For accessing the user model.
+app.crud: For performing CRUD operations on the users.
+app.schemas.user: For validating and deserializing user data.
+app.services: For getting the current user.
+
+Variables:
+----------
+router: The API router instance.
+"""
 
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -1610,17 +2470,40 @@ from app.services import get_current_user
 router = APIRouter()
 
 @router.get("/users/", response_model=List[UserSchema])
+# pylint: disable=unused-argument
 def read_users(db: Session = Depends(get_db), current_user: UserModel = Depends(get_current_user)):
+    """
+    Retrieve a list of all users.
+
+    Parameters:
+        db (Session): The database session.
+        current_user (UserModel): The current user.
+
+    Returns:
+        List[UserSchema]: A list of user objects.
+    """
     users = db.query(UserModel).all()
     return users
 
 @router.post("/users/", response_model=UserSchema, status_code=201)
 def create_user(user: UserCreateSchema, db: Session = Depends(get_db)):
+    """
+    Create a new user.
+
+    Parameters:
+        user (UserCreateSchema): The user data to be created.
+        db (Session): The database session.
+
+    Returns:
+        UserSchema: The created user object.
+
+    Raises:
+        HTTPException: If there's an error creating the user.
+    """
     try:
         new_user = create_user_crud(db=db, user=user)
         return new_user
     except Exception as e:
-        # If there's an error (e.g., username already exists), raise an HTTPException
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Failed to create user. ' + str(e)
@@ -1628,10 +2511,34 @@ def create_user(user: UserCreateSchema, db: Session = Depends(get_db)):
 
 @router.get("/users/me", response_model=UserSchema)
 def read_user_me(current_user: UserModel = Depends(get_current_user)):
+    """
+    Retrieve the current user.
+
+    Parameters:
+        current_user (UserModel): The current user.
+
+    Returns:
+        UserSchema: The current user object.
+    """
     return current_user
 
 @router.put("/users/me", response_model=UserSchema)
-def update_user_me(updated_user: UserUpdateSchema, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_user_me(
+    updated_user: UserUpdateSchema,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update the current user.
+
+    Parameters:
+        updated_user (UserUpdateSchema): The updated user data.
+        current_user (UserModel): The current user.
+        db (Session): The database session.
+
+    Returns:
+        UserSchema: The updated user object.
+    """
     return update_user_crud(db=db, user_id=current_user.id, updated_user=updated_user)
 
 ```
@@ -3175,7 +4082,7 @@ def test_delete_topic(logged_in_client, db_session):
 ```py
 # filename: tests/test_api_user_responses.py
 
-def test_create_user_response_invalid_data(client, db_session):
+def test_create_user_response_invalid_data(logged_in_client, db_session):
     """
     Test creating a user response with invalid data.
     """
@@ -3185,7 +4092,7 @@ def test_create_user_response_invalid_data(client, db_session):
         "answer_choice_id": 999,  # Assuming this answer choice ID does not exist
         "is_correct": True
     }
-    response = client.post("/user-responses/", json=invalid_data)
+    response = logged_in_client.post("/user-responses/", json=invalid_data)
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid user_id"
 

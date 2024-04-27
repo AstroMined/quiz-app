@@ -1,8 +1,8 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"282","User Story","Filtering Endpoints","Active","api; filtering","Develop API endpoints for filtering questions based on various criteria such as subject, topic, subtopic, difficulty level, or tags. The endpoints should accept filtering parameters, query the database efficiently, and return the filtered results in a paginated manner. Proper validation and error handling should be implemented.","Filtering endpoints implemented
-Accepts Filtering parameters
-Queries database efficiently
-Returns paginated Results
-Proper validation and error handling
-tested with different Filtering scenarios"
-"283","Task","Implement filtering endpoints","Active","api","<div>Implement question filtering API endpoints </div>",
+"286","User Story","API Documentation","Active","api; documentation","Utilize FastAPI's built-in Swagger UI to automatically generate interactive API documentation for the quiz app backend. Ensure all API endpoints, request/response models, and authentication mechanisms are properly documented. Include clear descriptions, examples, and any necessary instructions for using the API effectively.","Swagger UI integrated with FastAPI
+all endpoints documented
+Request/response models defined
+Authentication mechanisms explained
+Clear descriptions and examples
+Interactive and User-friendly docs"
+"287","Task","Add docstrings to endpoint functions","Active","api","Add docstrings to all endpoint functions for Swagger UI",

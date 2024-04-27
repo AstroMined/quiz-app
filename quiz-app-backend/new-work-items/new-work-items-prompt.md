@@ -24,33 +24,33 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### Filtering Endpoints
+### API Documentation
 
-**ID:** 282
+**ID:** 286
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** api; filtering
+**Tags:** api; documentation
 
 **Description:**
 
-Develop API endpoints for filtering questions based on various criteria such as subject, topic, subtopic, difficulty level, or tags. The endpoints should accept filtering parameters, query the database efficiently, and return the filtered results in a paginated manner. Proper validation and error handling should be implemented.
+Utilize FastAPI's built-in Swagger UI to automatically generate interactive API documentation for the quiz app backend. Ensure all API endpoints, request/response models, and authentication mechanisms are properly documented. Include clear descriptions, examples, and any necessary instructions for using the API effectively.
 
 **Acceptance Criteria:**
 
-- Filtering endpoints implemented
-- Accepts Filtering parameters
-- Queries database efficiently
-- Returns paginated Results
-- Proper validation and error handling
-- tested with different Filtering scenarios
+- Swagger UI integrated with FastAPI
+- all endpoints documented
+- Request/response models defined
+- Authentication mechanisms explained
+- Clear descriptions and examples
+- Interactive and User-friendly docs
 
 
-### Implement filtering endpoints
+### Add docstrings to endpoint functions
 
-**ID:** 283
+**ID:** 287
 
 **Work Item Type:** Task
 
@@ -60,15 +60,16 @@ Develop API endpoints for filtering questions based on various criteria such as 
 
 **Description:**
 
-<div>Implement question filtering API endpoints </div>
+Add docstrings to all endpoint functions for Swagger UI
 
 
 
 ## Final Instructions:
+
 - First verify if the user story and associated tasks are completed in the current codebase.
 - If the requirements are not a direct match, please make suggestions to whether the user story, task, or the codebase needs modified.
 - Please ask clarifying questions where necessary to facilitate mutual understanding of the user story and tasks.
 - If the requirements have been satisfied for a user story or task, please indicate so.
 - You are also responsible for ensuring there is complete pytest test coverage for each user story and task you work on.
 - When recommending new code or code changes, ensure you follow the guidelines outlined above.
-- If you deem that all of the user stories and task are already satisfied by the current codebase, provide a descriptive git commit message alond with a descriptive comment to close the user story
+- If you deem that all of the user stories and task are already satisfied by the current codebase, provide a descriptive git commit message along with a descriptive comment to close the user story

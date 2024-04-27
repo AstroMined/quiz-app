@@ -1,7 +1,7 @@
 {
   "root_directory": "/code/quiz-app/quiz-app-backend",
-  "file_extensions": [".py"],
-  "specific_files": {},
+  "file_extensions": [".py", ".json"],
+  "specific_files": {"last": "/code/quiz-app/quiz-app-backend/app/api/endpoints/openapi.json"},
   "ignore_directories": [
     "utilities",
     "new-work-items",
