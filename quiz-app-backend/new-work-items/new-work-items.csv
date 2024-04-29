@@ -1,8 +1,8 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"286","User Story","API Documentation","Active","api; documentation","Utilize FastAPI's built-in Swagger UI to automatically generate interactive API documentation for the quiz app backend. Ensure all API endpoints, request/response models, and authentication mechanisms are properly documented. Include clear descriptions, examples, and any necessary instructions for using the API effectively.","Swagger UI integrated with FastAPI
-all endpoints documented
-Request/response models defined
-Authentication mechanisms explained
-Clear descriptions and examples
-Interactive and User-friendly docs"
-"287","Task","Add docstrings to endpoint functions","Active","api","Add docstrings to all endpoint functions for Swagger UI",
+"284","User Story","Response Submission Endpoints","Active","api; user-response","Develop API endpoints for submitting and retrieving user responses to quiz questions. The submission endpoint should accept the user's answer, validate it, and store it along with the timestamp and correctness status. The retrieval endpoint should allow fetching user responses based on filters like user ID, question ID, or time range, with pagination support.","- User response submission endpoint
+Accepts and validates user's answer
+Stores answer timestamp correctness
+User response retrieval endpoint
+Supports filtering and pagination
+Tested with different scenarios"
+"285","Task","Implement response submission endpoints","Active","api","Implement user response submission endpoints in main.py",

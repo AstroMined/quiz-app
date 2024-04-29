@@ -9,9 +9,13 @@ class UserResponseBaseSchema(BaseModel):
     question_id: int
     answer_choice_id: int
     is_correct: bool
+    timestamp: datetime
+    
+    class Config:
+        from_attributes = True
 
 class UserResponseCreateSchema(UserResponseBaseSchema):
-    pass
+    timestamp: datetime = None
 
 class UserResponseUpdateSchema(BaseModel):
     is_correct: Optional[bool] = None
@@ -22,3 +26,6 @@ class UserResponseSchema(UserResponseBaseSchema):
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat()
+        }

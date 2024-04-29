@@ -1,10 +1,14 @@
-Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`, which acts as a comprehensive representation of a project's repository. This file is generated using a Python script that meticulously walks through the project directory, encapsulating the essence of the entire project structure, including directories, files (e.g., README.md, LICENSE), and specific file contents (with a focus on `.py`, `.js`, `.html`, `.css` files) into a structured markdown document. Here's how the content is organized:
+# New Work Items
+
+Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`, which acts as a comprehensive representation of a project's repository.  
+This file is generated using a Python script that meticulously walks through the project directory, encapsulating the essence of the entire project structure, including directories, files (e.g., README.md, LICENSE), and specific file contents (with a focus on `.py`, `.js`, `.html`, `.css` files) into a structured markdown document.  
+Here's how the content is organized:
 
 1. **Directories** are prominently highlighted as main headers, formatted as `# Directory: path/to/directory`. This layout showcases each directory within the project with its full path, ensuring a transparent hierarchy of the project's architecture.
 
 2. **Files**, specifically focusing on README.md files, Python scripts, and other specified file types, are listed under secondary headers within their respective directory sections, formatted as `## File: filename`. README.md files are given precedence, appearing first in each section, followed by Python scripts and other files, arranged to reflect the project's logical structure.
 
-3. **Content** of these files is presented in code blocks right after their corresponding headers, using syntax highlighting appropriate to the file type (```markdown for README.md, ```python for Python scripts, etc.), facilitating a clear understanding of each file's purpose and content.
+3. **Content** of these files is presented in code blocks right after their corresponding headers, using syntax highlighting appropriate to the file type (```markdown for README.md,``` python for Python scripts, etc.), facilitating a clear understanding of each file's purpose and content.
 
 **Guidelines for Engaging with the Project:**
 
@@ -20,13 +24,13 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 *In this section, detailed assistance is requested for the following tasks within my project:*
 
-**Task:** 
+**Task:**
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
 <details from /code/quiz-app/quiz-app-backend/new-work-items/new-work-items.csv>
 
-## Final Instructions:
+## Final Instructions
 
 - First verify if the user story and associated tasks are completed in the current codebase.
 - If the requirements are not a direct match, please make suggestions to whether the user story, task, or the codebase needs modified.

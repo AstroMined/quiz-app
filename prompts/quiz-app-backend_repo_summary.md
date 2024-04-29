@@ -447,9 +447,13 @@ class UserResponseBaseSchema(BaseModel):
     question_id: int
     answer_choice_id: int
     is_correct: bool
+    timestamp: datetime
+    
+    class Config:
+        from_attributes = True
 
 class UserResponseCreateSchema(UserResponseBaseSchema):
-    pass
+    timestamp: datetime = None
 
 class UserResponseUpdateSchema(BaseModel):
     is_correct: Optional[bool] = None
@@ -460,6 +464,9 @@ class UserResponseSchema(UserResponseBaseSchema):
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat()
+        }
 
 ```
 
@@ -914,28 +921,131 @@ def delete_user_crud(db: Session, user_id: int) -> UserModel:
 ## File: crud_user_responses.py
 ```py
 # filename: app/crud/crud_user_responses.py
+"""
+This module defines the CRUD operations for user responses in the application.
+
+It includes functions to create a new user response, retrieve a user response by its ID,
+retrieve a list of user responses based on filters, update a user response, 
+and delete a user response.
+
+Imports:
+----------
+typing: For type hinting.
+datetime: For handling date and time related tasks.
+sqlalchemy.orm: For handling database sessions.
+fastapi: For handling HTTP exceptions.
+app.models: For accessing the user response model.
+app.schemas: For validating and deserializing user response data.
+
+Functions:
+----------
+create_user_response_crud: Create a new user response in the database.
+get_user_response_crud: Retrieve a user response from the database by its ID.
+get_user_responses_crud: Retrieve a list of user responses from the database based on filters.
+update_user_response_crud: Update a user response in the database.
+delete_user_response_crud: Delete a user response from the database.
+"""
 
 from typing import List, Optional
+from datetime import datetime
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models import UserResponseModel
 from app.schemas import UserResponseCreateSchema, UserResponseUpdateSchema
 
-def create_user_response_crud(db: Session, user_response: UserResponseCreateSchema) -> UserResponseModel:
+
+def create_user_response_crud(
+    db: Session,
+    user_response: UserResponseCreateSchema
+) -> UserResponseModel:
+    """
+    Create a new user response in the database.
+
+    Args:
+        db (Session): The database session.
+        user_response (UserResponseCreateSchema): The user response data.
+
+    Returns:
+        UserResponseModel: The created user response.
+    """
     db_user_response = UserResponseModel(**user_response.model_dump())
     db.add(db_user_response)
     db.commit()
     db.refresh(db_user_response)
     return db_user_response
 
+
 def get_user_response_crud(db: Session, user_response_id: int) -> Optional[UserResponseModel]:
+    """
+    Retrieve a user response from the database by its ID.
+
+    Args:
+        db (Session): The database session.
+        user_response_id (int): The ID of the user response.
+
+    Returns:
+        Optional[UserResponseModel]: The retrieved user response, or None if not found.
+    """
     return db.query(UserResponseModel).filter(UserResponseModel.id == user_response_id).first()
 
-def get_user_responses_crud(db: Session, skip: int = 0, limit: int = 100) -> List[UserResponseModel]:
-    return db.query(UserResponseModel).offset(skip).limit(limit).all()
 
-def update_user_response_crud(db: Session, user_response_id: int, user_response: UserResponseUpdateSchema) -> UserResponseModel:
-    db_user_response = db.query(UserResponseModel).filter(UserResponseModel.id == user_response_id).first()
+def get_user_responses_crud(
+    db: Session,
+    user_id: Optional[int] = None,
+    question_id: Optional[int] = None,
+    start_time: Optional[datetime] = None,
+    end_time: Optional[datetime] = None,
+    skip: int = 0,
+    limit: int = 100
+) -> List[UserResponseModel]:
+    """
+    Retrieve a list of user responses from the database based on the provided filters.
+
+    Args:
+        db (Session): The database session.
+        user_id (Optional[int]): The ID of the user.
+        question_id (Optional[int]): The ID of the question.
+        start_time (Optional[datetime]): The start time of the user response.
+        end_time (Optional[datetime]): The end time of the user response.
+        skip (int): The number of user responses to skip.
+        limit (int): The maximum number of user responses to retrieve.
+
+    Returns:
+        List[UserResponseModel]: The list of retrieved user responses.
+    """
+    query = db.query(UserResponseModel)
+
+    if user_id:
+        query = query.filter(UserResponseModel.user_id == user_id)
+    if question_id:
+        query = query.filter(UserResponseModel.question_id == question_id)
+    if start_time:
+        query = query.filter(UserResponseModel.timestamp >= start_time)
+    if end_time:
+        query = query.filter(UserResponseModel.timestamp <= end_time)
+
+    user_responses = query.offset(skip).limit(limit).all()
+    return user_responses
+
+
+def update_user_response_crud(
+    db: Session,
+    user_response_id: int,
+    user_response: UserResponseUpdateSchema
+) -> UserResponseModel:
+    """
+    Update a user response in the database.
+
+    Args:
+        db (Session): The database session.
+        user_response_id (int): The ID of the user response to update.
+        user_response (UserResponseUpdateSchema): The updated user response data.
+
+    Returns:
+        UserResponseModel: The updated user response.
+    """
+    db_user_response = db.query(UserResponseModel).filter(
+        UserResponseModel.id == user_response_id).first()
     if not db_user_response:
         raise HTTPException(status_code=404, detail="User response not found")
     update_data = user_response.model_dump(exclude_unset=True)
@@ -945,12 +1055,25 @@ def update_user_response_crud(db: Session, user_response_id: int, user_response:
     db.refresh(db_user_response)
     return db_user_response
 
+
 def delete_user_response_crud(db: Session, user_response_id: int) -> None:
-    db_user_response = db.query(UserResponseModel).filter(UserResponseModel.id == user_response_id).first()
+    """
+    Delete a user response from the database.
+
+    Args:
+        db (Session): The database session.
+        user_response_id (int): The ID of the user response to delete.
+
+    Raises:
+        HTTPException: If the user response is not found.
+    """
+    db_user_response = db.query(UserResponseModel).filter(
+        UserResponseModel.id == user_response_id).first()
     if not db_user_response:
         raise HTTPException(status_code=404, detail="User response not found")
     db.delete(db_user_response)
     db.commit()
+
 ```
 
 ## File: crud_user_utils.py
@@ -1298,11 +1421,6 @@ async def filter_questions_endpoint(
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 
-```
-
-## File: openapi.json
-```json
-{"openapi":"3.1.0","info":{"title":"FastAPI","version":"0.1.0"},"paths":{"/users/":{"get":{"tags":["User Management"],"summary":"Read Users","description":"Retrieve a list of all users.\n\nParameters:\n    db (Session): The database session.\n    current_user (UserModel): The current user.\n\nReturns:\n    List[UserSchema]: A list of user objects.","operationId":"read_users_users__get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"items":{"$ref":"#/components/schemas/UserSchema"},"type":"array","title":"Response Read Users Users  Get"}}}}},"security":[{"OAuth2PasswordBearer":[]}]},"post":{"tags":["User Management"],"summary":"Create User","description":"Create a new user.\n\nParameters:\n    user (UserCreateSchema): The user data to be created.\n    db (Session): The database session.\n\nReturns:\n    UserSchema: The created user object.\n\nRaises:\n    HTTPException: If there's an error creating the user.","operationId":"create_user_users__post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserCreateSchema"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/users/me":{"get":{"tags":["User Management"],"summary":"Read User Me","description":"Retrieve the current user.\n\nParameters:\n    current_user (UserModel): The current user.\n\nReturns:\n    UserSchema: The current user object.","operationId":"read_user_me_users_me_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserSchema"}}}}},"security":[{"OAuth2PasswordBearer":[]}]},"put":{"tags":["User Management"],"summary":"Update User Me","description":"Update the current user.\n\nParameters:\n    updated_user (UserUpdateSchema): The updated user data.\n    current_user (UserModel): The current user.\n    db (Session): The database session.\n\nReturns:\n    UserSchema: The updated user object.","operationId":"update_user_me_users_me_put","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserUpdateSchema"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/register/":{"post":{"tags":["Authentication"],"summary":"Register User","description":"Endpoint to register a new user.\n\nArgs:\n    user: A UserCreate schema object containing the user's registration information.\n    db: A database session dependency injected by FastAPI.\n    \nRaises:\n    HTTPException: If the username is already registered.\n    \nReturns:\n    The newly created user object.","operationId":"register_user_register__post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserCreateSchema"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/token":{"post":{"tags":["Authentication"],"summary":"Login For Access Token","description":"Endpoint to authenticate a user and issue a JWT access token.\n\nArgs:\n    form_data (OAuth2PasswordRequestForm):\n        An OAuth2PasswordRequestForm object containing the user's login credentials.\n    db (Session):\n        A database session dependency injected by FastAPI.\n\nRaises:\n    HTTPException:\n        If the username or password is incorrect, or if an internal server error occurs.\n\nReturns:\n    TokenSchema:\n        A TokenSchema object containing the access token and token type.","operationId":"login_for_access_token_token_post","requestBody":{"content":{"application/x-www-form-urlencoded":{"schema":{"$ref":"#/components/schemas/Body_login_for_access_token_token_post"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TokenSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/login":{"post":{"tags":["Authentication"],"summary":"Login Endpoint","description":"This function authenticates a user and generates an access token.\n\nParameters:\n----------\nform_data: LoginFormSchema\n    The login form data containing the username and password.\ndb: Session\n    The database session.\n\nRaises:\n----------\nHTTPException\n    If the user account is inactive or the password is incorrect.\n\nReturns:\n----------\nTokenSchema\n    The access token for the authenticated user.","operationId":"login_endpoint_login_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/LoginFormSchema"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TokenSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/logout":{"post":{"tags":["Authentication"],"summary":"Logout Endpoint","description":"This function logs out a user by adding their token to the revoked tokens list.\n\nParameters:\n----------\ntoken: str\n    The token of the user who is logging out.\ndb: Session\n    The database session.\n\nRaises:\n----------\nHTTPException\n    If there is an error while revoking the token.\n\nReturns:\n----------\ndict\n    A message indicating that the user has been successfully logged out.","operationId":"logout_endpoint_logout_post","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/upload-questions/":{"post":{"tags":["Question Sets"],"summary":"Upload Question Set Endpoint","description":"This function uploads a question set to the database.\n\nParameters:\n----------\nfile: UploadFile\n    The file containing the question set to be uploaded.\ndb: Session\n    The database session.\n\nRaises:\n----------\nHTTPException\n    If there is an error while uploading the question set.\n\nReturns:\n----------\ndict\n    A message indicating that the question set has been successfully uploaded.","operationId":"upload_question_set_endpoint_upload_questions__post","requestBody":{"content":{"multipart/form-data":{"schema":{"$ref":"#/components/schemas/Body_upload_question_set_endpoint_upload_questions__post"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/question-set/":{"get":{"tags":["Question Sets"],"summary":"Read Questions Endpoint","description":"This function retrieves a list of questions from the database.\n\nParameters:\n----------\nskip: int\n    The number of records to skip.\nlimit: int\n    The maximum number of records to return.\ndb: Session\n    The database session.\n\nReturns:\n----------\nList[QuestionSetSchema]\n    A list of questions.","operationId":"read_questions_endpoint_question_set__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/QuestionSetSchema"},"title":"Response Read Questions Endpoint Question Set  Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/question-sets/":{"post":{"tags":["Question Sets"],"summary":"Create Question Set Endpoint","description":"This function retrieves a list of questions from the database.\n\nParameters:\n----------\nskip: int\n    The number of records to skip.\nlimit: int\n    The maximum number of records to return.\ndb: Session\n    The database session.\n\nReturns:\n----------\nList[QuestionSetSchema]\n    A list of questions.","operationId":"create_question_set_endpoint_question_sets__post","security":[{"OAuth2PasswordBearer":[]}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSetCreateSchema"}}}},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSetSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"get":{"tags":["Question Sets"],"summary":"Read Question Sets Endpoint","description":"This function retrieves a list of question sets from the database.\n\nParameters:\n----------\nskip: int\n    The number of records to skip.\nlimit: int\n    The maximum number of records to return.\ndb: Session\n    The database session.\n\nReturns:\n----------\nList[QuestionSetSchema]\n    A list of question sets.","operationId":"read_question_sets_endpoint_question_sets__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/QuestionSetSchema"},"title":"Response Read Question Sets Endpoint Question Sets  Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/question-sets/{question_set_id}":{"get":{"tags":["Question Sets"],"summary":"Get Question Set Endpoint","description":"This function retrieves a question set from the database by its ID.\n\nParameters:\n----------\nquestion_set_id: int\n    The ID of the question set to retrieve.\ndb: Session\n    The database session.\n\nRaises:\n----------\nHTTPException\n    If the question set with the provided ID is not found.\n\nReturns:\n----------\nQuestionSetSchema\n    The retrieved question set.","operationId":"get_question_set_endpoint_question_sets__question_set_id__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_set_id","in":"path","required":true,"schema":{"type":"integer","title":"Question Set Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSetSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"put":{"tags":["Question Sets"],"summary":"Update Question Set Endpoint","description":"This function updates a question set in the database.\n\nParameters:\n----------\nquestion_set_id: int\n    The ID of the question set to update.\nquestion_set: QuestionSetUpdateSchema\n    The updated question set.\ndb: Session\n    The database session.\ncurrent_user: UserModel\n    The current user.\n\nRaises:\n----------\nHTTPException\n    If the current user is not an admin or the question set with the provided ID is not found.\n\nReturns:\n----------\nQuestionSetSchema\n    The updated question set.","operationId":"update_question_set_endpoint_question_sets__question_set_id__put","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_set_id","in":"path","required":true,"schema":{"type":"integer","title":"Question Set Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSetUpdateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSetSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Question Sets"],"summary":"Delete Question Set Endpoint","description":"This function deletes a question set from the database.\n\nParameters:\n----------\nquestion_set_id: int\n    The ID of the question set to delete.\ndb: Session\n    The database session.\ncurrent_user: UserModel\n    The current user.\n\nRaises:\n----------\nHTTPException\n    If the current user is not an admin or the question set with the provided ID is not found.\n\nReturns:\n----------\nResponse\n    An HTTP response with a 204 status code.","operationId":"delete_question_set_endpoint_question_sets__question_set_id__delete","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_set_id","in":"path","required":true,"schema":{"type":"integer","title":"Question Set Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/question":{"post":{"tags":["Question"],"summary":"Create Question Endpoint","description":"Create a new question.\n\nArgs:\n    question (QuestionCreateSchema): The question data to be created.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    QuestionSchema: The created question.\n\nRaises:\n    HTTPException: If subject_id, topic_id, or subtopic_id are missing.","operationId":"create_question_endpoint_question_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionCreateSchema"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/question/question_id}":{"get":{"tags":["Question"],"summary":"Get Question Endpoint","description":"Retrieve a question by its ID.\n\nArgs:\n    question_id (int): The ID of the question to retrieve.\n    question (QuestionUpdateSchema): The updated question data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    Question: The retrieved question.","operationId":"get_question_endpoint_question_question_id__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_id","in":"query","required":true,"schema":{"type":"integer","title":"Question Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionUpdateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/question/{question_id}":{"put":{"tags":["Question"],"summary":"Update Question Endpoint","description":"Update a question in the database.\n\nArgs:\n    question_id (int): The ID of the question to be updated.\n    question (QuestionUpdateSchema): The updated question data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    QuestionSchema: The updated question.\n\nRaises:\n    HTTPException: If the question with the specified ID is not found.","operationId":"update_question_endpoint_question__question_id__put","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_id","in":"path","required":true,"schema":{"type":"integer","title":"Question Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionUpdateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuestionSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Question"],"summary":"Delete Question Endpoint","description":"Delete a question with the given question_id from the database.\n\nArgs:\n    question_id (int): The ID of the question to be deleted.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    Response: A response with status code 204 indicating successful deletion.\n\nRaises:\n    HTTPException: If the question with the given question_id is not found in the database.","operationId":"delete_question_endpoint_question__question_id__delete","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"question_id","in":"path","required":true,"schema":{"type":"integer","title":"Question Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/questions/":{"get":{"tags":["Questions"],"summary":"Get Questions Endpoint","description":"Retrieve a list of questions.\n\nParameters:\n- skip (int): Number of questions to skip (default: 0)\n- limit (int): Maximum number of questions to retrieve (default: 100)\n- db (Session): SQLAlchemy database session dependency\n- current_user (UserModel): Current authenticated user dependency\n\nReturns:\n- List[QuestionSchema]: List of questions retrieved from the database","operationId":"get_questions_endpoint_questions__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/QuestionSchema"},"title":"Response Get Questions Endpoint Questions  Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/user-responses/":{"post":{"tags":["User Responses"],"summary":"Create User Response Endpoint","description":"Create a new user response.\n\nArgs:\n    user_response (UserResponseCreateSchema): The user response data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    UserResponseSchema: The created user response.","operationId":"create_user_response_endpoint_user_responses__post","security":[{"OAuth2PasswordBearer":[]}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserResponseCreateSchema"}}}},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserResponseSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"get":{"tags":["User Responses"],"summary":"Get User Responses Endpoint","description":"Get a list of user responses.\n\nArgs:\n    skip (int, optional): The number of user responses to skip. Defaults to 0.\n    limit (int, optional): The maximum number of user responses to retrieve. Defaults to 100.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    List[UserResponseSchema]: The list of user responses.","operationId":"get_user_responses_endpoint_user_responses__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/UserResponseSchema"},"title":"Response Get User Responses Endpoint User Responses  Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/user-responses/{user_response_id}":{"get":{"tags":["User Responses"],"summary":"Get User Response Endpoint","description":"Get a user response by ID.\n\nArgs:\n    user_response_id (int): The ID of the user response.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    UserResponseSchema: The user response with the specified ID.\n\nRaises:\n    HTTPException: If the user response is not found.","operationId":"get_user_response_endpoint_user_responses__user_response_id__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"user_response_id","in":"path","required":true,"schema":{"type":"integer","title":"User Response Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserResponseSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"put":{"tags":["User Responses"],"summary":"Update User Response Endpoint","description":"Update a user response.\n\nArgs:\n    user_response_id (int): The ID of the user response to update.\n    user_response (UserResponseUpdateSchema): The updated user response data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    UserResponseSchema: The updated user response.","operationId":"update_user_response_endpoint_user_responses__user_response_id__put","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"user_response_id","in":"path","required":true,"schema":{"type":"integer","title":"User Response Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserResponseUpdateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserResponseSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["User Responses"],"summary":"Delete User Response Endpoint","description":"Delete a user response.\n\nArgs:\n    user_response_id (int): The ID of the user response to delete.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    Response: The HTTP response with status code 204 (No Content).","operationId":"delete_user_response_endpoint_user_responses__user_response_id__delete","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"user_response_id","in":"path","required":true,"schema":{"type":"integer","title":"User Response Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/questions/filter":{"get":{"tags":["Filters"],"summary":"Filter Questions Endpoint","description":"This function filters questions based on the provided parameters.\nReturns a list of questions that match the filters.\n\nParameters:\n----------\nrequest: Request\n    The request object containing all the parameters.\nsubject: Optional[str]\n    The subject to filter the questions by.\ntopic: Optional[str]\n    The topic to filter the questions by.\nsubtopic: Optional[str]\n    The subtopic to filter the questions by.\ndifficulty: Optional[str]\n    The difficulty level to filter the questions by.\ntags: Optional[List[str]]\n    The tags to filter the questions by.\ndb: Session\n    The database session.\nskip: int\n    The number of records to skip.\nlimit: int\n    The maximum number of records to return.\n\nReturns:\n----------\nList[QuestionSchema]\n    A list of questions that match the filters.","operationId":"filter_questions_endpoint_questions_filter_get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"subject","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Subject"}},{"name":"topic","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Topic"}},{"name":"subtopic","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Subtopic"}},{"name":"difficulty","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Difficulty"}},{"name":"tags","in":"query","required":false,"schema":{"anyOf":[{"type":"array","items":{"type":"string"}},{"type":"null"}],"title":"Tags"}},{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/QuestionSchema"},"title":"Response Filter Questions Endpoint Questions Filter Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/topics/":{"post":{"tags":["Topics"],"summary":"Create Topic Endpoint","description":"Create a new topic.\n\nArgs:\n    topic (TopicCreateSchema): The topic data to be created.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    TopicSchema: The created topic.","operationId":"create_topic_endpoint_topics__post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/TopicCreateSchema"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TopicSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/topics/{topic_id}":{"get":{"tags":["Topics"],"summary":"Read Topic Endpoint","description":"Read a topic by its ID.\n\nArgs:\n    topic_id (int): The ID of the topic to be read.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    TopicSchema: The read topic.\n\nRaises:\n    HTTPException: If the topic is not found.","operationId":"read_topic_endpoint_topics__topic_id__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"topic_id","in":"path","required":true,"schema":{"type":"integer","title":"Topic Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TopicSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"put":{"tags":["Topics"],"summary":"Update Topic Endpoint","description":"Update a topic by its ID.\n\nArgs:\n    topic_id (int): The ID of the topic to be updated.\n    topic (TopicCreateSchema): The updated topic data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    TopicSchema: The updated topic.\n\nRaises:\n    HTTPException: If the topic is not found.","operationId":"update_topic_endpoint_topics__topic_id__put","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"topic_id","in":"path","required":true,"schema":{"type":"integer","title":"Topic Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/TopicCreateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TopicSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Topics"],"summary":"Delete Topic Endpoint","description":"Delete a topic by its ID.\n\nArgs:\n    topic_id (int): The ID of the topic to be deleted.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nRaises:\n    HTTPException: If the topic is not found.","operationId":"delete_topic_endpoint_topics__topic_id__delete","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"topic_id","in":"path","required":true,"schema":{"type":"integer","title":"Topic Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/subjects/":{"post":{"tags":["Subjects"],"summary":"Create Subject Endpoint","description":"Create a new subject.\n\nArgs:\n    subject (SubjectCreateSchema): The subject data to be created.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    SubjectSchema: The created subject.","operationId":"create_subject_endpoint_subjects__post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubjectCreateSchema"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubjectSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"OAuth2PasswordBearer":[]}]}},"/subjects/{subject_id}":{"get":{"tags":["Subjects"],"summary":"Read Subject Endpoint","description":"Read a subject by ID.\n\nArgs:\n    subject_id (int): The ID of the subject to be read.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    SubjectSchema: The read subject.\n\nRaises:\n    HTTPException: If the subject is not found.","operationId":"read_subject_endpoint_subjects__subject_id__get","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"subject_id","in":"path","required":true,"schema":{"type":"integer","title":"Subject Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubjectSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"put":{"tags":["Subjects"],"summary":"Update Subject Endpoint","description":"Update a subject by ID.\n\nArgs:\n    subject_id (int): The ID of the subject to be updated.\n    subject (SubjectCreateSchema): The updated subject data.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nReturns:\n    SubjectSchema: The updated subject.\n\nRaises:\n    HTTPException: If the subject is not found.","operationId":"update_subject_endpoint_subjects__subject_id__put","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"subject_id","in":"path","required":true,"schema":{"type":"integer","title":"Subject Id"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubjectCreateSchema"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubjectSchema"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Subjects"],"summary":"Delete Subject Endpoint","description":"Delete a subject by ID.\n\nArgs:\n    subject_id (int): The ID of the subject to be deleted.\n    db (Session, optional): The database session. Defaults to Depends(get_db).\n\nRaises:\n    HTTPException: If the subject is not found.","operationId":"delete_subject_endpoint_subjects__subject_id__delete","security":[{"OAuth2PasswordBearer":[]}],"parameters":[{"name":"subject_id","in":"path","required":true,"schema":{"type":"integer","title":"Subject Id"}}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/":{"get":{"summary":"Read Root","operationId":"read_root__get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}}}}}},"components":{"schemas":{"AnswerChoiceCreateSchema":{"properties":{"text":{"type":"string","title":"Text"},"is_correct":{"type":"boolean","title":"Is Correct"},"explanation":{"type":"string","title":"Explanation"}},"type":"object","required":["text","is_correct","explanation"],"title":"AnswerChoiceCreateSchema"},"AnswerChoiceSchema":{"properties":{"id":{"type":"integer","title":"Id"},"text":{"type":"string","title":"Text"},"is_correct":{"type":"boolean","title":"Is Correct"},"explanation":{"type":"string","title":"Explanation"}},"type":"object","required":["id","text","is_correct","explanation"],"title":"AnswerChoiceSchema"},"Body_login_for_access_token_token_post":{"properties":{"grant_type":{"anyOf":[{"type":"string","pattern":"password"},{"type":"null"}],"title":"Grant Type"},"username":{"type":"string","title":"Username"},"password":{"type":"string","title":"Password"},"scope":{"type":"string","title":"Scope","default":""},"client_id":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Client Id"},"client_secret":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Client Secret"}},"type":"object","required":["username","password"],"title":"Body_login_for_access_token_token_post"},"Body_upload_question_set_endpoint_upload_questions__post":{"properties":{"file":{"type":"string","format":"binary","title":"File"}},"type":"object","required":["file"],"title":"Body_upload_question_set_endpoint_upload_questions__post"},"HTTPValidationError":{"properties":{"detail":{"items":{"$ref":"#/components/schemas/ValidationError"},"type":"array","title":"Detail"}},"type":"object","title":"HTTPValidationError"},"LoginFormSchema":{"properties":{"username":{"type":"string","maxLength":50,"minLength":3,"title":"Username"},"password":{"type":"string","minLength":8,"title":"Password"}},"type":"object","required":["username","password"],"title":"LoginFormSchema"},"QuestionCreateSchema":{"properties":{"text":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Text","description":"The text of the question"},"subject_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Subject Id","description":"ID of the subject associated with the question"},"topic_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Topic Id","description":"ID of the topic associated with the question"},"subtopic_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Subtopic Id","description":"ID of the subtopic associated with the question"},"difficulty":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Difficulty","description":"The difficulty level of the question"},"answer_choices":{"anyOf":[{"items":{"$ref":"#/components/schemas/AnswerChoiceCreateSchema"},"type":"array"},{"type":"null"}],"title":"Answer Choices","description":"A list of answer choices"},"tags":{"anyOf":[{"items":{"$ref":"#/components/schemas/QuestionTagSchema"},"type":"array"},{"type":"null"}],"title":"Tags","description":"A list of tags associated with the question"},"question_set_ids":{"anyOf":[{"items":{"type":"integer"},"type":"array"},{"type":"null"}],"title":"Question Set Ids","description":"Updated list of question set IDs the question belongs to"}},"type":"object","title":"QuestionCreateSchema"},"QuestionSchema":{"properties":{"id":{"type":"integer","title":"Id"},"text":{"type":"string","title":"Text"},"subject_id":{"type":"integer","title":"Subject Id"},"topic_id":{"type":"integer","title":"Topic Id"},"subtopic_id":{"type":"integer","title":"Subtopic Id"},"difficulty":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Difficulty"},"tags":{"anyOf":[{"items":{"$ref":"#/components/schemas/QuestionTagSchema"},"type":"array"},{"type":"null"}],"title":"Tags","default":[]},"answer_choices":{"items":{"$ref":"#/components/schemas/AnswerChoiceSchema"},"type":"array","title":"Answer Choices","default":[]},"question_set_ids":{"anyOf":[{"items":{"type":"integer"},"type":"array"},{"type":"null"}],"title":"Question Set Ids","default":[]}},"type":"object","required":["id","text","subject_id","topic_id","subtopic_id"],"title":"QuestionSchema"},"QuestionSetCreateSchema":{"properties":{"name":{"type":"string","title":"Name"},"is_public":{"type":"boolean","title":"Is Public","default":true}},"type":"object","required":["name"],"title":"QuestionSetCreateSchema"},"QuestionSetSchema":{"properties":{"name":{"type":"string","title":"Name"},"id":{"type":"integer","title":"Id"},"is_public":{"type":"boolean","title":"Is Public","default":true},"question_ids":{"items":{"type":"integer"},"type":"array","title":"Question Ids","default":[]}},"type":"object","required":["name","id"],"title":"QuestionSetSchema"},"QuestionSetUpdateSchema":{"properties":{"name":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Name"},"is_public":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Is Public"},"question_ids":{"anyOf":[{"items":{"type":"integer"},"type":"array"},{"type":"null"}],"title":"Question Ids"}},"type":"object","title":"QuestionSetUpdateSchema"},"QuestionTagSchema":{"properties":{"tag":{"type":"string","title":"Tag"},"id":{"type":"integer","title":"Id"}},"type":"object","required":["tag","id"],"title":"QuestionTagSchema"},"QuestionUpdateSchema":{"properties":{"text":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Text","description":"The text of the question"},"difficulty":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Difficulty","description":"The difficulty level of the question"},"subject_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Subject Id","description":"ID of the subject associated with the question"},"topic_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Topic Id","description":"ID of the topic associated with the question"},"subtopic_id":{"anyOf":[{"type":"integer"},{"type":"null"}],"title":"Subtopic Id","description":"ID of the subtopic associated with the question"},"answer_choices":{"anyOf":[{"items":{"$ref":"#/components/schemas/AnswerChoiceCreateSchema"},"type":"array"},{"type":"null"}],"title":"Answer Choices","description":"A list of answer choices"},"tags":{"anyOf":[{"items":{"$ref":"#/components/schemas/QuestionTagSchema"},"type":"array"},{"type":"null"}],"title":"Tags","description":"A list of tags associated with the question"},"question_set_ids":{"anyOf":[{"items":{"type":"integer"},"type":"array"},{"type":"null"}],"title":"Question Set Ids","description":"Updated list of question set IDs the question belongs to"}},"type":"object","title":"QuestionUpdateSchema"},"SubjectCreateSchema":{"properties":{"name":{"type":"string","title":"Name"}},"type":"object","required":["name"],"title":"SubjectCreateSchema"},"SubjectSchema":{"properties":{"name":{"type":"string","title":"Name"},"id":{"type":"integer","title":"Id"}},"type":"object","required":["name","id"],"title":"SubjectSchema"},"TokenSchema":{"properties":{"access_token":{"type":"string","title":"Access Token"},"token_type":{"type":"string","title":"Token Type"}},"type":"object","required":["access_token","token_type"],"title":"TokenSchema"},"TopicCreateSchema":{"properties":{"name":{"type":"string","title":"Name"},"subject_id":{"type":"integer","title":"Subject Id"}},"type":"object","required":["name","subject_id"],"title":"TopicCreateSchema"},"TopicSchema":{"properties":{"name":{"type":"string","title":"Name"},"subject_id":{"type":"integer","title":"Subject Id"},"id":{"type":"integer","title":"Id"}},"type":"object","required":["name","subject_id","id"],"title":"TopicSchema"},"UserCreateSchema":{"properties":{"username":{"type":"string","title":"Username"},"password":{"type":"string","title":"Password"}},"type":"object","required":["username","password"],"title":"UserCreateSchema"},"UserResponseCreateSchema":{"properties":{"user_id":{"type":"integer","title":"User Id"},"question_id":{"type":"integer","title":"Question Id"},"answer_choice_id":{"type":"integer","title":"Answer Choice Id"},"is_correct":{"type":"boolean","title":"Is Correct"}},"type":"object","required":["user_id","question_id","answer_choice_id","is_correct"],"title":"UserResponseCreateSchema"},"UserResponseSchema":{"properties":{"user_id":{"type":"integer","title":"User Id"},"question_id":{"type":"integer","title":"Question Id"},"answer_choice_id":{"type":"integer","title":"Answer Choice Id"},"is_correct":{"type":"boolean","title":"Is Correct"},"id":{"type":"integer","title":"Id"},"timestamp":{"type":"string","format":"date-time","title":"Timestamp"}},"type":"object","required":["user_id","question_id","answer_choice_id","is_correct","id","timestamp"],"title":"UserResponseSchema"},"UserResponseUpdateSchema":{"properties":{"is_correct":{"anyOf":[{"type":"boolean"},{"type":"null"}],"title":"Is Correct"}},"type":"object","title":"UserResponseUpdateSchema"},"UserSchema":{"properties":{"username":{"type":"string","title":"Username"},"id":{"type":"integer","title":"Id"},"is_admin":{"type":"boolean","title":"Is Admin"}},"type":"object","required":["username","id","is_admin"],"title":"UserSchema"},"UserUpdateSchema":{"properties":{"username":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Username"},"password":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Password"}},"type":"object","title":"UserUpdateSchema"},"ValidationError":{"properties":{"loc":{"items":{"anyOf":[{"type":"string"},{"type":"integer"}]},"type":"array","title":"Location"},"msg":{"type":"string","title":"Message"},"type":{"type":"string","title":"Error Type"}},"type":"object","required":["loc","msg","type"],"title":"ValidationError"}},"securitySchemes":{"OAuth2PasswordBearer":{"type":"oauth2","flows":{"password":{"scopes":{},"tokenUrl":"login"}}}}}}
 ```
 
 ## File: question.py
@@ -2251,10 +2369,12 @@ def delete_topic_endpoint(
 ```py
 # filename: app/api/endpoints/user_responses.py
 """
+User Responses API Endpoints.
 This module defines the API endpoints for managing user responses in the application.
 
 It includes endpoints to create, read, update, and delete user responses.
-It also includes a service to get the database session and CRUD operations to manage user responses.
+It also includes a service to get the current user, the database session, 
+and CRUD operations to manage user responses.
 
 Imports:
 ----------
@@ -2269,9 +2389,27 @@ app.models: For accessing the user, question, and answer choice models.
 Variables:
 ----------
 router: The API router instance.
+
+Endpoints:
+----------
+- POST /user-responses/:
+    Create a new user response.
+
+- GET /user-responses/{user_response_id}:
+    Get a user response by ID.
+
+- GET /user-responses/:
+    Get a list of user responses.
+
+- PUT /user-responses/{user_response_id}:
+    Update a user response.
+
+- DELETE /user-responses/{user_response_id}:
+    Delete a user response.
 """
 
-from typing import List
+from typing import List, Optional
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, status, HTTPException, Response
 from sqlalchemy.orm import Session
 from app.crud import (
@@ -2304,11 +2442,18 @@ def create_user_response_endpoint(
     Create a new user response.
 
     Args:
-        user_response (UserResponseCreateSchema): The user response data.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
+        user_response (UserResponseCreateSchema):
+            The user response data.
+        db (Session, optional):
+            The database session. Defaults to Depends(get_db).
+        current_user (UserModel, optional):
+            The current authenticated user. Defaults to Depends(get_current_user).
 
     Returns:
         UserResponseSchema: The created user response.
+
+    Raises:
+        HTTPException: If the user_id, question_id, or answer_choice_id is invalid.
     """
     user = db.query(UserModel).filter(
         UserModel.id == user_response.user_id).first()
@@ -2330,6 +2475,7 @@ def create_user_response_endpoint(
             detail="Invalid answer_choice_id"
         )
 
+    user_response.timestamp = datetime.now(timezone.utc)
     return create_user_response_crud(db=db, user_response=user_response)
 
 
@@ -2344,14 +2490,29 @@ def get_user_response_endpoint(
     Get a user response by ID.
 
     Args:
-        user_response_id (int): The ID of the user response.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
+        user_response_id (int):
+            The ID of the user response.
+        db (Session, optional):
+            The database session. Defaults to Depends(get_db).
+        current_user (UserModel, optional):
+            The current authenticated user. Defaults to Depends(get_current_user).
 
     Returns:
         UserResponseSchema: The user response with the specified ID.
 
     Raises:
         HTTPException: If the user response is not found.
+
+    Example:
+        >>> get_user_response_endpoint(1)
+        {
+            "id": 1,
+            "question_id": 1,
+            "user_id": 1,
+            "response": "Option A",
+            "created_at": "2022-01-01 12:00:00",
+            "updated_at": "2022-01-01 12:05:00"
+        }
     """
     user_response = get_user_response_crud(db, user_response_id)
     if not user_response:
@@ -2363,6 +2524,10 @@ def get_user_response_endpoint(
 @router.get("/user-responses/", response_model=List[UserResponseSchema])
 # pylint: disable=unused-argument
 def get_user_responses_endpoint(
+    user_id: Optional[int] = None,
+    question_id: Optional[int] = None,
+    start_time: Optional[datetime] = None,
+    end_time: Optional[datetime] = None,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
@@ -2372,15 +2537,28 @@ def get_user_responses_endpoint(
     Get a list of user responses.
 
     Args:
+        user_id (int, optional): The ID of the user. Defaults to None.
+        question_id (int, optional): The ID of the question. Defaults to None.
+        start_time (datetime, optional): The start time of the responses. Defaults to None.
+        end_time (datetime, optional): The end time of the responses. Defaults to None.
         skip (int, optional): The number of user responses to skip. Defaults to 0.
         limit (int, optional): The maximum number of user responses to retrieve. Defaults to 100.
         db (Session, optional): The database session. Defaults to Depends(get_db).
+        current_user (UserModel, optional): The current user. Defaults to Depends(get_current_user).
 
     Returns:
         List[UserResponseSchema]: The list of user responses.
 
     """
-    user_responses = get_user_responses_crud(db, skip=skip, limit=limit)
+    user_responses = get_user_responses_crud(
+        db,
+        user_id=user_id,
+        question_id=question_id,
+        start_time=start_time,
+        end_time=end_time,
+        skip=skip,
+        limit=limit
+    )
     return user_responses
 
 
@@ -2396,9 +2574,14 @@ def update_user_response_endpoint(
     Update a user response.
 
     Args:
-        user_response_id (int): The ID of the user response to update.
-        user_response (UserResponseUpdateSchema): The updated user response data.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
+        user_response_id (int):
+            The ID of the user response to update.
+        user_response (UserResponseUpdateSchema):
+            The updated user response data.
+        db (Session, optional):
+            The database session. Defaults to Depends(get_db).
+        current_user (UserModel, optional):
+            The current authenticated user. Defaults to Depends(get_current_user).
 
     Returns:
         UserResponseSchema: The updated user response.
@@ -2420,8 +2603,12 @@ def delete_user_response_endpoint(
     Delete a user response.
 
     Args:
-        user_response_id (int): The ID of the user response to delete.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
+        user_response_id (int):
+            The ID of the user response to delete.
+        db (Session, optional):
+            The database session. Defaults to Depends(get_db).
+        current_user (UserModel, optional):
+            The current authenticated user. Defaults to Depends(get_current_user).
 
     Returns:
         Response: The HTTP response with status code 204 (No Content).
@@ -4081,6 +4268,7 @@ def test_delete_topic(logged_in_client, db_session):
 ## File: test_api_user_responses.py
 ```py
 # filename: tests/test_api_user_responses.py
+# pylint: disable=unused-argument
 
 def test_create_user_response_invalid_data(logged_in_client, db_session):
     """
@@ -4096,21 +4284,116 @@ def test_create_user_response_invalid_data(logged_in_client, db_session):
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid user_id"
 
-def test_update_user_response(logged_in_client, db_session, test_user, test_question, test_answer_choice_1):
-    response_data = {"user_id": test_user.id, "question_id": test_question.id, "answer_choice_id": test_answer_choice_1.id, "is_correct": True}
-    created_response = logged_in_client.post("/user-responses/", json=response_data).json()
+
+def test_update_user_response(
+    logged_in_client,
+    db_session,
+    test_user,
+    test_question,
+    test_answer_choice_1
+):
+    response_data = {"user_id": test_user.id, "question_id": test_question.id,
+                     "answer_choice_id": test_answer_choice_1.id, "is_correct": True}
+    created_response = logged_in_client.post(
+        "/user-responses/", json=response_data).json()
     update_data = {"is_correct": False}
-    response = logged_in_client.put(f"/user-responses/{created_response['id']}", json=update_data)
+    response = logged_in_client.put(
+        f"/user-responses/{created_response['id']}", json=update_data)
     assert response.status_code == 200
     assert response.json()["is_correct"] is False
 
-def test_delete_user_response(logged_in_client, db_session, test_user, test_question, test_answer_choice_1):
-    response_data = {"user_id": test_user.id, "question_id": test_question.id, "answer_choice_id": test_answer_choice_1.id, "is_correct": True}
-    created_response = logged_in_client.post("/user-responses/", json=response_data).json()
-    response = logged_in_client.delete(f"/user-responses/{created_response['id']}")
+
+def test_delete_user_response(
+    logged_in_client,
+    db_session,
+    test_user,
+    test_question,
+    test_answer_choice_1
+):
+    response_data = {"user_id": test_user.id, "question_id": test_question.id,
+                     "answer_choice_id": test_answer_choice_1.id, "is_correct": True}
+    created_response = logged_in_client.post(
+        "/user-responses/", json=response_data).json()
+    response = logged_in_client.delete(
+        f"/user-responses/{created_response['id']}")
     assert response.status_code == 204
-    response = logged_in_client.get(f"/user-responses/{created_response['id']}")
+    response = logged_in_client.get(
+        f"/user-responses/{created_response['id']}")
     assert response.status_code == 404
+
+
+def test_create_user_response_missing_data(logged_in_client, db_session):
+    invalid_data = {
+        "user_id": 1,
+        "question_id": 1
+        # Missing answer_choice_id
+    }
+    response = logged_in_client.post("/user-responses/", json=invalid_data)
+    assert response.status_code == 422
+    assert "answer_choice_id" in response.text
+
+
+def test_get_user_responses_with_filters(
+    logged_in_client,
+    db_session,
+    test_user,
+    test_question,
+    test_answer_choice_1,
+    test_answer_choice_2
+):
+    response_data_1 = {
+        "user_id": test_user.id,
+        "question_id": test_question.id,
+        "answer_choice_id": test_answer_choice_1.id,
+        "is_correct": True
+    }
+    response_data_2 = {
+        "user_id": test_user.id,
+        "question_id": test_question.id,
+        "answer_choice_id": test_answer_choice_2.id,
+        "is_correct": False
+    }
+    post_1 = logged_in_client.post("/user-responses/", json=response_data_1)
+    assert post_1.status_code == 201
+
+    post_2 = logged_in_client.post("/user-responses/", json=response_data_2)
+    assert post_2.status_code == 201
+
+    response = logged_in_client.get(f"/user-responses/?user_id={test_user.id}")
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+    response = logged_in_client.get(
+        f"/user-responses/?question_id={test_question.id}")
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+def test_get_user_responses_with_pagination(
+    logged_in_client,
+    db_session,
+    test_user,
+    test_question,test_answer_choice_1
+):
+    response_data_1 = {
+        "user_id": test_user.id,
+        "question_id": test_question.id,
+        "answer_choice_id": test_answer_choice_1.id,
+        "is_correct": True
+    }
+    response_data_2 = {
+        "user_id": test_user.id,
+        "question_id": test_question.id + 1,
+        "answer_choice_id": test_answer_choice_1.id,
+        "is_correct": False
+    }
+    logged_in_client.post("/user-responses/", json=response_data_1)
+    logged_in_client.post("/user-responses/", json=response_data_2)
+
+    response = logged_in_client.get("/user-responses/?skip=0&limit=1")
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert isinstance(response.json()[0]['timestamp'], str)
 
 ```
 
