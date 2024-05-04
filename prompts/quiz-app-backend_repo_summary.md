@@ -104,7 +104,7 @@ from .question_tags import QuestionTagSchema, QuestionTagBaseSchema, QuestionTag
 ## File: answer_choices.py
 ```py
 # app/schemas/answer_choices.py
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 class AnswerChoiceBaseSchema(BaseModel):
     text: str
@@ -112,7 +112,19 @@ class AnswerChoiceBaseSchema(BaseModel):
     explanation: str
 
 class AnswerChoiceCreateSchema(AnswerChoiceBaseSchema):
-    pass
+    @validator('text')
+    def validate_text(cls, text):
+        if not text.strip():
+            raise ValueError('Answer choice text cannot be empty or whitespace')
+        if len(text) > 5000:
+            raise ValueError('Answer choice text cannot exceed 5000 characters')
+        return text
+
+    @validator('explanation')
+    def validate_explanation(cls, explanation):
+        if len(explanation) > 10000:
+            raise ValueError('Answer choice explanation cannot exceed 10000 characters')
+        return explanation
 
 class AnswerChoiceSchema(BaseModel):
     id: int
@@ -140,7 +152,7 @@ class LoginFormSchema(BaseModel):
 # filename: app/schemas/filters.py
 
 from typing import Optional, List
-from pydantic import BaseModel, Field, validator, ValidationError
+from pydantic import BaseModel, Field, validator
 
 class FilterParamsSchema(BaseModel):
     subject: Optional[str] = Field(None, description="Filter questions by subject")
@@ -148,6 +160,13 @@ class FilterParamsSchema(BaseModel):
     subtopic: Optional[str] = Field(None, description="Filter questions by subtopic")
     difficulty: Optional[str] = Field(None, description="Filter questions by difficulty level")
     tags: Optional[List[str]] = Field(None, description="Filter questions by tags")
+
+    @validator('difficulty')
+    def validate_difficulty(cls, difficulty):
+        valid_difficulties = ['Beginner', 'Easy', 'Medium', 'Hard', 'Expert']
+        if difficulty and difficulty not in valid_difficulties:
+            raise ValueError(f'Invalid difficulty. Must be one of: {", ".join(valid_difficulties)}')
+        return difficulty
 
     class Config:
         extra = 'forbid'  # Allows extra fields but you can manually handle them
@@ -167,14 +186,26 @@ class FilterParamsSchema(BaseModel):
 ```py
 # filename: app/schemas/question_sets.py
 
+import re
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 class QuestionSetBaseSchema(BaseModel):
     name: str
 
 class QuestionSetCreateSchema(QuestionSetBaseSchema):
     is_public: bool = True
+    @validator('name')
+    def validate_name(cls, name):
+        if not name.strip():
+            raise ValueError('Question set name cannot be empty or whitespace')
+        if len(name) > 100:
+            raise ValueError('Question set name cannot exceed 100 characters')
+        if not re.match(r'^[\w\-\s]+$', name):
+            raise ValueError(
+                'Question set name can only contain alphanumeric characters, hyphens, underscores, and spaces'
+            )
+        return name
 
 class QuestionSetUpdateSchema(BaseModel):
     name: Optional[str] = None
@@ -217,7 +248,7 @@ class QuestionTagSchema(QuestionTagBaseSchema):
 # filename: app/schemas/questions.py
 
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from app.schemas.answer_choices import AnswerChoiceSchema, AnswerChoiceCreateSchema
 from app.schemas.question_tags import QuestionTagSchema
 
@@ -228,14 +259,52 @@ class QuestionBaseSchema(BaseModel):
     subtopic_id: int
 
 class QuestionCreateSchema(QuestionBaseSchema):
-    text: Optional[str] = Field(None, description="The text of the question")
-    difficulty: Optional[str] = Field(None, description="The difficulty level of the question")
-    subject_id: Optional[int] = Field(None, description="ID of the subject associated with the question")
-    topic_id: Optional[int] = Field(None, description="ID of the topic associated with the question")
-    subtopic_id: Optional[int] = Field(None, description="ID of the subtopic associated with the question")
-    answer_choices: Optional[List[AnswerChoiceCreateSchema]] = Field(None, description="A list of answer choices")
-    tags: Optional[List[QuestionTagSchema]] = Field(None, description="A list of tags associated with the question")
-    question_set_ids: Optional[List[int]] = Field(None, description="Updated list of question set IDs the question belongs to")
+    text: Optional[str] = Field(
+        None,
+        description="The text of the question",
+        max_length=1000
+    )
+    difficulty: Optional[str] = Field(
+        None,
+        description="The difficulty level of the question"
+    )
+    subject_id: Optional[int] = Field(
+        None,
+        description="ID of the subject associated with the question"
+    )
+    topic_id: Optional[int] = Field(
+        None,
+        description="ID of the topic associated with the question"
+    )
+    subtopic_id: Optional[int] = Field(
+        None,
+        description="ID of the subtopic associated with the question"
+    )
+    answer_choices: Optional[List[AnswerChoiceCreateSchema]] = Field(
+        None,
+        description="A list of answer choices"
+    )
+    tags: Optional[List[QuestionTagSchema]] = Field(
+        None,
+        description="A list of tags associated with the question"
+    )
+    question_set_ids: Optional[List[int]] = Field(
+        None,
+        description="Updated list of question set IDs the question belongs to"
+    )
+
+    @validator('difficulty')
+    def validate_difficulty(cls, difficulty):
+        valid_difficulties = [
+            'Beginner',
+            'Easy',
+            'Medium',
+            'Hard',
+            'Expert'
+        ]
+        if difficulty not in valid_difficulties:
+            raise ValueError(f'Invalid difficulty. Must be one of: {", ".join(valid_difficulties)}')
+        return difficulty
 
 class QuestionUpdateSchema(BaseModel):
     text: Optional[str] = Field(None, description="The text of the question")
@@ -315,13 +384,19 @@ class SessionSchema(SessionBaseSchema):
 ```py
 # filename: app/schemas/subjects.py
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 class SubjectBaseSchema(BaseModel):
     name: str
 
 class SubjectCreateSchema(SubjectBaseSchema):
-    pass
+    @validator('name')
+    def validate_name(cls, name):
+        if not name.strip():
+            raise ValueError('Subject name cannot be empty or whitespace')
+        if len(name) > 100:
+            raise ValueError('Subject name cannot exceed 100 characters')
+        return name
 
 class SubjectSchema(SubjectBaseSchema):
     id: int
@@ -335,14 +410,20 @@ class SubjectSchema(SubjectBaseSchema):
 ```py
 # schemas/subtopics.py
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 class SubtopicBaseSchema(BaseModel):
     name: str
     topic_id: int
 
 class SubtopicCreateSchema(SubtopicBaseSchema):
-    pass
+    @validator('name')
+    def validate_name(cls, name):
+        if not name.strip():
+            raise ValueError('Subtopic name cannot be empty or whitespace')
+        if len(name) > 100:
+            raise ValueError('Subtopic name cannot exceed 100 characters')
+        return name
 
 class SubtopicSchema(SubtopicBaseSchema):
     id: int
@@ -368,14 +449,20 @@ class TokenSchema(BaseModel):
 ```py
 # filename: app/schemas/topics.py
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 class TopicBaseSchema(BaseModel):
     name: str
     subject_id: int
 
 class TopicCreateSchema(TopicBaseSchema):
-    pass
+    @validator('name')
+    def validate_name(cls, name):
+        if not name.strip():
+            raise ValueError('Topic name cannot be empty or whitespace')
+        if len(name) > 100:
+            raise ValueError('Topic name cannot exceed 100 characters')
+        return name
 
 class TopicSchema(TopicBaseSchema):
     id: int
@@ -389,14 +476,18 @@ class TopicSchema(TopicBaseSchema):
 # filename: app/schemas/user.py
 
 import string
+import re
 from typing import Optional
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, EmailStr
+
 
 class UserBaseSchema(BaseModel):
     username: str
 
+
 class UserCreateSchema(UserBaseSchema):
     password: str
+    email: EmailStr
 
     @validator('password')
     def validate_password(cls, password):
@@ -405,21 +496,57 @@ class UserCreateSchema(UserBaseSchema):
         if not any(char.isdigit() for char in password):
             raise ValueError('Password must contain at least one digit')
         if not any(char.isupper() for char in password):
-            raise ValueError('Password must contain at least one uppercase letter')
+            raise ValueError(
+                'Password must contain at least one uppercase letter')
         if not any(char.islower() for char in password):
-            raise ValueError('Password must contain at least one lowercase letter')
+            raise ValueError(
+                'Password must contain at least one lowercase letter')
         if not any(char in string.punctuation for char in password):
-            raise ValueError('Password must contain at least one special character')
+            raise ValueError(
+                'Password must contain at least one special character')
         if any(char.isspace() for char in password):
             raise ValueError('Password must not contain whitespace characters')
-        weak_passwords = ['password', '123456', 'qwerty', 'abc123', 'letmein', 'admin', 'welcome', 'monkey', '111111', 'iloveyou']
+        weak_passwords = [
+            'password',
+            '123456',
+            'qwerty',
+            'abc123',
+            'letmein',
+            'admin',
+            'welcome',
+            'monkey',
+            '111111',
+            'iloveyou'
+        ]
         if password.lower() in weak_passwords:
-            raise ValueError('Password is too common. Please choose a stronger password.')
+            raise ValueError(
+                'Password is too common. Please choose a stronger password.')
         return password
+
+    @validator('username')
+    def validate_username(cls, username):
+        if len(username) < 3:
+            raise ValueError('Username must be at least 3 characters long')
+        if len(username) > 50:
+            raise ValueError('Username must not exceed 50 characters')
+        # Regex to allow alphanumeric characters, hyphens, underscores, and periods
+        if not re.match(r'^[\w\-\.]+$', username):
+            raise ValueError(
+                'Username must contain only alphanumeric characters, hyphens, underscores, and periods'
+            )
+        return username
+
+    @validator('email')
+    def validate_email(cls, email):
+        if not email:
+            raise ValueError('Email is required')
+        return email
+
 
 class UserLoginSchema(BaseModel):
     username: str
     password: str
+
 
 class UserSchema(UserBaseSchema):
     id: int
@@ -427,6 +554,7 @@ class UserSchema(UserBaseSchema):
 
     class Config:
         from_attributes = True
+
 
 class UserUpdateSchema(BaseModel):
     username: Optional[str] = None
@@ -565,7 +693,7 @@ from .crud_question_sets import create_question_set_crud, read_question_sets_cru
 from .crud_questions import create_question_crud, get_question_crud, get_questions_crud, update_question_crud, delete_question_crud
 from .crud_user import create_user_crud, delete_user_crud, update_user_crud
 from .crud_user_responses import create_user_response_crud, get_user_response_crud, get_user_responses_crud, update_user_response_crud, delete_user_response_crud
-from .crud_user_utils import get_user_by_username_crud
+from .crud_user_utils import get_user_by_username_crud, get_user_by_email_crud
 from .crud_subtopics import create_subtopic_crud
 from .crud_subjects import create_subject_crud, read_subject_crud, update_subject_crud, delete_subject_crud
 from .crud_topics import create_topic_crud, read_topic_crud, update_topic_crud, delete_topic_crud
@@ -887,7 +1015,11 @@ from app.core import get_password_hash
 
 def create_user_crud(db: Session, user: UserCreateSchema) -> UserModel:
     hashed_password = get_password_hash(user.password)
-    db_user = UserModel(username=user.username, hashed_password=hashed_password)
+    db_user = UserModel(
+        username=user.username,
+        hashed_password=hashed_password,
+        email=user.email
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -1086,6 +1218,9 @@ from app.models import UserModel
 def get_user_by_username_crud(db: Session, username: str) -> UserModel:
     return db.query(UserModel).filter(UserModel.username == username).first()
 
+def get_user_by_email_crud(db: Session, email: str) -> UserModel:
+    return db.query(UserModel).filter(UserModel.email == email).first()
+
 ```
 
 # Directory: /code/quiz-app/quiz-app-backend/app/db
@@ -1231,26 +1366,14 @@ async def login_endpoint(form_data: LoginFormSchema, db: Session = Depends(get_d
     """
     user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
 
-    if user:
-        if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User account is inactive",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        if not verify_password(form_data.password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    else:
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Username not found",
+            detail="User account is inactive",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -2000,7 +2123,11 @@ the provided data and creating a new user in the database.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core import get_password_hash
-from app.crud import create_user_crud, get_user_by_username_crud
+from app.crud import (
+    create_user_crud,
+    get_user_by_username_crud,
+    get_user_by_email_crud
+)
 from app.db import get_db
 from app.schemas import UserCreateSchema
 
@@ -2024,8 +2151,11 @@ def register_user(user: UserCreateSchema, db: Session = Depends(get_db)):
     db_user = get_user_by_username_crud(db, username=user.username)
     if db_user:
         raise HTTPException(status_code=422, detail="Username already registered")
+    db_email = get_user_by_email_crud(db, email=user.email)
+    if db_email:
+        raise HTTPException(status_code=422, detail="Email already registered")
     hashed_password = get_password_hash(user.password)
-    user_create = UserCreateSchema(username=user.username, password=hashed_password)
+    user_create = UserCreateSchema(username=user.username, password=hashed_password, email=user.email)
     created_user = create_user_crud(db=db, user=user_create)
     return created_user
 
@@ -3046,6 +3176,7 @@ class UserModel(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)  # Add the email field
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
@@ -3249,11 +3380,12 @@ def db_session(db):
 
 @pytest.fixture(scope="function")
 def random_username():
-    yield "testuser_" + "".join(random.choices(string.ascii_letters + string.digits, k=5))
+    yield "test.user_" + "".join(random.choices(string.ascii_letters + string.digits, k=5))
 
 @pytest.fixture(scope="function")
 def test_user(db_session, random_username):
-    user_data = UserCreateSchema(username=random_username, password="TestPassword123!")
+    email = f"{random_username}@example.com"
+    user_data = UserCreateSchema(username=random_username, email=email, password="TestPassword123!")
     user = create_user_crud(db_session, user_data)
     user.is_admin = True
     db_session.add(user)
@@ -3466,25 +3598,11 @@ def test_filter_params_schema_invalid_params():
 
 ```
 
-## File: test_schemas_schemas.py
+## File: test_schemas_questions.py
 ```py
 # filename: tests/test_schemas.py
 
-from app.schemas import UserCreateSchema, QuestionCreateSchema
-
-def test_user_create_schema():
-    user_data = {
-        "username": "testuser",
-        "password": "TestPassword123!"
-    }
-    user_schema = UserCreateSchema(**user_data)
-    assert user_schema.username == "testuser"
-    assert user_schema.password == "TestPassword123!"
-
-def test_user_create_schema_password_validation():
-    user_data = {"username": "testuser", "password": "ValidPassword123!"}
-    user_schema = UserCreateSchema(**user_data)
-    assert user_schema.password == "ValidPassword123!"
+from app.schemas import QuestionCreateSchema
 
 def test_question_create_schema():
     question_data = {
@@ -3517,37 +3635,110 @@ def test_question_create_schema():
 import pytest
 from app.schemas.user import UserCreateSchema
 
+def test_user_create_schema():
+    user_data = {
+        "username": "testuser",
+        "password": "TestPassword123!",
+        "email": "testuser@example.com"
+    }
+    user_schema = UserCreateSchema(**user_data)
+    assert user_schema.username == "testuser"
+    assert user_schema.password == "TestPassword123!"
+    assert user_schema.email == "testuser@example.com"
+
 def test_user_create_schema_password_validation():
+    user_data = {
+        "username": "testuser",
+        "password": "ValidPassword123!",
+        "email": "testuser@example.com"
+    }
+    user_schema = UserCreateSchema(**user_data)
+    assert user_schema.password == "ValidPassword123!"
+
+def test_user_create_schema_password_too_short():
     """
-    Test password validation in UserCreate schema.
+    Test password too short validation in UserCreate schema.
     """
-    # Test password too short
     with pytest.raises(ValueError):
         UserCreateSchema(username="testuser", password="short")
 
-    # Test password valid
-    user_data = {"username": "testuser", "password": "ValidPassword123!"}
+def test_user_create_schema_password_valid():
+    """
+    Test valid password validation in UserCreate schema.
+    """
+    user_data = {
+        "username": "testuser",
+        "password": "ValidPassword123!",
+        "email": "testuser@example.com"
+    }
     user_schema = UserCreateSchema(**user_data)
     assert user_schema.password == "ValidPassword123!"
 
-def test_user_create_schema_password_complexity_validation():
-    """Test password complexity validation in UserCreate schema."""
-    # Test password missing a digit
+def test_user_create_schema_password_missing_digit():
+    """
+    Test password missing a digit validation in UserCreate schema.
+    """
     with pytest.raises(ValueError, match="Password must contain at least one digit"):
         UserCreateSchema(username="testuser", password="NoDigitPassword")
 
-    # Test password missing an uppercase letter
+def test_user_create_schema_password_missing_uppercase():
+    """
+    Test password missing an uppercase letter validation in UserCreate schema.
+    """
     with pytest.raises(ValueError, match="Password must contain at least one uppercase letter"):
         UserCreateSchema(username="testuser", password="nouppercasepassword123")
 
-    # Test password missing a lowercase letter
+def test_user_create_schema_password_missing_lowercase():
+    """
+    Test password missing a lowercase letter validation in UserCreate schema.
+    """
     with pytest.raises(ValueError, match="Password must contain at least one lowercase letter"):
         UserCreateSchema(username="testuser", password="NOLOWERCASEPASSWORD123")
 
-    # Test valid password
-    user_data = {"username": "testuser", "password": "ValidPassword123!"}
+def test_user_create_schema_password_valid_complexity():
+    """
+    Test valid password complexity validation in UserCreate schema.
+    """
+    user_data = {
+        "username": "testuser",
+        "password": "ValidPassword123!",
+        "email": "testuser@example.com"
+    }
     user_schema = UserCreateSchema(**user_data)
     assert user_schema.password == "ValidPassword123!"
+
+def test_user_create_schema_username_too_short():
+    """
+    Test username too short validation in UserCreate schema.
+    """
+    with pytest.raises(ValueError, match='Username must be at least 3 characters long'):
+        UserCreateSchema(username='ab', password='ValidPassword123!')
+
+def test_user_create_schema_username_too_long():
+    """
+    Test username too long validation in UserCreate schema.
+    """
+    with pytest.raises(ValueError, match='Username must not exceed 50 characters'):
+        UserCreateSchema(username='a' * 51, password='ValidPassword123!')
+
+def test_user_create_schema_username_invalid_characters():
+    """
+    Test username with invalid characters validation in UserCreate schema.
+    """
+    with pytest.raises(ValueError, match='Username must contain only alphanumeric characters'):
+        UserCreateSchema(username='invalid_username!', password='ValidPassword123!')
+
+def test_user_create_schema_username_valid():
+    """
+    Test valid username validation in UserCreate schema.
+    """
+    user_data = {
+        "username": "validuser",
+        "password": "ValidPassword123!",
+        "email": "testuser@example.com"
+    }
+    user_schema = UserCreateSchema(**user_data)
+    assert user_schema.username == "validuser"
 
 ```
 
@@ -3555,7 +3746,7 @@ def test_user_create_schema_password_complexity_validation():
 
 ## File: test_api_authentication.py
 ```py
-# filename: tests/test_api_authentication.py
+# filename: tests/test_api/test_api_authentication.py
 
 import pytest
 from fastapi import HTTPException
@@ -3570,11 +3761,6 @@ def test_user_authentication(client, test_user):
     assert "access_token" in response.json(), "Access token missing in response."
     assert response.json()["token_type"] == "bearer", "Incorrect token type."
 
-def test_register_user_success(client, db_session):
-    user_data = {"username": "new_user", "password": "NewPassword123!"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 201, "User registration failed"
-
 def test_login_user_success(client, test_user):
     """Test successful user login and token retrieval."""
     login_data = {"username": test_user.username, "password": "TestPassword123!"}
@@ -3582,23 +3768,10 @@ def test_login_user_success(client, test_user):
     assert response.status_code == 200, "User login failed."
     assert "access_token" in response.json(), "Access token missing in login response."
 
-def test_registration_user_exists(client, test_user):
-    response = client.post("/register/", json={"username": test_user.username, "password": "anotherpassword"})
-    assert response.status_code == 422, "Registration should fail for existing username."
-
 def test_token_access_with_invalid_credentials(client, db_session):
     """Test token access with invalid credentials."""
     response = client.post("/token", data={"username": "nonexistentuser", "password": "wrongpassword"})
     assert response.status_code == 401, "Token issuance should fail with invalid credentials."
-
-def test_register_user_duplicate(client, test_user):
-    """
-    Test registration with a username that already exists.
-    """
-    user_data = {"username": test_user.username, "password": "DuplicatePass123!"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 422
-    assert "already registered" in str(response.content)
 
 def test_login_wrong_password(client, test_user):
     """
@@ -3630,34 +3803,6 @@ def test_access_protected_endpoint_with_invalid_token(client, db_session):
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid token"
 
-def test_register_user_invalid_password(client):
-    """Test registration with an invalid password."""
-    user_data = {"username": "newuser", "password": "weak"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 422
-    assert "Password must be at least 8 characters long" in response.json()["detail"][0]["msg"]
-
-def test_register_user_missing_digit_in_password(client):
-    """Test registration with a password missing a digit."""
-    user_data = {"username": "newuser", "password": "NoDigitPassword"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 422
-    assert "Password must contain at least one digit" in str(response.content)
-
-def test_register_user_missing_uppercase_in_password(client):
-    """Test registration with a password missing an uppercase letter."""
-    user_data = {"username": "newuser", "password": "nouppercasepassword123"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 422
-    assert "Password must contain at least one uppercase letter" in str(response.content)
-
-def test_register_user_missing_lowercase_in_password(client):
-    """Test registration with a password missing a lowercase letter."""
-    user_data = {"username": "newuser", "password": "NOLOWERCASEPASSWORD123"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 422
-    assert "Password must contain at least one lowercase letter" in str(response.content)
-
 def test_login_success(client, test_user):
     """
     Test successful user login.
@@ -3671,9 +3816,15 @@ def test_login_invalid_credentials(client, db_session):
     """
     Test login with invalid credentials.
     """
-    response = client.post("/login", json={"username": "invalid_user", "password": "invalid_password"})
+    response = client.post(
+        "/login",
+        json={
+            "username": "invalid_user",
+            "password": "invalid_password"
+        }
+    )
     assert response.status_code == 401
-    assert "Username not found" in response.json()["detail"]
+    assert "Invalid credentials" in response.json()["detail"]
 
 def test_logout_success(client, test_user, test_token):
     headers = {"Authorization": f"Bearer {test_token}"}
@@ -3714,10 +3865,13 @@ def test_login_nonexistent_user(client, db_session):
     """
     Test login with a non-existent username.
     """
-    login_data = {"username": "nonexistent_user", "password": "password123"}
+    login_data = {
+        "username": "nonexistent_user",
+        "password": "password123"
+    }
     response = client.post("/login", json=login_data)
     assert response.status_code == 401
-    assert "Username not found" in response.json()["detail"]
+    assert "Invalid credentials" in response.json()["detail"]
 
 def test_logout_revoked_token(client, test_user, test_token, db_session):
     # Revoke the token manually
@@ -4157,6 +4311,72 @@ def test_update_question_endpoint(logged_in_client, test_question, test_question
 
 ```
 
+## File: test_api_register.py
+```py
+# filename: tests/test_api/test_api_register.py
+
+def test_register_user_success(client, db_session):
+    user_data = {
+        "username": "new_user",
+        "password": "NewPassword123!",
+        "email": "new_user@example.com"
+    }
+    response = client.post("/register/", json=user_data)
+    assert response.status_code == 201, "User registration failed"
+
+def test_register_user_invalid_password(client):
+    """Test registration with an invalid password."""
+    user_data = {"username": "newuser", "password": "weak"}
+    response = client.post("/register/", json=user_data)
+    assert response.status_code == 422
+    assert "Password must be at least 8 characters long" in response.json()["detail"][0]["msg"]
+
+def test_register_user_missing_digit_in_password(client):
+    """Test registration with a password missing a digit."""
+    user_data = {"username": "newuser", "password": "NoDigitPassword"}
+    response = client.post("/register/", json=user_data)
+    assert response.status_code == 422
+    assert "Password must contain at least one digit" in str(response.content)
+
+def test_register_user_missing_uppercase_in_password(client):
+    """Test registration with a password missing an uppercase letter."""
+    user_data = {"username": "newuser", "password": "nouppercasepassword123"}
+    response = client.post("/register/", json=user_data)
+    assert response.status_code == 422
+    assert "Password must contain at least one uppercase letter" in str(response.content)
+
+def test_register_user_missing_lowercase_in_password(client):
+    """Test registration with a password missing a lowercase letter."""
+    user_data = {"username": "newuser", "password": "NOLOWERCASEPASSWORD123"}
+    response = client.post("/register/", json=user_data)
+    assert response.status_code == 422
+    assert "Password must contain at least one lowercase letter" in str(response.content)
+
+def test_register_user_duplicate(client, test_user):
+    """
+    Test registration with a username that already exists.
+    """
+    user_data = {
+        "username": test_user.username,
+        "password": "DuplicatePass123!",
+        "email": test_user.email
+    }
+    response = client.post("/register/", json=user_data)
+    assert response.status_code == 422
+    assert "already registered" in str(response.content)
+
+def test_registration_user_exists(client, test_user):
+    response = client.post(
+        "/register/",
+        json={
+            "username": test_user.username,
+            "password": "anotherpassword",
+            "email": test_user.email
+        }
+    )
+    assert response.status_code == 422, "Registration should fail for existing username."
+```
+
 ## File: test_api_subjects.py
 ```py
 # filename: tests/test_api_subjects.py
@@ -4401,7 +4621,11 @@ def test_get_user_responses_with_pagination(
 ```py
 # filename: tests/test_api_users.py
 def test_create_user(client, db_session, random_username):
-    data = {"username": random_username, "password": "TestPassword123!"}
+    data = {
+        "username": random_username,
+        "password": "TestPassword123!",
+        "email": f"{random_username}@example.com"
+    }
     response = client.post("/users/", json=data)
     assert response.status_code == 201
 
@@ -4558,8 +4782,9 @@ def test_filter_questions_invalid_difficulty(db_session):
     filters = {
         "difficulty": "InvalidDifficulty"
     }
-    result = filter_questions_crud(db=db_session, filters=filters)
-    assert result == []
+    with pytest.raises(ValidationError) as excinfo:
+        result = filter_questions_crud(db=db_session, filters=filters)
+    assert "Invalid difficulty. Must be one of: Beginner, Easy, Medium, Hard, Expert" in str(excinfo.value)
 
 def test_filter_questions_invalid_tags(db_session):
     # Test case: Invalid tags filter
@@ -4772,14 +4997,22 @@ def test_remove_user_not_found(db_session):
     assert removed_user is None
 
 def test_authenticate_user(db_session, random_username):
-    user_data = UserCreateSchema(username=random_username, password="AuthPassword123!")
+    user_data = UserCreateSchema(
+        username=random_username,
+        password="AuthPassword123!",
+        email=f"{random_username}@example.com"
+    )
     create_user_crud(db_session, user_data)
     authenticated_user = authenticate_user(db_session, username=random_username, password="AuthPassword123!")
     assert authenticated_user
     assert authenticated_user.username == random_username
 
 def test_create_user(db_session, random_username):
-    user_data = UserCreateSchema(username=random_username, password="NewPassword123!")
+    user_data = UserCreateSchema(
+        username=random_username,
+        password="NewPassword123!",
+        email=f"{random_username}@example.com"
+    )
     created_user = create_user_crud(db_session, user_data)
     assert created_user.username == random_username
 

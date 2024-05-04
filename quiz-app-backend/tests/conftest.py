@@ -77,11 +77,12 @@ def db_session(db):
 
 @pytest.fixture(scope="function")
 def random_username():
-    yield "testuser_" + "".join(random.choices(string.ascii_letters + string.digits, k=5))
+    yield "test.user_" + "".join(random.choices(string.ascii_letters + string.digits, k=5))
 
 @pytest.fixture(scope="function")
 def test_user(db_session, random_username):
-    user_data = UserCreateSchema(username=random_username, password="TestPassword123!")
+    email = f"{random_username}@example.com"
+    user_data = UserCreateSchema(username=random_username, email=email, password="TestPassword123!")
     user = create_user_crud(db_session, user_data)
     user.is_admin = True
     db_session.add(user)

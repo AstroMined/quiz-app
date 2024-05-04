@@ -67,8 +67,9 @@ def test_filter_questions_invalid_difficulty(db_session):
     filters = {
         "difficulty": "InvalidDifficulty"
     }
-    result = filter_questions_crud(db=db_session, filters=filters)
-    assert result == []
+    with pytest.raises(ValidationError) as excinfo:
+        result = filter_questions_crud(db=db_session, filters=filters)
+    assert "Invalid difficulty. Must be one of: Beginner, Easy, Medium, Hard, Expert" in str(excinfo.value)
 
 def test_filter_questions_invalid_tags(db_session):
     # Test case: Invalid tags filter

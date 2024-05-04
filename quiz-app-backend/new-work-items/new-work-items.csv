@@ -1,8 +1,8 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"284","User Story","Response Submission Endpoints","Active","api; user-response","Develop API endpoints for submitting and retrieving user responses to quiz questions. The submission endpoint should accept the user's answer, validate it, and store it along with the timestamp and correctness status. The retrieval endpoint should allow fetching user responses based on filters like user ID, question ID, or time range, with pagination support.","- User response submission endpoint
-Accepts and validates user's answer
-Stores answer timestamp correctness
-User response retrieval endpoint
-Supports filtering and pagination
-Tested with different scenarios"
-"285","Task","Implement response submission endpoints","Active","api","Implement user response submission endpoints in main.py",
+"289","User Story","Input Validation","Active","security; validation","Implement strict input validation for all user inputs in the quiz app backend to prevent potential security vulnerabilities. Validate and sanitize input data, such as user credentials, question content, and API parameters, to mitigate the risk of injection attacks, cross-site scripting (XSS), and other malicious activities.","Input validation implemented
+User credentials validated
+Question content sanitized
+API parameters validated
+injection attacks prevented
+XSS and other attacks mitigated"
+"290","Task","Implement input validation","Active","security","Implement input validation in all endpoint-related files",

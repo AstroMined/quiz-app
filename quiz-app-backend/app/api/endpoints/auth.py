@@ -66,26 +66,14 @@ async def login_endpoint(form_data: LoginFormSchema, db: Session = Depends(get_d
     """
     user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
 
-    if user:
-        if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User account is inactive",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        if not verify_password(form_data.password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    else:
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Username not found",
+            detail="User account is inactive",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 

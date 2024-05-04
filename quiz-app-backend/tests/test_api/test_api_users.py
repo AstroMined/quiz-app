@@ -1,6 +1,10 @@
 # filename: tests/test_api_users.py
 def test_create_user(client, db_session, random_username):
-    data = {"username": random_username, "password": "TestPassword123!"}
+    data = {
+        "username": random_username,
+        "password": "TestPassword123!",
+        "email": f"{random_username}@example.com"
+    }
     response = client.post("/users/", json=data)
     assert response.status_code == 201
 

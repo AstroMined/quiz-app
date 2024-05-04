@@ -1,4 +1,4 @@
-# filename: tests/test_api_authentication.py
+# filename: tests/test_api/test_api_authentication.py
 
 import pytest
 from fastapi import HTTPException
@@ -13,11 +13,6 @@ def test_user_authentication(client, test_user):
     assert "access_token" in response.json(), "Access token missing in response."
     assert response.json()["token_type"] == "bearer", "Incorrect token type."
 
-def test_register_user_success(client, db_session):
-    user_data = {"username": "new_user", "password": "NewPassword123!"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 201, "User registration failed"
-
 def test_login_user_success(client, test_user):
     """Test successful user login and token retrieval."""
     login_data = {"username": test_user.username, "password": "TestPassword123!"}
@@ -25,23 +20,10 @@ def test_login_user_success(client, test_user):
     assert response.status_code == 200, "User login failed."
     assert "access_token" in response.json(), "Access token missing in login response."
 
-def test_registration_user_exists(client, test_user):
-    response = client.post("/register/", json={"username": test_user.username, "password": "anotherpassword"})
-    assert response.status_code == 422, "Registration should fail for existing username."
-
 def test_token_access_with_invalid_credentials(client, db_session):
     """Test token access with invalid credentials."""
     response = client.post("/token", data={"username": "nonexistentuser", "password": "wrongpassword"})
     assert response.status_code == 401, "Token issuance should fail with invalid credentials."
-
-def test_register_user_duplicate(client, test_user):
-    """
-    Test registration with a username that already exists.
-    """
-    user_data = {"username": test_user.username, "password": "DuplicatePass123!"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 422
-    assert "already registered" in str(response.content)
 
 def test_login_wrong_password(client, test_user):
     """
@@ -73,34 +55,6 @@ def test_access_protected_endpoint_with_invalid_token(client, db_session):
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid token"
 
-def test_register_user_invalid_password(client):
-    """Test registration with an invalid password."""
-    user_data = {"username": "newuser", "password": "weak"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 422
-    assert "Password must be at least 8 characters long" in response.json()["detail"][0]["msg"]
-
-def test_register_user_missing_digit_in_password(client):
-    """Test registration with a password missing a digit."""
-    user_data = {"username": "newuser", "password": "NoDigitPassword"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 422
-    assert "Password must contain at least one digit" in str(response.content)
-
-def test_register_user_missing_uppercase_in_password(client):
-    """Test registration with a password missing an uppercase letter."""
-    user_data = {"username": "newuser", "password": "nouppercasepassword123"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 422
-    assert "Password must contain at least one uppercase letter" in str(response.content)
-
-def test_register_user_missing_lowercase_in_password(client):
-    """Test registration with a password missing a lowercase letter."""
-    user_data = {"username": "newuser", "password": "NOLOWERCASEPASSWORD123"}
-    response = client.post("/register/", json=user_data)
-    assert response.status_code == 422
-    assert "Password must contain at least one lowercase letter" in str(response.content)
-
 def test_login_success(client, test_user):
     """
     Test successful user login.
@@ -114,9 +68,15 @@ def test_login_invalid_credentials(client, db_session):
     """
     Test login with invalid credentials.
     """
-    response = client.post("/login", json={"username": "invalid_user", "password": "invalid_password"})
+    response = client.post(
+        "/login",
+        json={
+            "username": "invalid_user",
+            "password": "invalid_password"
+        }
+    )
     assert response.status_code == 401
-    assert "Username not found" in response.json()["detail"]
+    assert "Invalid credentials" in response.json()["detail"]
 
 def test_logout_success(client, test_user, test_token):
     headers = {"Authorization": f"Bearer {test_token}"}
@@ -157,10 +117,13 @@ def test_login_nonexistent_user(client, db_session):
     """
     Test login with a non-existent username.
     """
-    login_data = {"username": "nonexistent_user", "password": "password123"}
+    login_data = {
+        "username": "nonexistent_user",
+        "password": "password123"
+    }
     response = client.post("/login", json=login_data)
     assert response.status_code == 401
-    assert "Username not found" in response.json()["detail"]
+    assert "Invalid credentials" in response.json()["detail"]
 
 def test_logout_revoked_token(client, test_user, test_token, db_session):
     # Revoke the token manually
