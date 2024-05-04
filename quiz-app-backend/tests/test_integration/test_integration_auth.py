@@ -1,4 +1,4 @@
-# filename: tests/test_auth_integration.py
+# filename: tests/test_integration_auth.py
 
 import pytest
 from fastapi import HTTPException

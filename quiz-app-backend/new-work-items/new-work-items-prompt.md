@@ -28,43 +28,43 @@ Here's how the content is organized:
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### Input Validation
+### CORS Configuration
 
-**ID:** 289
+**ID:** 291
 
 **Work Item Type:** User Story
 
 **State:** Active
 
-**Tags:** security; validation
+**Tags:** cors; security
 
 **Description:**
 
-Implement strict input validation for all user inputs in the quiz app backend to prevent potential security vulnerabilities. Validate and sanitize input data, such as user credentials, question content, and API parameters, to mitigate the risk of injection attacks, cross-site scripting (XSS), and other malicious activities.
+Configure Cross-Origin Resource Sharing (CORS) settings in the quiz app backend to control access from different origins. Implement appropriate CORS headers and policies to allow or restrict requests from specific domains, ensuring the backend API can be consumed by authorized clients while preventing unauthorized access.
 
 **Acceptance Criteria:**
 
-- Input validation implemented
-- User credentials validated
-- Question content sanitized
-- API parameters validated
-- injection attacks prevented
-- XSS and other attacks mitigated
+- CORS configuration implemented
+- Appropriate CORS headers set
+- Access control policies defined
+- Requests from allowed origins accepted
+- Unauthorized Access prevented
+- tested with different origin scenarios
 
 
-### Implement input validation
+### Configure CORS in main.py
 
-**ID:** 290
+**ID:** 292
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** security
+**Tags:** nan
 
 **Description:**
 
-Implement input validation in all endpoint-related files
+Configure CORS settings in main.py
 
 
 

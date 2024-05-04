@@ -1,6 +1,7 @@
 # filename: main.py
 
 from fastapi import FastAPI, Request, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from app.api.endpoints import (
     users as users_router,
     register as register_router,
@@ -60,12 +61,32 @@ async def check_revoked_token(request: Request, call_next):
         revoked_token = db.query(RevokedTokenModel).filter(RevokedTokenModel.token == token).first()
         if revoked_token:
             # Raise a more specific exception for revoked tokens
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been revoked"
+            )
     try:
         response = await call_next(request)
     except HTTPException as e:
         if e.status_code == 401:
             # Handle invalid token exception
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            ) from e
         raise e
     return response
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+    "http://localhost:3000",  # Add the URL of your frontend application
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
