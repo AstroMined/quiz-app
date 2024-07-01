@@ -1,8 +1,8 @@
 # filename: app/crud/crud_topics.py
 
 from sqlalchemy.orm import Session
-from app.models import TopicModel
-from app.schemas import TopicCreateSchema
+from app.models.topics import TopicModel
+from app.schemas.topics import TopicCreateSchema
 
 def create_topic_crud(db: Session, topic: TopicCreateSchema) -> TopicModel:
     db_topic = TopicModel(**topic.model_dump())

@@ -4,6 +4,7 @@ from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
 
+
 class SessionQuestionSchema(BaseModel):
     question_id: int
     answered: bool
@@ -40,4 +41,3 @@ class SessionSchema(SessionBaseSchema):
 
     class Config:
         from_attributes = True
-

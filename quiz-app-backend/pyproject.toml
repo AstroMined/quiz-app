@@ -1,4 +1,14 @@
 # pyproject.toml
+[tool.app]
+secret_key = "your_default_secret_key"
+access_token_expire_minutes = 30
+database_url_dev = "sqlite:///./quiz_app.db"
+database_url_test = "sqlite:///./test.db"
+unprotected_endpoints = ["/", "/login", "/logout", "/register", "/docs", "/redoc", "/openapi.json"]
+
+[tool.pylint.METHOD]
+no-self-argument = "cls"
+
 [tool.pytest.ini_options]
 python_files = ["test_*.py"]
 testpaths = [

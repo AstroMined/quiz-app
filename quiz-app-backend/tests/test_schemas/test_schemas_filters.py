@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
-from app.schemas import FilterParamsSchema
+from app.schemas.filters import FilterParamsSchema
+
 
 def test_filter_params_schema_invalid_params():
     invalid_data = {

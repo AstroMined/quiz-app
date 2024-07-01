@@ -1,7 +1,9 @@
+# filename: tests/test_crud_filters.py
+
 import pytest
 from pydantic import ValidationError
 from app.crud.crud_filters import filter_questions_crud
-from app.schemas.filters import FilterParamsSchema
+
 
 def test_filter_questions_extra_invalid_parameter(db_session):
     # Test case: Extra invalid parameter

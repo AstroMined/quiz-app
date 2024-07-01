@@ -5,8 +5,9 @@ from sqlalchemy import Column, Integer, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 
+
 class SessionQuestionModel(Base):
-    __tablename__ = 'session_question'
+    __tablename__ = 'session_questions'
     session_id = Column(Integer, ForeignKey('sessions.id'), primary_key=True)
     question_id = Column(Integer, ForeignKey('questions.id'), primary_key=True)
     answered = Column(Boolean, default=False)
@@ -14,10 +15,10 @@ class SessionQuestionModel(Base):
     timestamp = Column(DateTime, default=datetime.now(timezone.utc))
 
     session = relationship("SessionModel", back_populates="questions")
-    question = relationship("QuestionModel", back_populates="sessions")
+    question = relationship("QuestionModel", back_populates="session_questions")
 
 class SessionQuestionSetModel(Base):
-    __tablename__ = 'session_question_set'
+    __tablename__ = 'session_question_sets'
     session_id = Column(Integer, ForeignKey('sessions.id'), primary_key=True)
     question_set_id = Column(Integer, ForeignKey('question_sets.id'), primary_key=True)
     question_limit = Column(Integer, nullable=True)  # Optional limit on questions from this set

@@ -28,43 +28,19 @@ Here's how the content is organized:
 
 You are the Senior Python Engineer on my team and I am the product manager.  
 Your duties for the current sprint have been assigned as below:  
-### CORS Configuration
+### Create Role and Permission Models
 
-**ID:** 291
-
-**Work Item Type:** User Story
-
-**State:** Active
-
-**Tags:** cors; security
-
-**Description:**
-
-Configure Cross-Origin Resource Sharing (CORS) settings in the quiz app backend to control access from different origins. Implement appropriate CORS headers and policies to allow or restrict requests from specific domains, ensuring the backend API can be consumed by authorized clients while preventing unauthorized access.
-
-**Acceptance Criteria:**
-
-- CORS configuration implemented
-- Appropriate CORS headers set
-- Access control policies defined
-- Requests from allowed origins accepted
-- Unauthorized Access prevented
-- tested with different origin scenarios
-
-
-### Configure CORS in main.py
-
-**ID:** 292
+**ID:** 320
 
 **Work Item Type:** Task
 
 **State:** Active
 
-**Tags:** nan
+**Tags:** database; models
 
 **Description:**
 
-Configure CORS settings in main.py
+<p>Create database models for roles and permissions, including fields for name and description. Establish a many-to-many relationship between RoleModel and PermissionModel. </p>
 
 
 

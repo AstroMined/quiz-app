@@ -1,13 +1,9 @@
 # filename: app/models/subtopics.py
-"""
-This module defines the Subtopic model.
-
-The Subtopic model represents a subtopic in the quiz app.
-"""
 
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
+
 
 class SubtopicModel(Base):
     """

@@ -1,12 +1,13 @@
-# filename: app/services/auth_service.py
+# filename: app/services/authentication_service.py
 
 from sqlalchemy.orm import Session
-from app.crud.crud_user_utils import get_user_by_username_crud
-from app.core import verify_password
-from app.models import UserModel
+from app.services.user_service import get_user_by_username
+from app.core.security import verify_password
+from app.models.users import UserModel
+
 
 def authenticate_user(db: Session, username: str, password: str) -> UserModel:
-    user = get_user_by_username_crud(db, username)
+    user = get_user_by_username(db, username)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):

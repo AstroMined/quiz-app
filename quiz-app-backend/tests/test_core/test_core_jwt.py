@@ -3,7 +3,8 @@
 from datetime import timedelta
 import pytest
 from jose import JWTError
-from app.core import create_access_token, verify_token
+from app.core.jwt import create_access_token, verify_token
+
 
 @pytest.fixture
 def test_data():
@@ -19,11 +20,10 @@ def test_jwt_token_generation_and_validation(test_data):
     decoded_username = verify_token(token, credentials_exception=Exception("Invalid token"))
     assert decoded_username == test_data["sub"], "JWT token validation failed. Username mismatch."
 
-def test_jwt_token_creation_and_verification():
+def test_jwt_token_creation_and_verification(test_data):
     """
     Test the JWT token creation and verification process.
     """
-    test_data = {"sub": "testuser"}
     token = create_access_token(data=test_data, expires_delta=timedelta(minutes=30))
     assert token is not None
     decoded_sub = verify_token(token, credentials_exception=ValueError("Invalid token"))

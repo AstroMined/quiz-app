@@ -20,10 +20,10 @@ router: The API router instance.
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.schemas import TopicSchema, TopicCreateSchema
-from app.crud import create_topic_crud, read_topic_crud, update_topic_crud, delete_topic_crud
-from app.services import get_current_user
+from app.db.session import get_db
+from app.schemas.topics import TopicSchema, TopicCreateSchema
+from app.crud.crud_topics import create_topic_crud, read_topic_crud, update_topic_crud, delete_topic_crud
+from app.services.user_service import get_current_user
 from app.models.users import UserModel
 
 router = APIRouter()

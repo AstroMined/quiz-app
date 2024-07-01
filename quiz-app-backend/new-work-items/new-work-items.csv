@@ -1,8 +1,2 @@
 ﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"291","User Story","CORS Configuration","Active","cors; security","Configure Cross-Origin Resource Sharing (CORS) settings in the quiz app backend to control access from different origins. Implement appropriate CORS headers and policies to allow or restrict requests from specific domains, ensuring the backend API can be consumed by authorized clients while preventing unauthorized access.","CORS configuration implemented
-Appropriate CORS headers set
-Access control policies defined
-Requests from allowed origins accepted
-Unauthorized Access prevented
-tested with different origin scenarios"
-"292","Task","Configure CORS in main.py","Active",,"Configure CORS settings in main.py",
+"320","Task","Create Role and Permission Models","Active","database; models","<p>Create database models for roles and permissions, including fields for name and description. Establish a many-to-many relationship between RoleModel and PermissionModel. </p>",

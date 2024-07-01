@@ -1,6 +1,7 @@
 # filename: tests/test_api_subjects.py
 
-from app.schemas import SubjectCreateSchema
+from app.schemas.subjects import SubjectCreateSchema
+
 
 def test_create_subject(logged_in_client, db_session):
     subject_data = SubjectCreateSchema(name="Test Subject")

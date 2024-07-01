@@ -1,6 +1,7 @@
 # filename: tests/test_api_questions.py
 
-from app.schemas import AnswerChoiceCreateSchema
+import pytest
+from fastapi import HTTPException
 
 def test_create_question_endpoint(logged_in_client, test_subject, test_topic, test_subtopic, test_question_set):
     data = {
@@ -19,8 +20,10 @@ def test_create_question_endpoint(logged_in_client, test_subject, test_topic, te
     assert response.status_code == 201
 
 def test_read_questions_without_token(client, db_session, test_question):
-    response = client.get("/questions/")
-    assert response.status_code == 401
+    with pytest.raises(HTTPException) as exc_info:
+        response = client.get("/questions/")
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Not authenticated"
 
 def test_read_questions_with_token(logged_in_client, db_session, test_question):
     response = logged_in_client.get("/questions/")

@@ -1,6 +1,7 @@
 # filename: tests/test_api_topics.py
 
-from app.schemas import TopicCreateSchema
+from app.schemas.topics import TopicCreateSchema
+
 
 def test_create_topic(logged_in_client, db_session):
     # Create a test subject

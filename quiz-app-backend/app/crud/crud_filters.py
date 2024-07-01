@@ -4,14 +4,13 @@ from typing import List, Optional
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.models import (
-    QuestionModel,
-    SubjectModel,
-    TopicModel,
-    SubtopicModel,
-    QuestionTagModel
-)
-from app.schemas import QuestionSchema, FilterParamsSchema
+from app.models.questions import QuestionModel
+from app.models.subjects import SubjectModel
+from app.models.topics import TopicModel
+from app.models.subtopics import SubtopicModel
+from app.models.question_tags import QuestionTagModel
+from app.schemas.questions import QuestionSchema
+from app.schemas.filters import FilterParamsSchema
 
 def filter_questions_crud(
     db: Session,

@@ -2,8 +2,8 @@
 
 from sqlalchemy import inspect
 
-def test_revoked_tokens_table_exists(db):
-    inspector = inspect(db.bind)
+def test_revoked_tokens_table_exists(db_session):
+    inspector = inspect(db_session.bind)
     available_tables = inspector.get_table_names()
     assert "revoked_tokens" in available_tables, "Table 'revoked_tokens' does not exist in the test database."
 

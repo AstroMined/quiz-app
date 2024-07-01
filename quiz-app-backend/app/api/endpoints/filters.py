@@ -30,10 +30,11 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from sqlalchemy.orm import Session
 from pydantic import ValidationError
-from app.schemas import QuestionSchema, FilterParamsSchema
-from app.crud import filter_questions_crud
-from app.db import get_db
-from app.services import get_current_user
+from app.schemas.filters import FilterParamsSchema
+from app.schemas.questions import QuestionSchema
+from app.crud.crud_filters import filter_questions_crud
+from app.db.session import get_db
+from app.services.user_service import get_current_user
 from app.models.users import UserModel
 
 router = APIRouter()

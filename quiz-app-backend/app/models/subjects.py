@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 
+
 class SubjectModel(Base):
     __tablename__ = "subjects"
 

@@ -1,15 +1,14 @@
 # filename: tests/test_api_filters.py
 
 import pytest
-from app.models import (
-    SubjectModel,
-    TopicModel,
-    SubtopicModel,
-    QuestionTagModel,
-    QuestionSetModel,
-    QuestionModel
-)
+from app.models.subjects import SubjectModel
+from app.models.topics import TopicModel
+from app.models.subtopics import SubtopicModel
+from app.models.question_tags import QuestionTagModel
+from app.models.question_sets import QuestionSetModel
+from app.models.questions import QuestionModel
 from app.api.endpoints.filters import filter_questions_endpoint
+
 
 def test_setup_filter_questions_data(db_session, setup_filter_questions_data):
     # Check if the required data is created in the database
@@ -29,6 +28,36 @@ def test_setup_filter_questions_data(db_session, setup_filter_questions_data):
     assert db_session.query(QuestionSetModel).filter(QuestionSetModel.name == "Math Question Set").first() is not None
     assert db_session.query(QuestionSetModel).filter(QuestionSetModel.name == "Science Question Set").first() is not None
     assert db_session.query(QuestionModel).count() == 4
+
+    # Check if the topics are correctly associated with their respective subjects
+    algebra_topic = db_session.query(TopicModel).filter(TopicModel.name == "Algebra").first()
+    assert algebra_topic.subject.name == "Math"
+
+    geometry_topic = db_session.query(TopicModel).filter(TopicModel.name == "Geometry").first()
+    assert geometry_topic.subject.name == "Math"
+
+    physics_topic = db_session.query(TopicModel).filter(TopicModel.name == "Physics").first()
+    assert physics_topic.subject.name == "Science"
+
+    # Check if the subtopics are correctly associated with their respective topics
+    linear_equations_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Linear Equations").first()
+    assert linear_equations_subtopic.topic.name == "Algebra"
+
+    quadratic_equations_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Quadratic Equations").first()
+    assert quadratic_equations_subtopic.topic.name == "Algebra"
+
+    triangles_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Triangles").first()
+    assert triangles_subtopic.topic.name == "Geometry"
+
+    mechanics_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Mechanics").first()
+    assert mechanics_subtopic.topic.name == "Physics"
+
+    # Check if the questions are correctly associated with their respective subjects, topics, and subtopics
+    questions = db_session.query(QuestionModel).all()
+    for question in questions:
+        assert question.subject is not None
+        assert question.topic is not None
+        assert question.subtopic is not None
 
 def test_filter_questions(logged_in_client, db_session):
     response = logged_in_client.get(

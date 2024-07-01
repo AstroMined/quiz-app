@@ -4,21 +4,23 @@ from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel
 
+
 class UserResponseBaseSchema(BaseModel):
     user_id: int
     question_id: int
     answer_choice_id: int
-    is_correct: bool
-    timestamp: datetime
-    
+    is_correct: Optional[bool] = None
+    timestamp: Optional[datetime] = None
+
     class Config:
         from_attributes = True
 
-class UserResponseCreateSchema(UserResponseBaseSchema):
-    timestamp: datetime = None
 
-class UserResponseUpdateSchema(BaseModel):
-    is_correct: Optional[bool] = None
+class UserResponseCreateSchema(UserResponseBaseSchema):
+    pass
+
+class UserResponseUpdateSchema(UserResponseBaseSchema):
+    answer_choice_id: Optional[int] = None
 
 class UserResponseSchema(UserResponseBaseSchema):
     id: int
@@ -27,5 +29,5 @@ class UserResponseSchema(UserResponseBaseSchema):
     class Config:
         from_attributes = True
         json_encoders = {
-            datetime: lambda dt: dt.isoformat()
+            datetime: lambda dt: dt
         }

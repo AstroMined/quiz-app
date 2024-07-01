@@ -3,6 +3,7 @@
 import pytest
 from app.schemas.user import UserCreateSchema
 
+
 def test_user_create_schema():
     user_data = {
         "username": "testuser",

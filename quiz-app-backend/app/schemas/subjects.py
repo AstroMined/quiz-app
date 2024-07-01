@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, validator
 
+
 class SubjectBaseSchema(BaseModel):
     name: str
 

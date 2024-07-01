@@ -3,6 +3,7 @@
 from typing import Optional, List
 from pydantic import BaseModel, Field, validator
 
+
 class FilterParamsSchema(BaseModel):
     subject: Optional[str] = Field(None, description="Filter questions by subject")
     topic: Optional[str] = Field(None, description="Filter questions by topic")
@@ -18,7 +19,7 @@ class FilterParamsSchema(BaseModel):
         return difficulty
 
     class Config:
-        extra = 'forbid'  # Allows extra fields but you can manually handle them
+        extra = 'forbid'
         json_schema_extra = {
             "example": {
                 "subject": "Math",

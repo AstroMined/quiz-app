@@ -1,7 +1,9 @@
 # filename: tests/test_utils/test_randomization.py
 
-from app.services import randomize_questions, randomize_answer_choices
-from app.models import QuestionModel, AnswerChoiceModel
+from app.services.randomization_service import randomize_questions, randomize_answer_choices
+from app.models.questions import QuestionModel
+from app.models.answer_choices import AnswerChoiceModel
+
 
 def test_randomize_questions():
     questions = [

@@ -1,35 +1,43 @@
 # filename: tests/test_api_users.py
-def test_create_user(client, db_session, random_username):
+
+from app.services.logging_service import logger
+
+
+def test_create_user(logged_in_client, random_username):
+    username = random_username + "_test_create_user"
+    logger.debug("Creating user with username: %s", username)
     data = {
-        "username": random_username,
+        "username": username,
         "password": "TestPassword123!",
-        "email": f"{random_username}@example.com"
+        "email": f"{username}@example.com"
     }
-    response = client.post("/users/", json=data)
+    logger.debug("Creating user with data: %s", data)
+    response = logged_in_client.post("/users/", json=data)
+    logger.debug("Response: %s", response.json())
     assert response.status_code == 201
 
-def test_read_users(client, db_session, test_user):
-    # Authenticate and get the access token
-    login_data = {"username": test_user.username, "password": "TestPassword123!"}
-    response = client.post("/token", data=login_data)
+def test_read_users(logged_in_client, test_user_with_group):
+    response = logged_in_client.get("/users/")
     assert response.status_code == 200
-    access_token = response.json()["access_token"]
+    assert test_user_with_group.username in [user["username"] for user in response.json()]
 
-    # Make the request to the /users/ endpoint with the access token
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.get("/users/", headers=headers)
+def test_read_user_me(logged_in_client, test_user_with_group):
+    response = logged_in_client.get("/users/me")
     assert response.status_code == 200
-    assert test_user.username in [user["username"] for user in response.json()]
+    assert response.json()["username"] == test_user_with_group.username
 
-def test_read_user_me(client, test_user, test_token):
-    headers = {"Authorization": f"Bearer {test_token}"}
-    response = client.get("/users/me", headers=headers)
+def test_update_user_me(logged_in_client, db_session):
+    update_data = {
+        "username": "new_username",
+        "email": "new_email@example.com"
+    }
+    response = logged_in_client.put("/users/me", json=update_data)
+    logger.debug("Response: %s", response.json())
     assert response.status_code == 200
-    assert response.json()["username"] == test_user.username
 
-def test_update_user_me(client, test_user, test_token):
-    headers = {"Authorization": f"Bearer {test_token}"}
-    updated_data = {"username": "updated_username"}
-    response = client.put("/users/me", json=updated_data, headers=headers)
-    assert response.status_code == 200
-    assert response.json()["username"] == "updated_username"
+    # Extract the details from the response
+    data = response.json()
+
+    # Check the updated data
+    assert data["username"] == "new_username"
+    assert data["email"] == "new_email@example.com"

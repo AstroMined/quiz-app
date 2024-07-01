@@ -1,7 +1,7 @@
 # filename: app/schemas/question_tags.py
 
-from typing import List, Optional
 from pydantic import BaseModel
+
 
 class QuestionTagBaseSchema(BaseModel):
     tag: str

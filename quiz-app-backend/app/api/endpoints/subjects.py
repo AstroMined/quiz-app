@@ -22,13 +22,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.subjects import SubjectSchema, SubjectCreateSchema
-from app.crud import (
+from app.crud.crud_subjects import (
     create_subject_crud,
     read_subject_crud,
     update_subject_crud,
     delete_subject_crud
 )
-from app.services import get_current_user
+from app.services.user_service import get_current_user
 from app.models.users import UserModel
 
 router = APIRouter()

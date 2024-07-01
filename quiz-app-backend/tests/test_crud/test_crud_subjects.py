@@ -1,7 +1,8 @@
 # filename: tests/test_crud_subjects.py
 
-from app.schemas import SubjectCreateSchema
-from app.crud import create_subject_crud
+from app.schemas.subjects import SubjectCreateSchema
+from app.crud.crud_subjects import create_subject_crud
+
 
 def test_create_subject(db_session):
     subject_data = SubjectCreateSchema(name="Test Subject")
