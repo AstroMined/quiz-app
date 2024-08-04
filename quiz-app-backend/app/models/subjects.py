@@ -2,14 +2,17 @@
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-
+from app.db.base import Base
 
 class SubjectModel(Base):
     __tablename__ = "subjects"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
+    name = Column(String, unique=True, nullable=False, index=True)
 
-    topics = relationship("TopicModel", back_populates="subject")
-    questions = relationship("QuestionModel", back_populates="subject")
+    disciplines = relationship("DisciplineModel", secondary="discipline_to_subject_association", back_populates="subjects")
+    topics = relationship("TopicModel", secondary="subject_to_topic_association", back_populates="subjects")
+    questions = relationship("QuestionModel", secondary="question_to_subject_association", back_populates="subjects")
+
+    def __repr__(self):
+        return f"<Subject(id={self.id}, name='{self.name}')>"

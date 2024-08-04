@@ -1,0 +1,352 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.8, pytest-8.1.2, pluggy-1.4.0
+rootdir: /code/quiz-app/quiz-app-backend
+configfile: pyproject.toml
+plugins: anyio-4.3.0, asyncio-0.23.6, cov-4.1.0
+asyncio: mode=Mode.STRICT
+collected 1 item
+
+tests/test_models/test_question_model.py .E                              [100%]
+
+==================================== ERRORS ====================================
+_____________ ERROR at teardown of test_question_set_relationship ______________
+  + Exception Group Traceback (most recent call last):
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/runner.py", line 340, in from_call
+  |     result: Optional[TResult] = func()
+  |                                 ^^^^^^
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/runner.py", line 240, in <lambda>
+  |     lambda: runtest_hook(item=item, **kwds), when=when, reraise=reraise
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/pluggy/_hooks.py", line 501, in __call__
+  |     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/pluggy/_manager.py", line 119, in _hookexec
+  |     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/pluggy/_callers.py", line 138, in _multicall
+  |     raise exception.with_traceback(exception.__traceback__)
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/pluggy/_callers.py", line 121, in _multicall
+  |     teardown.throw(exception)  # type: ignore[union-attr]
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/threadexception.py", line 92, in pytest_runtest_teardown
+  |     yield from thread_exception_runtest_hook()
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/threadexception.py", line 63, in thread_exception_runtest_hook
+  |     yield
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/pluggy/_callers.py", line 121, in _multicall
+  |     teardown.throw(exception)  # type: ignore[union-attr]
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/unraisableexception.py", line 95, in pytest_runtest_teardown
+  |     yield from unraisable_exception_runtest_hook()
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/unraisableexception.py", line 65, in unraisable_exception_runtest_hook
+  |     yield
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/pluggy/_callers.py", line 121, in _multicall
+  |     teardown.throw(exception)  # type: ignore[union-attr]
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/logging.py", line 856, in pytest_runtest_teardown
+  |     yield from self._runtest_for(item, "teardown")
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/logging.py", line 832, in _runtest_for
+  |     yield
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/pluggy/_callers.py", line 121, in _multicall
+  |     teardown.throw(exception)  # type: ignore[union-attr]
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/capture.py", line 888, in pytest_runtest_teardown
+  |     return (yield)
+  |             ^^^^^
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/pluggy/_callers.py", line 102, in _multicall
+  |     res = hook_impl.function(*args)
+  |           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/runner.py", line 187, in pytest_runtest_teardown
+  |     item.session._setupstate.teardown_exact(nextitem)
+  |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/runner.py", line 555, in teardown_exact
+  |     raise exceptions[0]
+  | ExceptionGroup: errors while tearing down <Function test_question_set_relationship> (2 sub-exceptions)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/runner.py", line 544, in teardown_exact
+    |     fin()
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/fixtures.py", line 1046, in finish
+    |     raise exceptions[0]
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/fixtures.py", line 1035, in finish
+    |     fin()
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/fixtures.py", line 922, in _teardown_yield_fixture
+    |     next(it)
+    |   File "/code/quiz-app/quiz-app-backend/tests/conftest.py", line 146, in test_permissions
+    |     db_session.query(PermissionModel).delete()
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 3160, in delete
+    |     result: CursorResult[Any] = self.session.execute(
+    |                                 ^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2306, in execute
+    |     return self._execute_internal(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2181, in _execute_internal
+    |     conn = self._connection_for_bind(bind)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2050, in _connection_for_bind
+    |     return trans._connection_for_bind(engine, execution_options)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "<string>", line 2, in _connection_for_bind
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 103, in _go
+    |     self._raise_for_prerequisite_state(fn.__name__, current_state)
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 928, in _raise_for_prerequisite_state
+    |     raise sa_exc.PendingRollbackError(
+    | sqlalchemy.exc.PendingRollbackError: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (sqlite3.IntegrityError) NOT NULL constraint failed: users.role_id
+    | [SQL: UPDATE users SET role_id=? WHERE users.id = ?]
+    | [parameters: (None, 1)]
+    | (Background on this error at: https://sqlalche.me/e/20/gkpj) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+    +---------------- 2 ----------------
+    | Traceback (most recent call last):
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1960, in _exec_single_context
+    |     self.dialect.do_execute(
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 924, in do_execute
+    |     cursor.execute(statement, parameters)
+    | sqlite3.IntegrityError: NOT NULL constraint failed: users.role_id
+    | 
+    | The above exception was the direct cause of the following exception:
+    | 
+    | Traceback (most recent call last):
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/runner.py", line 544, in teardown_exact
+    |     fin()
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/fixtures.py", line 1046, in finish
+    |     raise exceptions[0]
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/fixtures.py", line 1035, in finish
+    |     fin()
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/fixtures.py", line 922, in _teardown_yield_fixture
+    |     next(it)
+    |   File "/code/quiz-app/quiz-app-backend/tests/conftest.py", line 166, in test_role
+    |     delete_role_crud(db_session, role.id)
+    |   File "/code/quiz-app/quiz-app-backend/app/crud/crud_roles.py", line 68, in delete_role_crud
+    |     db.commit()
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1972, in commit
+    |     trans.commit(_to_root=True)
+    |   File "<string>", line 2, in commit
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    |     ret_value = fn(self, *arg, **kw)
+    |                 ^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1257, in commit
+    |     self._prepare_impl()
+    |   File "<string>", line 2, in _prepare_impl
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    |     ret_value = fn(self, *arg, **kw)
+    |                 ^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1232, in _prepare_impl
+    |     self.session.flush()
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4296, in flush
+    |     self._flush(objects)
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4431, in _flush
+    |     with util.safe_reraise():
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    |     raise exc_value.with_traceback(exc_tb)
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4392, in _flush
+    |     flush_context.execute()
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    |     rec.execute(self)
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    |     util.preloaded.orm_persistence.save_obj(
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 85, in save_obj
+    |     _emit_update_statements(
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 912, in _emit_update_statements
+    |     c = connection.execute(
+    |         ^^^^^^^^^^^^^^^^^^^
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1408, in execute
+    |     return meth(
+    |            ^^^^^
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 513, in _execute_on_connection
+    |     return connection._execute_clauseelement(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1630, in _execute_clauseelement
+    |     ret = self._execute_context(
+    |           ^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1839, in _execute_context
+    |     return self._exec_single_context(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1979, in _exec_single_context
+    |     self._handle_dbapi_exception(
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2335, in _handle_dbapi_exception
+    |     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1960, in _exec_single_context
+    |     self.dialect.do_execute(
+    |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 924, in do_execute
+    |     cursor.execute(statement, parameters)
+    | sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: users.role_id
+    | [SQL: UPDATE users SET role_id=? WHERE users.id = ?]
+    | [parameters: (None, 1)]
+    | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+    +------------------------------------
+------------------------------ Captured log setup ------------------------------
+DEBUG    backend:conftest.py:84 Running test: tests/test_models/test_question_model.py::test_question_set_relationship
+DEBUG    backend:conftest.py:95 Begin setting up database fixture
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__openapi.json
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__docs
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__docs_oauth2-redirect
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__redoc
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__answer-choices_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__answer-choices_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__answer-choices_answer_choice_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__answer-choices_answer_choice_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__answer-choices_answer_choice_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__login
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__logout
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__register
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__questions_filter
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__groups
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__groups_group_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__groups_group_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__groups_group_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__leaderboard_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__upload-questions_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__question-set_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__question-sets_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__question-sets_question_set_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__question-sets_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__question-sets_question_set_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__question-sets_question_set_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__questions_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__questions_with-answers_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__questions_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__questions_question_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__questions_question_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__questions_question_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__subjects_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__subjects_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__subjects_subject_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__subjects_subject_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__subjects_subject_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__domains_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__domains_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__domains_domain_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__domains_domain_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__domains_domain_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__disciplines_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__disciplines_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__disciplines_discipline_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__disciplines_discipline_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__disciplines_discipline_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__concepts_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__concepts_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__concepts_concept_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__concepts_concept_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__concepts_concept_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__user-responses_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__user-responses_user_response_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__user-responses_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__user-responses_user_response_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__user-responses_user_response_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__users_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__users_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__users_me
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__users_me
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__topics_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__topics_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__topics_topic_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__topics_topic_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__topics_topic_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: create__subtopics_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__subtopics_
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__subtopics_subtopic_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: update__subtopics_subtopic_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: delete__subtopics_subtopic_id
+DEBUG    backend:permission_generator_service.py:26 Generated permission: read__
+DEBUG    backend:permission_generator_service.py:38 Added 71 new permissions to the database
+DEBUG    backend:conftest.py:158 Creating test role with data: {'name': 'test_role', 'description': 'Test Role', 'permissions': ['delete__question-sets_question_set_id', 'delete__disciplines_discipline_id', 'read__domains_', 'read__user-responses_user_response_id', 'delete__groups_group_id', 'read__redoc', 'read__disciplines_', 'create__users_', 'update__users_me', 'read__docs', 'create__domains_', 'update__user-responses_user_response_id', 'read__', 'delete__domains_domain_id', 'update__questions_question_id', 'update__subtopics_subtopic_id', 'update__disciplines_discipline_id', 'read__subjects_', 'delete__subtopics_subtopic_id', 'create__question-sets_', 'read__user-responses_', 'create__subjects_', 'read__users_', 'read__questions_filter', 'create__concepts_', 'create__disciplines_', 'read__disciplines_discipline_id', 'update__groups_group_id', 'create__questions_', 'create__topics_', 'delete__answer-choices_answer_choice_id', 'delete__concepts_concept_id', 'read__questions_', 'update__concepts_concept_id', 'read__topics_topic_id', 'update__topics_topic_id', 'create__groups', 'delete__questions_question_id', 'read__subjects_subject_id', 'read__openapi.json', 'read__leaderboard_', 'create__login', 'delete__topics_topic_id', 'create__upload-questions_', 'read__subtopics_', 'read__docs_oauth2-redirect', 'read__subtopics_subtopic_id', 'read__question-sets_', 'read__questions_question_id', 'delete__user-responses_user_response_id', 'update__domains_domain_id', 'read__question-set_', 'create__questions_with-answers_', 'update__question-sets_question_set_id', 'read__users_me', 'read__answer-choices_answer_choice_id', 'create__subtopics_', 'read__topics_', 'create__register', 'read__concepts_concept_id', 'update__answer-choices_answer_choice_id', 'read__domains_domain_id', 'create__user-responses_', 'create__answer-choices_', 'update__subjects_subject_id', 'read__groups_group_id', 'create__logout', 'read__answer-choices_', 'read__concepts_', 'read__question-sets_question_set_id', 'delete__subjects_subject_id'], 'default': False}
+DEBUG    backend:conftest.py:160 Role create schema: {'name': 'test_role', 'description': 'Test Role', 'permissions': ['delete__question-sets_question_set_id', 'delete__disciplines_discipline_id', 'read__domains_', 'read__user-responses_user_response_id', 'delete__groups_group_id', 'read__redoc', 'read__disciplines_', 'create__users_', 'update__users_me', 'read__docs', 'create__domains_', 'update__user-responses_user_response_id', 'read__', 'delete__domains_domain_id', 'update__questions_question_id', 'update__subtopics_subtopic_id', 'update__disciplines_discipline_id', 'read__subjects_', 'delete__subtopics_subtopic_id', 'create__question-sets_', 'read__user-responses_', 'create__subjects_', 'read__users_', 'read__questions_filter', 'create__concepts_', 'create__disciplines_', 'read__disciplines_discipline_id', 'update__groups_group_id', 'create__questions_', 'create__topics_', 'delete__answer-choices_answer_choice_id', 'delete__concepts_concept_id', 'read__questions_', 'update__concepts_concept_id', 'read__topics_topic_id', 'update__topics_topic_id', 'create__groups', 'delete__questions_question_id', 'read__subjects_subject_id', 'read__openapi.json', 'read__leaderboard_', 'create__login', 'delete__topics_topic_id', 'create__upload-questions_', 'read__subtopics_', 'read__docs_oauth2-redirect', 'read__subtopics_subtopic_id', 'read__question-sets_', 'read__questions_question_id', 'delete__user-responses_user_response_id', 'update__domains_domain_id', 'read__question-set_', 'create__questions_with-answers_', 'update__question-sets_question_set_id', 'read__users_me', 'read__answer-choices_answer_choice_id', 'create__subtopics_', 'read__topics_', 'create__register', 'read__concepts_concept_id', 'update__answer-choices_answer_choice_id', 'read__domains_domain_id', 'create__user-responses_', 'create__answer-choices_', 'update__subjects_subject_id', 'read__groups_group_id', 'create__logout', 'read__answer-choices_', 'read__concepts_', 'read__question-sets_question_set_id', 'delete__subjects_subject_id']}
+DEBUG    backend:crud_roles.py:13 Creating role: <RoleModel(id=None, name='test_role', default=None)>
+DEBUG    backend:crud_roles.py:20 Adding permission delete__question-sets_question_set_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission delete__disciplines_discipline_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__domains_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__user-responses_user_response_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission delete__groups_group_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__redoc to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__disciplines_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__users_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__users_me to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__docs to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__domains_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__user-responses_user_response_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission delete__domains_domain_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__questions_question_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__subtopics_subtopic_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__disciplines_discipline_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__subjects_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission delete__subtopics_subtopic_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__question-sets_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__user-responses_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__subjects_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__users_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__questions_filter to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__concepts_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__disciplines_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__disciplines_discipline_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__groups_group_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__questions_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__topics_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission delete__answer-choices_answer_choice_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission delete__concepts_concept_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__questions_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__concepts_concept_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__topics_topic_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__topics_topic_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__groups to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission delete__questions_question_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__subjects_subject_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__openapi.json to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__leaderboard_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__login to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission delete__topics_topic_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__upload-questions_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__subtopics_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__docs_oauth2-redirect to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__subtopics_subtopic_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__question-sets_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__questions_question_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission delete__user-responses_user_response_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__domains_domain_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__question-set_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__questions_with-answers_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__question-sets_question_set_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__users_me to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__answer-choices_answer_choice_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__subtopics_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__topics_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__register to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__concepts_concept_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__answer-choices_answer_choice_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__domains_domain_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__user-responses_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__answer-choices_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission update__subjects_subject_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__groups_group_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission create__logout to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__answer-choices_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__concepts_ to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission read__question-sets_question_set_id to role 1
+DEBUG    backend:crud_roles.py:20 Adding permission delete__subjects_subject_id to role 1
+DEBUG    backend:crud_roles.py:23 Role created with id 1, name test_role, and permissions [<PermissionModel(id=1, name='delete__groups_group_id')>, <PermissionModel(id=2, name='read__answer-choices_')>, <PermissionModel(id=3, name='read__')>, <PermissionModel(id=4, name='delete__domains_domain_id')>, <PermissionModel(id=5, name='delete__subjects_subject_id')>, <PermissionModel(id=6, name='read__subjects_')>, <PermissionModel(id=7, name='read__users_')>, <PermissionModel(id=8, name='read__questions_filter')>, <PermissionModel(id=9, name='create__concepts_')>, <PermissionModel(id=10, name='create__disciplines_')>, <PermissionModel(id=11, name='create__topics_')>, <PermissionModel(id=12, name='create__questions_')>, <PermissionModel(id=13, name='delete__answer-choices_answer_choice_id')>, <PermissionModel(id=14, name='delete__concepts_concept_id')>, <PermissionModel(id=15, name='read__questions_')>, <PermissionModel(id=16, name='read__topics_topic_id')>, <PermissionModel(id=17, name='create__groups')>, <PermissionModel(id=18, name='read__subjects_subject_id')>, <PermissionModel(id=19, name='create__upload-questions_')>, <PermissionModel(id=20, name='read__subtopics_subtopic_id')>, <PermissionModel(id=21, name='read__question-sets_')>, <PermissionModel(id=22, name='delete__user-responses_user_response_id')>, <PermissionModel(id=23, name='update__domains_domain_id')>, <PermissionModel(id=24, name='update__question-sets_question_set_id')>, <PermissionModel(id=25, name='read__answer-choices_answer_choice_id')>, <PermissionModel(id=26, name='update__answer-choices_answer_choice_id')>, <PermissionModel(id=27, name='read__domains_domain_id')>, <PermissionModel(id=28, name='update__subjects_subject_id')>, <PermissionModel(id=29, name='read__groups_group_id')>, <PermissionModel(id=30, name='create__domains_')>, <PermissionModel(id=31, name='delete__question-sets_question_set_id')>, <PermissionModel(id=32, name='delete__disciplines_discipline_id')>, <PermissionModel(id=33, name='read__domains_')>, <PermissionModel(id=34, name='read__user-responses_user_response_id')>, <PermissionModel(id=35, name='read__redoc')>, <PermissionModel(id=36, name='read__disciplines_')>, <PermissionModel(id=37, name='create__users_')>, <PermissionModel(id=38, name='update__users_me')>, <PermissionModel(id=39, name='read__docs')>, <PermissionModel(id=40, name='update__user-responses_user_response_id')>, <PermissionModel(id=41, name='update__questions_question_id')>, <PermissionModel(id=42, name='update__subtopics_subtopic_id')>, <PermissionModel(id=43, name='update__disciplines_discipline_id')>, <PermissionModel(id=44, name='delete__subtopics_subtopic_id')>, <PermissionModel(id=45, name='create__question-sets_')>, <PermissionModel(id=46, name='create__subjects_')>, <PermissionModel(id=47, name='read__disciplines_discipline_id')>, <PermissionModel(id=48, name='update__groups_group_id')>, <PermissionModel(id=49, name='update__concepts_concept_id')>, <PermissionModel(id=50, name='update__topics_topic_id')>, <PermissionModel(id=51, name='delete__questions_question_id')>, <PermissionModel(id=52, name='read__subtopics_')>, <PermissionModel(id=53, name='read__openapi.json')>, <PermissionModel(id=54, name='read__leaderboard_')>, <PermissionModel(id=55, name='create__login')>, <PermissionModel(id=56, name='read__docs_oauth2-redirect')>, <PermissionModel(id=57, name='read__questions_question_id')>, <PermissionModel(id=58, name='read__question-set_')>, <PermissionModel(id=59, name='create__questions_with-answers_')>, <PermissionModel(id=60, name='read__users_me')>, <PermissionModel(id=61, name='create__subtopics_')>, <PermissionModel(id=62, name='read__topics_')>, <PermissionModel(id=63, name='create__register')>, <PermissionModel(id=64, name='read__concepts_concept_id')>, <PermissionModel(id=65, name='create__user-responses_')>, <PermissionModel(id=66, name='create__answer-choices_')>, <PermissionModel(id=67, name='create__logout')>, <PermissionModel(id=68, name='delete__topics_topic_id')>, <PermissionModel(id=69, name='read__concepts_')>, <PermissionModel(id=70, name='read__question-sets_question_set_id')>, <PermissionModel(id=71, name='read__user-responses_')>]
+DEBUG    backend:conftest.py:162 Role created: <RoleModel(id=1, name='test_role', default=False)>
+DEBUG    backend:conftest.py:175 Setting up test_user fixture
+WARNING  passlib.handlers.bcrypt:bcrypt.py:622 (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+DEBUG    backend:security.py:16 get_password_hash called with password: TestPassword123!
+DEBUG    backend:security.py:17 get_password_hash result: $2b$12$5rSgD5MGB/bxjzG.OUappew20fZaU2rvwab/WYv4KONC4AhOifQDu
+ERROR    backend:conftest.py:179 Creating test user with role ID: 1
+ERROR    backend:conftest.py:193 Created test user: {'id': 1, 'username': 'test.user_BU0w9', 'email': 'test.user_BU0w9@example.com', 'hashed_password': '$2b$12$5rSgD5MGB/bxjzG.OUappew20fZaU2rvwab/WYv4KONC4AhOifQDu', 'is_active': True, 'is_admin': True, 'role_id': 1}
+DEBUG    backend:conftest.py:205 Setting up test_group fixture
+DEBUG    backend:conftest.py:228 Setting up test_user_with_group fixture
+DEBUG    backend:conftest.py:249 Setting up test_question_set_data fixture
+DEBUG    backend:conftest.py:261 Tearing down test_question_set_data fixture
+DEBUG    backend:conftest.py:266 Setting up test_question_set fixture
+---------------------------- Captured log teardown -----------------------------
+DEBUG    backend:conftest.py:277 Tearing down test_question_set fixture
+DEBUG    backend:conftest.py:237 Tearing down test_user_with_group fixture
+DEBUG    backend:conftest.py:219 Tearing down test_group fixture
+DEBUG    backend:conftest.py:199 Tearing down test_user fixture
+DEBUG    backend:conftest.py:103 Begin tearing down database fixture
+DEBUG    backend:conftest.py:107 Finished tearing down database fixture
+DEBUG    backend:conftest.py:86 Finished test: tests/test_models/test_question_model.py::test_question_set_relationship
+=========================== short test summary info ============================
+ERROR tests/test_models/test_question_model.py::test_question_set_relationship
+========================== 1 passed, 1 error in 1.52s ==========================

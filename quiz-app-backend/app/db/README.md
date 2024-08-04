@@ -6,7 +6,7 @@ This directory contains modules related to database management and session handl
 
 - `__init__.py`: This file is currently empty but serves as a placeholder to make the `db` directory a Python package.
 
-- `base_class.py`: This module defines the base class for SQLAlchemy models. It provides a declarative base class (`Base`) that can be used to create database models.
+- `base.py`: This module defines the base class for SQLAlchemy models. It provides a declarative base class (`Base`) that can be used to create database models.
 
 - `session.py`: This module provides database session management. It includes the following:
   - `SQLALCHEMY_DATABASE_URL`: A variable that holds the database connection URL. It is currently set to use SQLite for development, but it should be adjusted for production.

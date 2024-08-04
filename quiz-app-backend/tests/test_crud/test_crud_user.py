@@ -1,18 +1,20 @@
 # filename: tests/test_crud_user.py
 
-from app.crud.crud_user import delete_user_crud, create_user_crud, update_user_crud
+from app.crud.crud_user import delete_user, create_user_crud, update_user_crud
 from app.schemas.user import UserCreateSchema, UserUpdateSchema
 from app.services.authentication_service import authenticate_user
+from app.core.security import get_password_hash
 
 def test_remove_user_not_found(db_session):
     user_id = 999  # Assuming this ID does not exist
-    removed_user = delete_user_crud(db_session, user_id)
+    removed_user = delete_user(db_session, user_id)
     assert removed_user is None
 
 def test_authenticate_user(db_session, random_username, test_role):
+    hashed_password = get_password_hash("AuthPassword123!")
     user_data = UserCreateSchema(
         username=random_username,
-        password="AuthPassword123!",
+        password=hashed_password,
         email=f"{random_username}@example.com",
         role=test_role.name
     )

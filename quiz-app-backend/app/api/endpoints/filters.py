@@ -56,7 +56,7 @@ async def forbid_extra_params(request: Request):
         If any extra parameters are found in the request.
     """
     allowed_params = {'subject', 'topic', 'subtopic',
-                      'difficulty', 'tags', 'skip', 'limit'}
+                      'difficulty', 'question_tags', 'skip', 'limit'}
     actual_params = set(request.query_params.keys())
     extra_params = actual_params - allowed_params
     if extra_params:
@@ -72,7 +72,7 @@ async def filter_questions_endpoint(
     topic: Optional[str] = Query(None),
     subtopic: Optional[str] = Query(None),
     difficulty: Optional[str] = Query(None),
-    tags: Optional[List[str]] = Query(None),
+    question_tags: Optional[List[str]] = Query(None),
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
@@ -94,7 +94,7 @@ async def filter_questions_endpoint(
         The subtopic to filter the questions by.
     difficulty: Optional[str]
         The difficulty level to filter the questions by.
-    tags: Optional[List[str]]
+    question_tags: Optional[List[str]]
         The tags to filter the questions by.
     db: Session
         The database session.
@@ -116,7 +116,7 @@ async def filter_questions_endpoint(
             topic=topic,
             subtopic=subtopic,
             difficulty=difficulty,
-            tags=tags
+            question_tags=question_tags
         )
         questions = filter_questions_crud(
             db=db,

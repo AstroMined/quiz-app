@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from app.models.roles import RoleModel
 from app.models.permissions import PermissionModel
 from app.schemas.roles import RoleCreateSchema, RoleUpdateSchema
-from app.crud.crud_role_permission_associations import add_permission_to_role, remove_permission_from_role, get_role_permissions
+from app.crud.crud_role_to_permission_associations import add_permission_to_role, remove_permission_from_role, get_role_permissions
 from app.services.logging_service import logger
 
 def create_role_crud(db: Session, role: RoleCreateSchema) -> RoleModel:

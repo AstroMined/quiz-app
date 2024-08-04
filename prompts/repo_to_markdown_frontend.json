@@ -1,0 +1,10 @@
+{
+  "root_directory": "/code/quiz-app/quiz-app-frontend",
+  "file_extensions": [".js", ".jsx", ".ts", ".tsx", ".css", ".scss", ".html"],
+  "specific_files": {},
+  "ignore_directories": [
+    ".next",
+    "public",
+    "node_modules"
+  ]
+}

@@ -2,21 +2,20 @@
 
 from typing import Optional, List
 from pydantic import BaseModel, Field, validator
-
+from app.schemas.questions import DifficultyLevel
 
 class FilterParamsSchema(BaseModel):
-    subject: Optional[str] = Field(None, description="Filter questions by subject")
-    topic: Optional[str] = Field(None, description="Filter questions by topic")
-    subtopic: Optional[str] = Field(None, description="Filter questions by subtopic")
-    difficulty: Optional[str] = Field(None, description="Filter questions by difficulty level")
-    tags: Optional[List[str]] = Field(None, description="Filter questions by tags")
+    subject: Optional[str] = Field(None, max_length=100, description="Filter questions by subject")
+    topic: Optional[str] = Field(None, max_length=100, description="Filter questions by topic")
+    subtopic: Optional[str] = Field(None, max_length=100, description="Filter questions by subtopic")
+    difficulty: Optional[DifficultyLevel] = Field(None, description="Filter questions by difficulty level")
+    question_tags: Optional[List[str]] = Field(None, max_items=10, description="Filter questions by tags")
 
-    @validator('difficulty')
-    def validate_difficulty(cls, difficulty):
-        valid_difficulties = ['Beginner', 'Easy', 'Medium', 'Hard', 'Expert']
-        if difficulty and difficulty not in valid_difficulties:
-            raise ValueError(f'Invalid difficulty. Must be one of: {", ".join(valid_difficulties)}')
-        return difficulty
+    @validator('question_tags')
+    def validate_question_tags(cls, v):
+        if v:
+            return [tag.lower() for tag in v]
+        return v
 
     class Config:
         extra = 'forbid'
@@ -26,6 +25,6 @@ class FilterParamsSchema(BaseModel):
                 "topic": "Algebra",
                 "subtopic": "Linear Equations",
                 "difficulty": "Easy",
-                "tags": ["equations", "solving"]
+                "question_tags": ["equations", "solving"]
             }
         }

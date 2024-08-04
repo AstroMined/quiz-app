@@ -1,33 +1,35 @@
 # filename: app/schemas/answer_choices.py
 
-from pydantic import BaseModel, validator
-
+from typing import Optional
+from pydantic import BaseModel, Field, validator
 
 class AnswerChoiceBaseSchema(BaseModel):
-    text: str
+    text: str = Field(..., min_length=1, max_length=10000)
     is_correct: bool
-    explanation: str
+    explanation: Optional[str] = Field(None, max_length=10000)
+
+    @validator('text', 'explanation')
+    def validate_not_empty(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError('Field cannot be empty or only whitespace')
+        return v
 
 class AnswerChoiceCreateSchema(AnswerChoiceBaseSchema):
-    @validator('text')
-    def validate_text(cls, text):
-        if not text.strip():
-            raise ValueError('Answer choice text cannot be empty or whitespace')
-        if len(text) > 5000:
-            raise ValueError('Answer choice text cannot exceed 5000 characters')
-        return text
+    pass
 
-    @validator('explanation')
-    def validate_explanation(cls, explanation):
-        if len(explanation) > 10000:
-            raise ValueError('Answer choice explanation cannot exceed 10000 characters')
-        return explanation
+class AnswerChoiceUpdateSchema(BaseModel):
+    text: Optional[str] = Field(None, min_length=1, max_length=10000)
+    is_correct: Optional[bool] = None
+    explanation: Optional[str] = Field(None, max_length=10000)
 
-class AnswerChoiceSchema(BaseModel):
+    @validator('text', 'explanation')
+    def validate_not_empty(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError('Field cannot be empty or only whitespace')
+        return v
+
+class AnswerChoiceSchema(AnswerChoiceBaseSchema):
     id: int
-    text: str
-    is_correct: bool
-    explanation: str
 
     class Config:
         from_attributes = True

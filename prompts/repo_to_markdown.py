@@ -1,41 +1,32 @@
-"""
-This module contains functions for converting a repository into markdown format.
-
-It includes functions to check if a directory should be ignored, and to process the files in a directory and generate markdown content.
-
-Imports:
-----------
-os: For interacting with the operating system.
-argparse: For parsing command-line arguments.
-subprocess: For running subprocesses.
-json: For parsing and generating JSON data.
-
-Functions:
-----------
-is_directory_ignored: Check if a directory is in the list of directories to ignore.
-process_files_in_directory: Process the files in a directory and generate markdown content.
-"""
-
 import os
 import argparse
 import subprocess
 import json
 
 
-def is_directory_ignored(directory, ignore_directories):
-    """Check if the directory is in the list of directories to ignore.
+def is_directory_ignored(directory, ignore_directories, specific_files):
+    """Check if the directory is in the list of directories to ignore, 
+       excluding directories containing specific files.
 
     Args:
         directory (str): The directory to check.
         ignore_directories (list): List of directories to ignore.
+        specific_files (dict): Dictionary of specific files and their positions.
 
     Returns:
-        bool: True if the directory is in the list of directories to ignore, False otherwise.
+        bool: True if the directory is in the list of directories to ignore and does not contain specific files, False otherwise.
     """
-    return any(
-        os.path.abspath(directory).startswith(os.path.abspath(ignore_dir))
-        for ignore_dir in ignore_directories
-    )
+    abs_dir = os.path.abspath(directory)
+    for ignore_dir in ignore_directories:
+        abs_ignore_dir = os.path.abspath(ignore_dir)
+        if abs_dir.startswith(abs_ignore_dir):
+            # Check if any specific files are within this directory
+            for specific_file in specific_files:
+                abs_specific_file = os.path.abspath(os.path.join(directory, specific_file))
+                if abs_specific_file.startswith(abs_dir):
+                    return False
+            return True
+    return False
 
 
 def process_files_in_directory(root, files, file_extensions, specific_files, markdown_content):
@@ -56,16 +47,14 @@ def process_files_in_directory(root, files, file_extensions, specific_files, mar
 
     for file in files:
         file_path = os.path.join(root, file)
-        if specific_files and file in specific_files:
+        if specific_files and file_path in specific_files:
             with open(file_path, 'r', encoding='utf-8') as file_content:
                 content = file_content.read()
-                position = specific_files[file]
+                position = specific_files[file_path]
                 if position == "first":
                     dir_content = f"\n## File: {file}\n```markdown\n{content}\n```\n" + dir_content
                 elif position == "last":
-                    with open(file_path, 'r', encoding='utf-8') as file_content:
-                        content = file_content.read()
-                        dir_content += f"\n## File: {file}\n```markdown\n{content}\n```\n"
+                    dir_content += f"\n## File: {file}\n```markdown\n{content}\n```\n"
         elif any(file.endswith(ext) for ext in file_extensions):
             with open(file_path, 'r', encoding='utf-8') as file_content:
                 content = file_content.read()
@@ -88,20 +77,19 @@ def generate_markdown(config):
     """
     repo_path = config['root_directory']
     file_extensions = config['file_extensions']
-    specific_files = config.get('specific_files', {})
-    ignore_directories = [os.path.join(repo_path, d)
-                          for d in config.get('ignore_directories', [])]
+    specific_files = {os.path.join(repo_path, k): v for k, v in config.get('specific_files', {}).items()}
+    ignore_directories = [os.path.join(repo_path, d) for d in config.get('ignore_directories', [])]
 
     markdown_content = ""
 
     for root, dirs, files in os.walk(repo_path, topdown=True):
-        if is_directory_ignored(root, ignore_directories):
+        if is_directory_ignored(root, ignore_directories, specific_files):
             dirs[:] = []  # Don't walk into ignored directories
             continue
 
         # Process only the files that are not in ignored directories
         filtered_files = [f for f in files if not is_directory_ignored(
-            os.path.join(root, f), ignore_directories)]
+            os.path.join(root, f), ignore_directories, specific_files)]
         markdown_content = process_files_in_directory(
             root, filtered_files, file_extensions, specific_files, markdown_content)
 

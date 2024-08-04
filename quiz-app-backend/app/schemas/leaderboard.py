@@ -1,18 +1,24 @@
 # filename: app/schemas/leaderboard.py
 
+from pydantic import BaseModel, Field
 from typing import Optional
-from pydantic import BaseModel
-from app.models.time_period import TimePeriodModel
-from app.services.logging_service import logger
+from app.schemas.time_period import TimePeriodSchema
 
+class LeaderboardBaseSchema(BaseModel):
+    user_id: int = Field(..., gt=0)
+    score: int = Field(..., ge=0)
+    time_period_id: int = Field(..., gt=0)
+    group_id: Optional[int] = Field(None, gt=0)
 
-class LeaderboardSchema(BaseModel):
+class LeaderboardCreateSchema(LeaderboardBaseSchema):
+    pass
+
+class LeaderboardUpdateSchema(BaseModel):
+    score: int = Field(..., ge=0)
+
+class LeaderboardSchema(LeaderboardBaseSchema):
     id: int
-    user_id: int
-    score: int
-    time_period: TimePeriodModel
-    group_id: Optional[int] = None
+    time_period: TimePeriodSchema
 
     class Config:
         from_attributes = True
-

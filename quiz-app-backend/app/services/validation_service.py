@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.base import instance_state
 from sqlalchemy.orm.attributes import instance_dict
 from fastapi import HTTPException
-from app.db.base_class import Base
+from app.db.base import Base
 from app.services.logging_service import logger, sqlalchemy_obj_to_dict
 from app.models.questions import QuestionModel
 from app.models.groups import GroupModel
@@ -20,7 +20,6 @@ from app.models.leaderboard import LeaderboardModel
 from app.models.user_responses import UserResponseModel
 from app.models.answer_choices import AnswerChoiceModel
 from app.models.question_sets import QuestionSetModel
-from app.models.sessions import SessionModel
 from app.models.authentication import RevokedTokenModel
 
 
@@ -132,7 +131,6 @@ def find_related_class(attribute_name):
         'user_response_id': UserResponseModel,
         'answer_choice_id': AnswerChoiceModel,
         'question_set_id': QuestionSetModel,
-        'session_id': SessionModel,
         'token_id': RevokedTokenModel,
         
         # We don't need to map the association tables here, as their columns

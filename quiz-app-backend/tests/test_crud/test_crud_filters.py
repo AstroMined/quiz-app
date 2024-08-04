@@ -28,7 +28,7 @@ def test_filter_questions_invalid_parameter_type(db_session):
 def test_filter_questions_invalid_tag_type(db_session):
     # Test case: Invalid tag type
     filters = {
-        "tags": "InvalidTag"  # Invalid type, should be a list of strings
+        "question_tags": "InvalidTag"  # Invalid type, should be a list of strings
     }
     with pytest.raises(ValidationError) as exc_info:
         filter_questions_crud(db=db_session, filters=filters)
@@ -76,26 +76,26 @@ def test_filter_questions_invalid_difficulty(db_session):
 def test_filter_questions_invalid_tags(db_session):
     # Test case: Invalid tags filter
     filters = {
-        "tags": ["InvalidTag"]
+        "question_tags": ["InvalidTag"]
     }
     result = filter_questions_crud(db=db_session, filters=filters)
     assert result == []
 
-def test_filter_questions_valid_filters(db_session, test_question):
+def test_filter_questions_valid_filters(db_session, test_questions):
     # Test case: Valid filters
-    subject = test_question.subject
-    topic = test_question.topic
-    subtopic = test_question.subtopic
-    difficulty = test_question.difficulty
-    tags = [tag.tag for tag in test_question.tags]
+    subject = test_questions[0].subject
+    topic = test_questions[0].topic
+    subtopic = test_questions[0].subtopic
+    difficulty = test_questions[0].difficulty
+    question_tags = [tag.tag for tag in test_questions[0].question_tags]
 
     filters = {
         "subject": subject.name,
         "topic": topic.name,
         "subtopic": subtopic.name,
         "difficulty": difficulty,
-        "tags": tags
+        "question_tags": question_tags
     }
     result = filter_questions_crud(db=db_session, filters=filters)
     assert len(result) == 1
-    assert result[0].id == test_question.id
+    assert result[0].id == test_questions[0].id

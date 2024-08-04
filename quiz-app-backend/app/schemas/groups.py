@@ -1,60 +1,48 @@
 # filename: app/schemas/groups.py
 
+from typing import Optional, List
+from pydantic import BaseModel, Field, field_validator
 import re
-from typing import Optional
-from pydantic import BaseModel, validator
-from app.services.logging_service import logger
-
 
 class GroupBaseSchema(BaseModel):
-    name: str
-    creator_id: int
-    description: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=100, description="Name of the group")
+    description: Optional[str] = Field(None, max_length=500, description="Description of the group")
 
-    class Config:
-        from_attributes = True
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        if not re.match(r'^[\w\-\s]+$', v):
+            raise ValueError('Group name can only contain alphanumeric characters, hyphens, underscores, and spaces')
+        return v
 
 class GroupCreateSchema(GroupBaseSchema):
-    @validator('name')
-    def validate_name(cls, name):
-        if not name.strip():
-            raise ValueError('Group name cannot be empty or whitespace')
-        if len(name) > 100:
-            raise ValueError('Group name cannot exceed 100 characters')
-        if not re.match(r'^[\w\-\s]+$', name):
-            raise ValueError('Group name can only contain alphanumeric characters, hyphens, underscores, and spaces')
-        return name
-
-    @validator('description')
-    def validate_description(cls, description):
-        if description and len(description) > 500:
-            raise ValueError('Group description cannot exceed 500 characters')
-        return description
+    creator_id: int = Field(..., gt=0, description="ID of the user creating the group")
 
 class GroupUpdateSchema(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    
-    @validator('name')
-    def validate_name(cls, name):
-        if name == '':
-            raise ValueError('Group name cannot be empty or whitespace')
-        if len(name) > 100:
-            raise ValueError('Group name cannot exceed 100 characters')
-        if not re.match(r'^[\w\-\s]+$', name):
-            raise ValueError('Group name can only contain alphanumeric characters, hyphens, underscores, and spaces')
-        return name
+    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Name of the group")
+    description: Optional[str] = Field(None, max_length=500, description="Description of the group")
 
-    @validator('description')
-    def validate_description(cls, description):
-        if description and len(description) > 500:
-            raise ValueError('Group description cannot exceed 500 characters')
-        return description
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        if v is not None and not re.match(r'^[\w\-\s]+$', v):
+            raise ValueError('Group name can only contain alphanumeric characters, hyphens, underscores, and spaces')
+        return v
 
 class GroupSchema(GroupBaseSchema):
     id: int
     creator_id: int
-    description: Optional[str] = None
+    users: Optional[List[dict]] = Field(None, description="List of users in this group")
+    question_sets: Optional[List[dict]] = Field(None, description="List of question sets associated with this group")
+
+    @field_validator('users', 'question_sets', mode='before')
+    @classmethod
+    def convert_to_dict(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, list) and all(isinstance(item, dict) for item in v):
+            return v
+        return [{"id": item.id, "name": getattr(item, 'name', None)} for item in v]
 
     class Config:
         from_attributes = True

@@ -3,18 +3,18 @@
 import pytest
 from fastapi import HTTPException
 from app.crud.crud_question_sets import create_question_set_crud, delete_question_set_crud, update_question_set_crud
-from app.crud.crud_subjects import create_subject_crud
+from app.crud.crud_subjects import create_subject
 from app.schemas.subjects import SubjectCreateSchema
 from app.schemas.question_sets import QuestionSetCreateSchema, QuestionSetUpdateSchema
 
 
-def test_create_question_set_crud(db_session, test_user, test_question, test_group):
+def test_create_question_set_crud(db_session, test_user, test_questions, test_group):
     question_set_data = QuestionSetCreateSchema(
         db=db_session,
         name="test_create_question_set_crud Question Set",
         is_public=True,
         creator_id=test_user.id,
-        question_ids=[test_question.id],
+        question_ids=[test_questions[0].id],
         group_ids=[test_group.id]
     )
     question_set = create_question_set_crud(db=db_session, question_set=question_set_data)
@@ -23,7 +23,7 @@ def test_create_question_set_crud(db_session, test_user, test_question, test_gro
     assert question_set.is_public == True
     assert question_set.creator_id == test_user.id
     assert len(question_set.questions) == 1
-    assert question_set.questions[0].id == test_question.id
+    assert question_set.questions[0].id == test_questions[0].id
     assert len(question_set.groups) == 1
     assert question_set.groups[0].id == test_group.id
 
@@ -42,12 +42,12 @@ def test_create_question_set_duplicate_name(db_session, test_user):
     assert exc_info.value.status_code == 400
     assert "already exists" in str(exc_info.value.detail)
 
-def test_update_question_set_crud(db_session, test_question_set, test_question, test_group):
+def test_update_question_set_crud(db_session, test_question_set, test_questions, test_group):
     update_data = QuestionSetUpdateSchema(
         db = db_session,
         name="Updated Question Set",
         is_public=False,
-        question_ids=[test_question.id],
+        question_ids=[test_questions[0].id],
         group_ids=[test_group.id]
     )
     updated_question_set = update_question_set_crud(db_session, test_question_set.id, update_data)
@@ -55,7 +55,7 @@ def test_update_question_set_crud(db_session, test_question_set, test_question, 
     assert updated_question_set.name == "Updated Question Set"
     assert updated_question_set.is_public == False
     assert len(updated_question_set.questions) == 1
-    assert updated_question_set.questions[0].id == test_question.id
+    assert updated_question_set.questions[0].id == test_questions[0].id
     assert len(updated_question_set.groups) == 1
     assert updated_question_set.groups[0].id == test_group.id
 

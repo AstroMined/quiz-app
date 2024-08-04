@@ -14,7 +14,7 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 from pydantic import ValidationError
-from app.crud.crud_questions import create_question_crud
+from app.crud.crud_questions import create_question
 from app.crud.crud_question_sets import (
     read_question_sets_crud,
     read_question_set_crud,
@@ -62,7 +62,7 @@ async def upload_question_set_endpoint(
         for question in question_data:
             question['question_set_id'] = question_set_created.id
             question['db'] = db
-            create_question_crud(db, QuestionCreateSchema(**question))
+            create_question(db, QuestionCreateSchema(**question))
 
         return {"message": "Question set uploaded successfully"}
 

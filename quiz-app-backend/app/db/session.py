@@ -2,7 +2,7 @@
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.db.base_class import Base
+from app.db.base import Base
 from app.core.config import settings_core
 from app.models.permissions import PermissionModel
 from app.models.roles import RoleModel

@@ -7,11 +7,12 @@ import os
 
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.db.base_class import Base  # Update this import to match your project structure
+from app.db.base import Base  # Update this import to match your project structure
 from app.core.config import settings_core  # Import settings_core from the correct location
 
 # Import all your model files
 # pylint: disable=unused-import
+from app.models.answer_choices import AnswerChoiceModel
 from app.models.associations import (
     UserToGroupAssociation,
     QuestionSetToGroupAssociation,
@@ -19,8 +20,10 @@ from app.models.associations import (
     QuestionSetToQuestionAssociation,
     RoleToPermissionAssociation
 )
-from app.models.answer_choices import AnswerChoiceModel
 from app.models.authentication import RevokedTokenModel
+from app.models.concepts import ConceptModel
+from app.models.disciplines import DisciplineModel
+from app.models.domains import DomainModel
 from app.models.groups import GroupModel
 from app.models.leaderboard import LeaderboardModel
 from app.models.permissions import PermissionModel

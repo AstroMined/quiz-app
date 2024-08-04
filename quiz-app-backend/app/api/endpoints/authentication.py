@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models.authentication import RevokedTokenModel
 from app.schemas.authentication import TokenSchema
 from app.services.authentication_service import authenticate_user
+from app.services.logging_service import logger
 
 router = APIRouter()
 
@@ -22,10 +23,13 @@ async def login_endpoint(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
+    logger.debug(f"User {form_data.username} is trying to log in")
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
+        logger.error(f"User {form_data.username} failed to log in")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_active:
+        logger.error(f"User {form_data.username} is not active")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -36,6 +40,15 @@ async def login_endpoint(
     )
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires)
+    if access_token:
+        logger.debug(f"User {form_data.username} logged in successfully")
+    else:
+        logger.error(f"User {form_data.username} failed to log in")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/logout", status_code=status.HTTP_200_OK)

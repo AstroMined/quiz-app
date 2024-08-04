@@ -1,114 +1,59 @@
 # filename: app/crud/crud_question_sets.py
 
-from typing import List
-from sqlalchemy.orm import Session, joinedload
-from fastapi import HTTPException, status
+from typing import List, Optional
+from sqlalchemy.orm import Session
 from app.models.question_sets import QuestionSetModel
-from app.models.groups import GroupModel
 from app.models.questions import QuestionModel
-from app.schemas.question_sets import QuestionSetCreateSchema, QuestionSetUpdateSchema
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
-from app.crud.crud_question_set_associations import (
-    create_question_set_question_associations,
-    create_question_set_group_associations,
-    get_question_set_with_associations
-)
+from app.models.groups import GroupModel
 
-
-def create_question_set_crud(
-    db: Session,
-    question_set: QuestionSetCreateSchema,
-) -> QuestionSetModel:
-    existing_question_set = db.query(QuestionSetModel).filter(QuestionSetModel.name == question_set.name).first()
-    if existing_question_set:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Question set with name '{question_set.name}' already exists."
-        )
-
+def create_question_set(db: Session, question_set_data: dict) -> QuestionSetModel:
     db_question_set = QuestionSetModel(
-        name=question_set.name,
-        is_public=question_set.is_public,
-        creator_id=question_set.creator_id
+        name=question_set_data['name'],
+        description=question_set_data.get('description'),
+        is_public=question_set_data.get('is_public', True),
+        creator_id=question_set_data['creator_id']
     )
     db.add(db_question_set)
-    db.commit()
-    db.refresh(db_question_set)
+    db.flush()
 
-    if question_set.question_ids:
-        create_question_set_question_associations(db, db_question_set.id, question_set.question_ids)
+    if 'question_ids' in question_set_data:
+        questions = db.query(QuestionModel).filter(QuestionModel.id.in_(question_set_data['question_ids'])).all()
+        db_question_set.questions = questions
 
-    if question_set.group_ids:
-        create_question_set_group_associations(db, db_question_set.id, question_set.group_ids)
-
-    return get_question_set_with_associations(db, db_question_set.id)
-
-def read_question_set_crud(db: Session, question_set_id: int) -> QuestionSetModel:
-    question_set = db.query(QuestionSetModel).filter(QuestionSetModel.id == question_set_id).first()
-    if not question_set:
-        raise HTTPException(status_code=404, detail=f"Question set with ID {question_set_id} not found.")
-    
-    return question_set
-
-
-def read_question_sets_crud(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionSetModel]:
-    question_sets = db.query(QuestionSetModel).offset(skip).limit(limit).all()
-    if not question_sets:
-        raise HTTPException(status_code=404, detail="No question sets found.")
-    
-    return question_sets
-
-def update_question_set_crud(
-    db: Session,
-    question_set_id: int,
-    question_set: QuestionSetUpdateSchema
-) -> QuestionSetModel:
-    logger.debug("Starting update for question set ID: %d", question_set_id)
-    
-    db_question_set = db.query(QuestionSetModel).filter(QuestionSetModel.id == question_set_id).first()
-    if not db_question_set:
-        logger.error("Question set with ID %d not found", question_set_id)
-        raise HTTPException(
-            status_code=404,
-            detail=f"Question set with ID {question_set_id} not found."
-        )
-
-    update_data = question_set.model_dump(exclude_unset=True)
-    logger.debug("Update data after model_dump: %s", update_data)
-    
-    # Update basic fields
-    for field, value in update_data.items():
-        if field not in ['question_ids', 'group_ids']:
-            setattr(db_question_set, field, value)
-            logger.debug("Set attribute %s to %s", field, value)
-
-    # Update question associations
-    if 'question_ids' in update_data:
-        logger.debug("Updating question associations with IDs: %s", update_data['question_ids'])
-        db_question_set.questions.clear()
-        db.flush()
-        create_question_set_question_associations(db, db_question_set.id, update_data['question_ids'])
-
-    # Update group associations
-    if 'group_ids' in update_data:
-        logger.debug("Updating group associations with IDs: %s", update_data['group_ids'])
-        db_question_set.groups.clear()
-        db.flush()
-        create_question_set_group_associations(db, db_question_set.id, update_data['group_ids'])
+    if 'group_ids' in question_set_data:
+        groups = db.query(GroupModel).filter(GroupModel.id.in_(question_set_data['group_ids'])).all()
+        db_question_set.groups = groups
 
     db.commit()
     db.refresh(db_question_set)
+    return db_question_set
 
-    updated_question_set_dict = sqlalchemy_obj_to_dict(db_question_set)
-    logger.debug("Updated question set: %s", updated_question_set_dict)
+def get_question_set(db: Session, question_set_id: int) -> Optional[QuestionSetModel]:
+    return db.query(QuestionSetModel).filter(QuestionSetModel.id == question_set_id).first()
 
-    return get_question_set_with_associations(db, db_question_set.id)
+def get_question_sets(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionSetModel]:
+    return db.query(QuestionSetModel).offset(skip).limit(limit).all()
 
-def delete_question_set_crud(db: Session, question_set_id: int) -> bool:
-    db_question_set = db.query(QuestionSetModel).filter(QuestionSetModel.id == question_set_id).first()
-    if not db_question_set:
-        raise HTTPException(status_code=404, detail=f"Question set with ID {question_set_id} not found.")
-    
-    db.delete(db_question_set)
-    db.commit()
-    return True
+def update_question_set(db: Session, question_set_id: int, question_set_data: dict) -> Optional[QuestionSetModel]:
+    db_question_set = get_question_set(db, question_set_id)
+    if db_question_set:
+        for key, value in question_set_data.items():
+            if key == 'question_ids':
+                questions = db.query(QuestionModel).filter(QuestionModel.id.in_(value)).all()
+                db_question_set.questions = questions
+            elif key == 'group_ids':
+                groups = db.query(GroupModel).filter(GroupModel.id.in_(value)).all()
+                db_question_set.groups = groups
+            else:
+                setattr(db_question_set, key, value)
+        db.commit()
+        db.refresh(db_question_set)
+    return db_question_set
+
+def delete_question_set(db: Session, question_set_id: int) -> bool:
+    db_question_set = get_question_set(db, question_set_id)
+    if db_question_set:
+        db.delete(db_question_set)
+        db.commit()
+        return True
+    return False

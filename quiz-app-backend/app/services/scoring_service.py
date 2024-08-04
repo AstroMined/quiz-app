@@ -3,6 +3,7 @@
 from typing import Dict
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
+from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
 from app.models.user_responses import UserResponseModel
 from app.models.users import UserModel
 from app.models.time_period import TimePeriodModel
@@ -48,3 +49,18 @@ def calculate_leaderboard_scores(
             user_scores[response.user_id] += 1
 
     return user_scores
+
+def time_period_to_schema(time_period_model):
+    return TimePeriodSchema(
+        id=time_period_model.id,
+        name=time_period_model.name
+    )
+
+def leaderboard_to_schema(leaderboard_model):
+    return LeaderboardSchema(
+        id=leaderboard_model.id,
+        user_id=leaderboard_model.user_id,
+        score=leaderboard_model.score,
+        time_period=time_period_to_schema(leaderboard_model.time_period),
+        group_id=leaderboard_model.group_id
+    )

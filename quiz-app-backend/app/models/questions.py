@@ -1,37 +1,38 @@
 # filename: app/models/questions.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, Enum, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.inspection import inspect
-from app.db.base_class import Base
-from app.models.associations import (
-    QuestionSetToQuestionAssociation,
-    QuestionToTagAssociation
-)
-from app.models.sessions import SessionQuestionModel
+from sqlalchemy.sql import func
+from app.db.base import Base
+from enum import Enum as PyEnum
 
+class DifficultyLevel(PyEnum):
+    BEGINNER = "Beginner"
+    EASY = "Easy"
+    MEDIUM = "Medium"
+    HARD = "Hard"
+    EXPERT = "Expert"
 
 class QuestionModel(Base):
     __tablename__ = "questions"
 
     id = Column(Integer, primary_key=True, index=True)
-    text = Column(String, index=True)
-    subject_id = Column(Integer, ForeignKey("subjects.id"))
-    topic_id = Column(Integer, ForeignKey("topics.id"))
-    subtopic_id = Column(Integer, ForeignKey("subtopics.id"))
-    difficulty = Column(String)
+    text = Column(String(10000), nullable=False)
+    difficulty = Column(Enum(DifficultyLevel), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    creator_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
-    subject = relationship("SubjectModel", back_populates="questions")
-    topic = relationship("TopicModel", back_populates="questions")
-    subtopic = relationship("SubtopicModel", back_populates="questions")
-    tags = relationship("QuestionTagModel", secondary=QuestionToTagAssociation.__table__)
-    answer_choices = relationship("AnswerChoiceModel", back_populates="question")
-    question_sets = relationship(
-        "QuestionSetModel",
-        secondary=QuestionSetToQuestionAssociation.__table__,
-        back_populates="questions"
-    )
-    session_questions = relationship("SessionQuestionModel", back_populates="question")
+    # Relationships
+    subjects = relationship("SubjectModel", secondary="question_to_subject_association", back_populates="questions")
+    topics = relationship("TopicModel", secondary="question_to_topic_association", back_populates="questions")
+    subtopics = relationship("SubtopicModel", secondary="question_to_subtopic_association", back_populates="questions")
+    concepts = relationship("ConceptModel", secondary="question_to_concept_association", back_populates="questions")
+    question_tags = relationship("QuestionTagModel", secondary="question_to_tag_association", back_populates="questions")
+    answer_choices = relationship("AnswerChoiceModel", secondary="question_to_answer_association", back_populates="questions")
+    question_sets = relationship("QuestionSetModel", secondary="question_set_to_question_association", back_populates="questions")
+    user_responses = relationship("UserResponseModel", back_populates="question", cascade="all, delete-orphan")
+    creator = relationship("UserModel", back_populates="created_questions")
 
-    def as_dict(self):
-        return {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}
+    def __repr__(self):
+        return f"<QuestionModel(id={self.id}, text='{self.text[:50]}...', difficulty='{self.difficulty}')>"

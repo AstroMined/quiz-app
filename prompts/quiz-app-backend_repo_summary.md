@@ -83,22 +83,27 @@ filterwarnings = [
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+
+from app.api.endpoints import answer_choices as answer_choices_router
 from app.api.endpoints import authentication as authentication_router
 from app.api.endpoints import filters as filters_router
 from app.api.endpoints import groups as groups_router
 from app.api.endpoints import leaderboard as leaderboard_router
 from app.api.endpoints import question_sets as question_sets_router
-from app.api.endpoints import question as question_router
 from app.api.endpoints import questions as questions_router
 from app.api.endpoints import register as register_router
+from app.api.endpoints import domains as domains_router
+from app.api.endpoints import disciplines as disciplines_router
+from app.api.endpoints import concepts as concepts_router
 from app.api.endpoints import subjects as subjects_router
 from app.api.endpoints import topics as topics_router
+from app.api.endpoints import subtopics as subtopics_router
 from app.api.endpoints import user_responses as user_responses_router
 from app.api.endpoints import users as users_router
 from app.middleware.authorization_middleware import AuthorizationMiddleware
 from app.middleware.blacklist_middleware import BlacklistMiddleware
 from app.middleware.cors_middleware import add_cors_middleware
-from app.services.permission_generator_service import generate_permissions
+from app.services.permission_generator_service import generate_permissions, ensure_permissions_in_db
 from app.services.validation_service import register_validation_listeners
 from app.db.session import get_db
 
@@ -109,7 +114,8 @@ async def lifespan(app: FastAPI):
     # This code runs when the application starts up
     app.state.db = get_db()
     db = next(app.state.db)
-    generate_permissions(app, db)
+    permissions = generate_permissions(app)
+    ensure_permissions_in_db(db, permissions)
     register_validation_listeners()
     yield
     # Anything after the yield runs when the application shuts down
@@ -122,22 +128,59 @@ app.add_middleware(BlacklistMiddleware)
 add_cors_middleware(app)
 
 # Use the aliased name for the router
+app.include_router(answer_choices_router.router, tags=["Answer Choices"])
 app.include_router(authentication_router.router, tags=["Authentication"])
 app.include_router(register_router.router, tags=["Authentication"])
 app.include_router(filters_router.router, tags=["Filters"])
 app.include_router(groups_router.router, tags=["Groups"])
 app.include_router(leaderboard_router.router, tags=["Leaderboard"])
 app.include_router(question_sets_router.router, tags=["Question Sets"])
-app.include_router(question_router.router, tags=["Question"])
 app.include_router(questions_router.router, tags=["Questions"])
 app.include_router(subjects_router.router, tags=["Subjects"])
+app.include_router(domains_router.router, tags=["Domains"])
+app.include_router(disciplines_router.router, tags=["Disciplines"])
+app.include_router(concepts_router.router, tags=["Concepts"])
 app.include_router(user_responses_router.router, tags=["User Responses"])
 app.include_router(users_router.router, tags=["User Management"])
 app.include_router(topics_router.router, tags=["Topics"])
+app.include_router(subtopics_router.router, tags=["Subtopics"])
 
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+```
+
+## File: validate_openapi.py
+```py
+# filename: /code/quiz-app/quiz-app-backend/app/validate_openapi.py
+
+import sys
+import os
+
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from fastapi.openapi.utils import get_openapi
+from app.main import app  # Adjust the import based on your actual app file and instance
+
+def validate_openapi_schema():
+    try:
+        openapi_schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            openapi_version=app.openapi_version,
+            description=app.description,
+            routes=app.routes,
+        )
+        print("OpenAPI schema generated successfully!")
+        print(openapi_schema)
+    except Exception as e:
+        print("Error generating OpenAPI schema:")
+        print(e)
+
+if __name__ == "__main__":
+    validate_openapi_schema()
 
 ```
 
@@ -152,34 +195,36 @@ def read_root():
 ```py
 # filename: app/schemas/answer_choices.py
 
-from pydantic import BaseModel, validator
-
+from typing import Optional
+from pydantic import BaseModel, Field, validator
 
 class AnswerChoiceBaseSchema(BaseModel):
-    text: str
+    text: str = Field(..., min_length=1, max_length=10000)
     is_correct: bool
-    explanation: str
+    explanation: Optional[str] = Field(None, max_length=10000)
+
+    @validator('text', 'explanation')
+    def validate_not_empty(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError('Field cannot be empty or only whitespace')
+        return v
 
 class AnswerChoiceCreateSchema(AnswerChoiceBaseSchema):
-    @validator('text')
-    def validate_text(cls, text):
-        if not text.strip():
-            raise ValueError('Answer choice text cannot be empty or whitespace')
-        if len(text) > 5000:
-            raise ValueError('Answer choice text cannot exceed 5000 characters')
-        return text
+    pass
 
-    @validator('explanation')
-    def validate_explanation(cls, explanation):
-        if len(explanation) > 10000:
-            raise ValueError('Answer choice explanation cannot exceed 10000 characters')
-        return explanation
+class AnswerChoiceUpdateSchema(BaseModel):
+    text: Optional[str] = Field(None, min_length=1, max_length=10000)
+    is_correct: Optional[bool] = None
+    explanation: Optional[str] = Field(None, max_length=10000)
 
-class AnswerChoiceSchema(BaseModel):
+    @validator('text', 'explanation')
+    def validate_not_empty(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError('Field cannot be empty or only whitespace')
+        return v
+
+class AnswerChoiceSchema(AnswerChoiceBaseSchema):
     id: int
-    text: str
-    is_correct: bool
-    explanation: str
 
     class Config:
         from_attributes = True
@@ -192,14 +237,167 @@ class AnswerChoiceSchema(BaseModel):
 
 from pydantic import BaseModel, Field
 
-
 class LoginFormSchema(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=100)
 
 class TokenSchema(BaseModel):
-    access_token: str
-    token_type: str
+    access_token: str = Field(..., min_length=1)
+    token_type: str = Field(..., pattern="^bearer$", case_sensitive=False)
+
+```
+
+## File: concepts.py
+```py
+# filename: app/schemas/concepts.py
+
+from typing import Optional, List
+from pydantic import BaseModel, validator, Field
+
+class ConceptBaseSchema(BaseModel):
+    name: str = Field(..., max_length=100, description="Name of the concept")
+
+class ConceptCreateSchema(ConceptBaseSchema):
+    subtopic_ids: List[int] = Field(..., min_items=1, description="List of subtopic IDs associated with this concept")
+
+    @validator('name')
+    def validate_name(cls, name):
+        if not name.strip():
+            raise ValueError('Concept name cannot be empty or whitespace')
+        return name
+
+    @validator('subtopic_ids')
+    def validate_subtopic_ids(cls, v):
+        if len(set(v)) != len(v):
+            raise ValueError('Subtopic IDs must be unique')
+        return v
+
+class ConceptUpdateSchema(BaseModel):
+    name: Optional[str] = Field(None, max_length=100, description="Name of the concept")
+    subtopic_ids: Optional[List[int]] = Field(None, min_items=1, description="List of subtopic IDs associated with this concept")
+
+    @validator('name')
+    def validate_name(cls, name):
+        if name is not None and not name.strip():
+            raise ValueError('Concept name cannot be empty or whitespace')
+        return name
+
+    @validator('subtopic_ids')
+    def validate_subtopic_ids(cls, v):
+        if v is not None and len(set(v)) != len(v):
+            raise ValueError('Subtopic IDs must be unique')
+        return v
+
+class ConceptSchema(ConceptBaseSchema):
+    id: int
+    subtopic_ids: List[int] = Field(..., description="List of subtopic IDs associated with this concept")
+    question_ids: List[int] = Field(..., description="List of question IDs associated with this concept")
+
+    class Config:
+        from_attributes = True
+
+```
+
+## File: disciplines.py
+```py
+# filename: app/schemas/disciplines.py
+
+from typing import Optional, List
+from pydantic import BaseModel, validator, Field
+
+class DisciplineBaseSchema(BaseModel):
+    name: str = Field(..., max_length=100, description="Name of the discipline")
+
+class DisciplineCreateSchema(DisciplineBaseSchema):
+    domain_ids: List[int] = Field(..., min_items=1, description="List of domain IDs associated with this discipline")
+    subject_ids: Optional[List[int]] = Field(None, description="List of subject IDs associated with this discipline")
+
+    @validator('name')
+    def validate_name(cls, name):
+        if not name.strip():
+            raise ValueError('Discipline name cannot be empty or whitespace')
+        return name
+
+    @validator('domain_ids', 'subject_ids')
+    def validate_ids(cls, v):
+        if v is not None and len(set(v)) != len(v):
+            raise ValueError('IDs must be unique')
+        return v
+
+class DisciplineUpdateSchema(BaseModel):
+    name: Optional[str] = Field(None, max_length=100, description="Name of the discipline")
+    domain_ids: Optional[List[int]] = Field(None, min_items=1, description="List of domain IDs associated with this discipline")
+    subject_ids: Optional[List[int]] = Field(None, description="List of subject IDs associated with this discipline")
+
+    @validator('name')
+    def validate_name(cls, name):
+        if name is not None and not name.strip():
+            raise ValueError('Discipline name cannot be empty or whitespace')
+        return name
+
+    @validator('domain_ids', 'subject_ids')
+    def validate_ids(cls, v):
+        if v is not None and len(set(v)) != len(v):
+            raise ValueError('IDs must be unique')
+        return v
+
+class DisciplineSchema(DisciplineBaseSchema):
+    id: int
+    domain_ids: List[int] = Field(..., description="List of domain IDs associated with this discipline")
+    subject_ids: List[int] = Field(..., description="List of subject IDs associated with this discipline")
+
+    class Config:
+        from_attributes = True
+
+```
+
+## File: domains.py
+```py
+# filename: app/schemas/domains.py
+
+from typing import Optional, List
+from pydantic import BaseModel, validator, Field
+
+class DomainBaseSchema(BaseModel):
+    name: str = Field(..., max_length=100, description="Name of the domain")
+
+class DomainCreateSchema(DomainBaseSchema):
+    discipline_ids: Optional[List[int]] = Field(None, description="List of discipline IDs associated with this domain")
+
+    @validator('name')
+    def validate_name(cls, name):
+        if not name.strip():
+            raise ValueError('Domain name cannot be empty or whitespace')
+        return name
+
+    @validator('discipline_ids')
+    def validate_discipline_ids(cls, v):
+        if v is not None and len(set(v)) != len(v):
+            raise ValueError('Discipline IDs must be unique')
+        return v
+
+class DomainUpdateSchema(BaseModel):
+    name: Optional[str] = Field(None, max_length=100, description="Name of the domain")
+    discipline_ids: Optional[List[int]] = Field(None, description="List of discipline IDs associated with this domain")
+
+    @validator('name')
+    def validate_name(cls, name):
+        if name is not None and not name.strip():
+            raise ValueError('Domain name cannot be empty or whitespace')
+        return name
+
+    @validator('discipline_ids')
+    def validate_discipline_ids(cls, v):
+        if v is not None and len(set(v)) != len(v):
+            raise ValueError('Discipline IDs must be unique')
+        return v
+
+class DomainSchema(DomainBaseSchema):
+    id: int
+    discipline_ids: List[int] = Field(..., description="List of discipline IDs associated with this domain")
+
+    class Config:
+        from_attributes = True
 
 ```
 
@@ -209,21 +407,20 @@ class TokenSchema(BaseModel):
 
 from typing import Optional, List
 from pydantic import BaseModel, Field, validator
-
+from app.schemas.questions import DifficultyLevel
 
 class FilterParamsSchema(BaseModel):
-    subject: Optional[str] = Field(None, description="Filter questions by subject")
-    topic: Optional[str] = Field(None, description="Filter questions by topic")
-    subtopic: Optional[str] = Field(None, description="Filter questions by subtopic")
-    difficulty: Optional[str] = Field(None, description="Filter questions by difficulty level")
-    tags: Optional[List[str]] = Field(None, description="Filter questions by tags")
+    subject: Optional[str] = Field(None, max_length=100, description="Filter questions by subject")
+    topic: Optional[str] = Field(None, max_length=100, description="Filter questions by topic")
+    subtopic: Optional[str] = Field(None, max_length=100, description="Filter questions by subtopic")
+    difficulty: Optional[DifficultyLevel] = Field(None, description="Filter questions by difficulty level")
+    question_tags: Optional[List[str]] = Field(None, max_items=10, description="Filter questions by tags")
 
-    @validator('difficulty')
-    def validate_difficulty(cls, difficulty):
-        valid_difficulties = ['Beginner', 'Easy', 'Medium', 'Hard', 'Expert']
-        if difficulty and difficulty not in valid_difficulties:
-            raise ValueError(f'Invalid difficulty. Must be one of: {", ".join(valid_difficulties)}')
-        return difficulty
+    @validator('question_tags')
+    def validate_question_tags(cls, v):
+        if v:
+            return [tag.lower() for tag in v]
+        return v
 
     class Config:
         extra = 'forbid'
@@ -233,7 +430,7 @@ class FilterParamsSchema(BaseModel):
                 "topic": "Algebra",
                 "subtopic": "Linear Equations",
                 "difficulty": "Easy",
-                "tags": ["equations", "solving"]
+                "question_tags": ["equations", "solving"]
             }
         }
 
@@ -244,63 +441,37 @@ class FilterParamsSchema(BaseModel):
 # filename: app/schemas/groups.py
 
 import re
-from typing import Optional
-from pydantic import BaseModel, validator, Field
-from sqlalchemy.orm import Session
-from app.services.logging_service import logger
-
+from typing import Optional, List
+from pydantic import BaseModel, Field, validator
 
 class GroupBaseSchema(BaseModel):
-    name: str
-    creator_id: int
-    description: Optional[str] = None
-    db: Optional[Session] = Field(default=None, exclude=True)
+    name: str = Field(..., min_length=1, max_length=100, description="Name of the group")
+    description: Optional[str] = Field(None, max_length=500, description="Description of the group")
 
-    class Config:
-        from_attributes = True
-        arbitrary_types_allowed = True
+    @validator('name')
+    def validate_name(cls, v):
+        if not re.match(r'^[\w\-\s]+$', v):
+            raise ValueError('Group name can only contain alphanumeric characters, hyphens, underscores, and spaces')
+        return v
 
 class GroupCreateSchema(GroupBaseSchema):
-    @validator('name')
-    def validate_name(cls, name):
-        if not name.strip():
-            raise ValueError('Group name cannot be empty or whitespace')
-        if len(name) > 100:
-            raise ValueError('Group name cannot exceed 100 characters')
-        if not re.match(r'^[\w\-\s]+$', name):
-            raise ValueError('Group name can only contain alphanumeric characters, hyphens, underscores, and spaces')
-        return name
-
-    @validator('description')
-    def validate_description(cls, description):
-        if description and len(description) > 500:
-            raise ValueError('Group description cannot exceed 500 characters')
-        return description
+    creator_id: int = Field(..., gt=0, description="ID of the user creating the group")
 
 class GroupUpdateSchema(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    
-    @validator('name')
-    def validate_name(cls, name):
-        if name == '':
-            raise ValueError('Group name cannot be empty or whitespace')
-        if len(name) > 100:
-            raise ValueError('Group name cannot exceed 100 characters')
-        if not re.match(r'^[\w\-\s]+$', name):
-            raise ValueError('Group name can only contain alphanumeric characters, hyphens, underscores, and spaces')
-        return name
+    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Name of the group")
+    description: Optional[str] = Field(None, max_length=500, description="Description of the group")
 
-    @validator('description')
-    def validate_description(cls, description):
-        if description and len(description) > 500:
-            raise ValueError('Group description cannot exceed 500 characters')
-        return description
+    @validator('name')
+    def validate_name(cls, v):
+        if v is not None and not re.match(r'^[\w\-\s]+$', v):
+            raise ValueError('Group name can only contain alphanumeric characters, hyphens, underscores, and spaces')
+        return v
 
 class GroupSchema(GroupBaseSchema):
     id: int
     creator_id: int
-    description: Optional[str] = None
+    user_ids: List[int] = Field(..., description="List of user IDs in this group")
+    question_set_ids: List[int] = Field(..., description="List of question set IDs associated with this group")
 
     class Config:
         from_attributes = True
@@ -311,23 +482,28 @@ class GroupSchema(GroupBaseSchema):
 ```py
 # filename: app/schemas/leaderboard.py
 
+from pydantic import BaseModel, Field
 from typing import Optional
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from app.models.time_period import TimePeriodModel
-from app.services.logging_service import logger
+from app.schemas.time_period import TimePeriodSchema
 
+class LeaderboardBaseSchema(BaseModel):
+    user_id: int = Field(..., gt=0)
+    score: int = Field(..., ge=0)
+    time_period_id: int = Field(..., gt=0)
+    group_id: Optional[int] = Field(None, gt=0)
 
-class LeaderboardSchema(BaseModel):
+class LeaderboardCreateSchema(LeaderboardBaseSchema):
+    pass
+
+class LeaderboardUpdateSchema(BaseModel):
+    score: int = Field(..., ge=0)
+
+class LeaderboardSchema(LeaderboardBaseSchema):
     id: int
-    user_id: int
-    score: int
-    time_period: TimePeriodModel
-    group_id: Optional[int] = None
+    time_period: TimePeriodSchema
 
     class Config:
         from_attributes = True
-
 
 ```
 
@@ -336,103 +512,87 @@ class LeaderboardSchema(BaseModel):
 # filename: app/schemas/permissions.py
 
 import re
-from pydantic import BaseModel, validator
-
+from typing import Optional
+from pydantic import BaseModel, Field, validator
 
 class PermissionBaseSchema(BaseModel):
-    name: str
-    description: str
+    name: str = Field(..., min_length=1, max_length=100, description="Name of the permission")
+    description: Optional[str] = Field(None, max_length=200, description="Description of the permission")
+
+    @validator('name')
+    def validate_name(cls, v):
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError('Permission name can only contain alphanumeric characters, underscores, and hyphens')
+        return v
 
 class PermissionCreateSchema(PermissionBaseSchema):
-    @validator('name')
-    def validate_name(cls, name):
-        if not re.match(r'^[a-zA-Z0-9_-]+$', name):
-            raise ValueError('Permission name can only contain alphanumeric characters, underscores, and hyphens')
-        return name
+    pass
 
 class PermissionUpdateSchema(BaseModel):
-    name: str = None
-    description: str = None
+    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Name of the permission")
+    description: Optional[str] = Field(None, max_length=200, description="Description of the permission")
 
     @validator('name')
-    def validate_name(cls, name):
-        if name and not re.match(r'^[a-zA-Z0-9_-]+$', name):
+    def validate_name(cls, v):
+        if v is not None and not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError('Permission name can only contain alphanumeric characters, underscores, and hyphens')
-        return name
+        return v
 
 class PermissionSchema(PermissionBaseSchema):
     id: int
 
     class Config:
         from_attributes = True
+
 ```
 
 ## File: question_sets.py
 ```py
 # filename: app/schemas/question_sets.py
 
-import re
 from typing import List, Optional
-from pydantic import BaseModel, validator
-
+from pydantic import BaseModel, Field, validator
+import re
 
 class QuestionSetBaseSchema(BaseModel):
-    name: str
-    is_public: bool = True
-    question_ids: Optional[List[int]] = []
-    creator_id: int = None
-    group_ids: Optional[List[int]] = []
+    name: str = Field(..., min_length=1, max_length=200, description="Name of the question set")
+    description: Optional[str] = Field(None, max_length=1000, description="Description of the question set")
+    is_public: bool = Field(True, description="Whether the question set is public or private")
 
-    class Config:
-        from_attributes = True
-        arbitrary_types_allowed = True
-
+    @validator('name')
+    def validate_name(cls, v):
+        if not v.strip():
+            raise ValueError('Question set name cannot be empty or whitespace')
+        if not re.match(r'^[\w\-\s]+$', v):
+            raise ValueError('Question set name can only contain alphanumeric characters, hyphens, underscores, and spaces')
+        return v
 
 class QuestionSetCreateSchema(QuestionSetBaseSchema):
-    name: str
-    is_public: bool = True
-
-    @validator('name')
-    def validate_name(cls, name):
-        if not name.strip():
-            raise ValueError('Question set name cannot be empty or whitespace')
-        if len(name) > 100:
-            raise ValueError('Question set name cannot exceed 100 characters')
-        if not re.match(r'^[\w\-\s]+$', name):
-            raise ValueError(
-                'Question set name can only contain alphanumeric characters, hyphens, underscores, and spaces'
-            )
-        return name
-
+    creator_id: int = Field(..., gt=0, description="ID of the user creating the question set")
+    question_ids: List[int] = Field(default_factory=list, description="List of question IDs in the set")
+    group_ids: List[int] = Field(default_factory=list, description="List of group IDs associated with the set")
 
 class QuestionSetUpdateSchema(BaseModel):
-    name: Optional[str] = None
-    is_public: Optional[bool] = None
-    question_ids: Optional[List[int]] = None
-    group_ids: Optional[List[int]] = None
-
-    class Config:
-        arbitrary_types_allowed = True
+    name: Optional[str] = Field(None, min_length=1, max_length=200, description="Name of the question set")
+    description: Optional[str] = Field(None, max_length=1000, description="Description of the question set")
+    is_public: Optional[bool] = Field(None, description="Whether the question set is public or private")
+    question_ids: Optional[List[int]] = Field(None, description="List of question IDs in the set")
+    group_ids: Optional[List[int]] = Field(None, description="List of group IDs associated with the set")
 
     @validator('name')
-    def validate_name(cls, name):
-        if not name.strip():
-            raise ValueError('Question set name cannot be empty or whitespace')
-        if len(name) > 100:
-            raise ValueError('Question set name cannot exceed 100 characters')
-        if not re.match(r'^[\w\-\s]+$', name):
-            raise ValueError(
-                'Question set name can only contain alphanumeric characters, hyphens, underscores, and spaces'
-            )
-        return name
-
+    def validate_name(cls, v):
+        if v is not None:
+            if not v.strip():
+                raise ValueError('Question set name cannot be empty or whitespace')
+            if not re.match(r'^[\w\-\s]+$', v):
+                raise ValueError('Question set name can only contain alphanumeric characters, hyphens, underscores, and spaces')
+        return v
 
 class QuestionSetSchema(QuestionSetBaseSchema):
     id: int
-    is_public: bool = True
-    question_ids: Optional[List[int]] = []
-    creator_id: int = None
-    group_ids: Optional[List[int]] = []
+    creator_id: int
+    question_ids: List[int]
+    group_ids: List[int]
 
     class Config:
         from_attributes = True
@@ -443,14 +603,31 @@ class QuestionSetSchema(QuestionSetBaseSchema):
 ```py
 # filename: app/schemas/question_tags.py
 
-from pydantic import BaseModel
-
+from typing import Optional
+from pydantic import BaseModel, Field, validator
 
 class QuestionTagBaseSchema(BaseModel):
-    tag: str
+    tag: str = Field(..., min_length=1, max_length=50)
+
+    @validator('tag')
+    def validate_tag(cls, v):
+        if not v.strip():
+            raise ValueError('Tag cannot be empty or only whitespace')
+        return v.lower()  # Store tags in lowercase for consistency
 
 class QuestionTagCreateSchema(QuestionTagBaseSchema):
     pass
+
+class QuestionTagUpdateSchema(BaseModel):
+    tag: Optional[str] = Field(None, min_length=1, max_length=50)
+
+    @validator('tag')
+    def validate_tag(cls, v):
+        if v is not None:
+            if not v.strip():
+                raise ValueError('Tag cannot be empty or only whitespace')
+            return v.lower()
+        return v
 
 class QuestionTagSchema(QuestionTagBaseSchema):
     id: int
@@ -465,141 +642,131 @@ class QuestionTagSchema(QuestionTagBaseSchema):
 # filename: app/schemas/questions.py
 
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from enum import Enum
 from pydantic import BaseModel, Field, validator
-from app.schemas.answer_choices import AnswerChoiceSchema, AnswerChoiceCreateSchema
-from app.schemas.question_tags import QuestionTagSchema
 
+from app.schemas.answer_choices import AnswerChoiceSchema, AnswerChoiceCreateSchema
+from app.schemas.question_tags import QuestionTagSchema, QuestionTagCreateSchema
+from app.schemas.question_sets import QuestionSetSchema, QuestionSetCreateSchema
+
+class DifficultyLevel(str, Enum):
+    BEGINNER = "Beginner"
+    EASY = "Easy"
+    MEDIUM = "Medium"
+    HARD = "Hard"
+    EXPERT = "Expert"
 
 class QuestionBaseSchema(BaseModel):
-    text: str
-    subject_id: int
-    topic_id: int
-    subtopic_id: int
-    db: Optional[Session] = Field(default=None, exclude=True)
+    text: str = Field(..., min_length=1, max_length=10000, description="The text of the question")
+    difficulty: DifficultyLevel = Field(..., description="The difficulty level of the question")
 
-    class Config:
-        from_attributes = True
-        arbitrary_types_allowed = True
+    @validator('text')
+    def validate_text(cls, v):
+        if not v.strip():
+            raise ValueError('Question text cannot be empty or only whitespace')
+        return v
 
 class QuestionCreateSchema(QuestionBaseSchema):
-    text: Optional[str] = Field(None, description="The text of the question", max_length=1000)
-    difficulty: Optional[str] = Field(None, description="The difficulty level of the question")
-    subject_id: Optional[int] = Field(None, description="ID of the subject associated with the question")
-    topic_id: Optional[int] = Field(None, description="ID of the topic associated with the question")
-    subtopic_id: Optional[int] = Field(None, description="ID of the subtopic associated with the question")
-    answer_choices: Optional[List[AnswerChoiceCreateSchema]] = Field(None, description="A list of answer choices")
-    tags: Optional[List[QuestionTagSchema]] = Field(None, description="A list of tags associated with the question")
-    question_set_ids: Optional[List[int]] = Field(None, description="Updated list of question set IDs the question belongs to")
+    subject_ids: List[int] = Field(..., description="IDs of the subjects associated with the question")
+    topic_ids: List[int] = Field(..., description="IDs of the topics associated with the question")
+    subtopic_ids: List[int] = Field(..., description="IDs of the subtopics associated with the question")
+    concept_ids: List[int] = Field(..., description="IDs of the concepts associated with the question")
+    answer_choice_ids: Optional[List[int]] = Field(None, description="List of answer choice IDs associated with the question")
+    question_tag_ids: Optional[List[int]] = Field(None, description="List of tag IDs associated with the question")
+    question_set_ids: Optional[List[int]] = Field(None, description="List of question set IDs the question belongs to")
 
-    @validator('difficulty')
-    def validate_difficulty(cls, difficulty):
-        valid_difficulties = [
-            'Beginner',
-            'Easy',
-            'Medium',
-            'Hard',
-            'Expert'
-        ]
-        if difficulty not in valid_difficulties:
-            raise ValueError(f'Invalid difficulty. Must be one of: {", ".join(valid_difficulties)}')
-        return difficulty
+class QuestionUpdateSchema(BaseModel):
+    text: Optional[str] = Field(None, min_length=1, max_length=10000, description="The text of the question")
+    difficulty: Optional[DifficultyLevel] = Field(None, description="The difficulty level of the question")
+    subject_ids: Optional[List[int]] = Field(None, description="IDs of the subjects associated with the question")
+    topic_ids: Optional[List[int]] = Field(None, description="IDs of the topics associated with the question")
+    subtopic_ids: Optional[List[int]] = Field(None, description="IDs of the subtopics associated with the question")
+    concept_ids: Optional[List[int]] = Field(None, description="IDs of the concepts associated with the question")
+    answer_choice_ids: Optional[List[int]] = Field(None, description="List of answer choice IDs associated with the question")
+    question_tag_ids: Optional[List[int]] = Field(None, description="List of tag IDs associated with the question")
+    question_set_ids: Optional[List[int]] = Field(None, description="List of question set IDs the question belongs to")
 
-class QuestionUpdateSchema(QuestionBaseSchema):
-    text: Optional[str] = Field(None, description="The text of the question")
-    difficulty: Optional[str] = Field(None, description="The difficulty level of the question")
-    subject_id: Optional[int] = Field(None, description="ID of the subject associated with the question")
-    topic_id: Optional[int] = Field(None, description="ID of the topic associated with the question")
-    subtopic_id: Optional[int] = Field(None, description="ID of the subtopic associated with the question")
-    answer_choices: Optional[List[AnswerChoiceCreateSchema]] = Field(None, description="A list of answer choices")
-    tags: Optional[List[QuestionTagSchema]] = Field(None, description="A list of tags associated with the question")
-    question_set_ids: Optional[List[int]] = Field(None, description="Updated list of question set IDs the question belongs to")
+    @validator('text')
+    def validate_text(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError('Question text cannot be empty or only whitespace')
+        return v
 
 class QuestionSchema(QuestionBaseSchema):
     id: int
-    text: str
-    subject_id: int
-    topic_id: int
-    subtopic_id: int
-    difficulty: Optional[str] = None
-    tags: Optional[List[QuestionTagSchema]] = []
-    answer_choices: List[AnswerChoiceSchema] = []
-    question_set_ids: Optional[List[int]] = []
+    subject_ids: List[int]
+    topic_ids: List[int]
+    subtopic_ids: List[int]
+    concept_ids: List[int]
+    answer_choice_ids: List[int]
+    question_tag_ids: List[int]
+    question_set_ids: List[int]
 
     class Config:
         from_attributes = True
+
+class DetailedQuestionSchema(QuestionSchema):
+    answer_choices: List['AnswerChoiceSchema']
+    question_tags: List['QuestionTagSchema']
+    question_sets: List['QuestionSetSchema']
+
+class QuestionWithAnswersCreateSchema(QuestionCreateSchema):
+    answer_choices: List['AnswerChoiceCreateSchema']
+    question_tags: Optional[List['QuestionTagCreateSchema']] = None
+    question_sets: Optional[List['QuestionSetCreateSchema']] = None
 
 ```
 
 ## File: roles.py
 ```py
-#filename: /app/schemas/roles.py
+# filename: app/schemas/roles.py
 
-from typing import List
-from pydantic import BaseModel
-
+from typing import List, Optional
+from pydantic import BaseModel, Field, validator
 
 class RoleBaseSchema(BaseModel):
-    name: str
-    description: str
+    name: str = Field(..., min_length=1, max_length=50, description="Name of the role")
+    description: Optional[str] = Field(None, max_length=200, description="Description of the role")
+    default: bool = Field(False, description="Whether this is the default role for new users")
+
+    @validator('name')
+    def validate_name(cls, v):
+        if not v.strip():
+            raise ValueError('Role name cannot be empty or only whitespace')
+        return v
 
 class RoleCreateSchema(RoleBaseSchema):
-    permissions: List[str]
+    permissions: List[str] = Field(..., min_items=1, description="List of permission names associated with the role")
 
-class RoleUpdateSchema(RoleBaseSchema):
-    permissions: List[str]
+    @validator('permissions')
+    def validate_permissions(cls, v):
+        if not all(p.strip() for p in v):
+            raise ValueError('All permissions must be non-empty strings')
+        return list(set(v))  # Remove duplicates
+
+class RoleUpdateSchema(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=50, description="Name of the role")
+    description: Optional[str] = Field(None, max_length=200, description="Description of the role")
+    permissions: Optional[List[str]] = Field(None, min_items=1, description="List of permission names associated with the role")
+    default: Optional[bool] = Field(None, description="Whether this is the default role for new users")
+
+    @validator('name')
+    def validate_name(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError('Role name cannot be empty or only whitespace')
+        return v
+
+    @validator('permissions')
+    def validate_permissions(cls, v):
+        if v is not None:
+            if not all(p.strip() for p in v):
+                raise ValueError('All permissions must be non-empty strings')
+            return list(set(v))  # Remove duplicates
+        return v
 
 class RoleSchema(RoleBaseSchema):
     id: int
-    permissions: List[str]
-
-    class Config:
-        from_attributes = True
-
-```
-
-## File: sessions.py
-```py
-# filename: app/schemas/tags.py
-
-from typing import List, Optional
-from datetime import datetime
-from pydantic import BaseModel, Field
-
-
-class SessionQuestionSchema(BaseModel):
-    question_id: int
-    answered: bool
-    correct: Optional[bool] = None
-    timestamp: datetime
-
-    class Config:
-        from_attributes = True
-
-class SessionQuestionSetSchema(BaseModel):
-    question_set_id: int
-    question_limit: Optional[int] = None  # Limit on questions from this set, if any
-
-    class Config:
-        from_attributes = True
-
-class SessionBaseSchema(BaseModel):
-    # Define basic session fields here. For simplicity, we'll just assume a name for the session.
-    name: str = Field(..., description="The name of the session")
-
-class SessionCreateSchema(SessionBaseSchema):
-    # IDs of question sets to include in the session. Actual question selection/logic to be handled elsewhere.
-    question_sets: List[int] = Field(default=[], description="List of question set IDs for the session")
-
-class SessionUpdateSchema(SessionBaseSchema):
-    # Assuming we might want to update the name or the question sets associated with the session.
-    question_sets: Optional[List[int]] = Field(default=None, description="Optionally update the list of question set IDs for the session")
-
-class SessionSchema(SessionBaseSchema):
-    id: int
-    question_sets: List[SessionQuestionSetSchema]
-    questions: List[SessionQuestionSchema]
-    # Assuming additional fields as necessary, for instance, session creation or modification dates.
+    permissions: List[str] = Field(..., min_items=1, description="List of permission names associated with the role")
 
     class Config:
         from_attributes = True
@@ -610,23 +777,37 @@ class SessionSchema(SessionBaseSchema):
 ```py
 # filename: app/schemas/subjects.py
 
-from pydantic import BaseModel, validator
-
+from typing import Optional, List
+from pydantic import BaseModel, validator, Field
 
 class SubjectBaseSchema(BaseModel):
-    name: str
+    name: str = Field(..., max_length=100, description="Name of the subject")
 
 class SubjectCreateSchema(SubjectBaseSchema):
+    discipline_ids: List[int] = Field(..., description="List of discipline IDs associated with this subject")
+    topic_ids: Optional[List[int]] = Field(None, description="List of topic IDs associated with this subject")
+
     @validator('name')
     def validate_name(cls, name):
         if not name.strip():
             raise ValueError('Subject name cannot be empty or whitespace')
-        if len(name) > 100:
-            raise ValueError('Subject name cannot exceed 100 characters')
+        return name
+
+class SubjectUpdateSchema(BaseModel):
+    name: Optional[str] = Field(None, max_length=100, description="Name of the subject")
+    discipline_ids: Optional[List[int]] = Field(None, description="List of discipline IDs associated with this subject")
+    topic_ids: Optional[List[int]] = Field(None, description="List of topic IDs associated with this subject")
+
+    @validator('name')
+    def validate_name(cls, name):
+        if name is not None and not name.strip():
+            raise ValueError('Subject name cannot be empty or whitespace')
         return name
 
 class SubjectSchema(SubjectBaseSchema):
     id: int
+    discipline_ids: List[int] = Field(..., description="List of discipline IDs associated with this subject")
+    topic_ids: List[int] = Field(..., description="List of topic IDs associated with this subject")
 
     class Config:
         from_attributes = True
@@ -635,54 +816,94 @@ class SubjectSchema(SubjectBaseSchema):
 
 ## File: subtopics.py
 ```py
-# schemas/subtopics.py
+# filename: app/schemas/subtopics.py
 
-from pydantic import BaseModel, validator
-
+from typing import Optional, List
+from pydantic import BaseModel, validator, Field
 
 class SubtopicBaseSchema(BaseModel):
-    name: str
-    topic_id: int
+    name: str = Field(..., max_length=100, description="Name of the subtopic")
 
 class SubtopicCreateSchema(SubtopicBaseSchema):
+    topic_ids: List[int] = Field(..., description="List of topic IDs associated with this subtopic")
+    concept_ids: Optional[List[int]] = Field(None, description="List of concept IDs associated with this subtopic")
+
     @validator('name')
     def validate_name(cls, name):
         if not name.strip():
             raise ValueError('Subtopic name cannot be empty or whitespace')
-        if len(name) > 100:
-            raise ValueError('Subtopic name cannot exceed 100 characters')
+        return name
+
+class SubtopicUpdateSchema(BaseModel):
+    name: Optional[str] = Field(None, max_length=100, description="Name of the subtopic")
+    topic_ids: Optional[List[int]] = Field(None, description="List of topic IDs associated with this subtopic")
+    concept_ids: Optional[List[int]] = Field(None, description="List of concept IDs associated with this subtopic")
+
+    @validator('name')
+    def validate_name(cls, name):
+        if name is not None and not name.strip():
+            raise ValueError('Subtopic name cannot be empty or whitespace')
         return name
 
 class SubtopicSchema(SubtopicBaseSchema):
     id: int
+    topic_ids: List[int] = Field(..., description="List of topic IDs associated with this subtopic")
+    concept_ids: List[int] = Field(..., description="List of concept IDs associated with this subtopic")
 
     class Config:
         from_attributes = True
 
 ```
 
+## File: time_period.py
+```py
+# filename: app/schemas/time_period.py
+
+from pydantic import BaseModel, Field
+
+class TimePeriodSchema(BaseModel):
+    id: int = Field(..., gt=0)
+    name: str
+
+    class Config:
+        from_attributes = True
+```
+
 ## File: topics.py
 ```py
 # filename: app/schemas/topics.py
 
-from pydantic import BaseModel, validator
-
+from typing import Optional, List
+from pydantic import BaseModel, validator, Field
 
 class TopicBaseSchema(BaseModel):
-    name: str
-    subject_id: int
+    name: str = Field(..., max_length=100, description="Name of the topic")
 
 class TopicCreateSchema(TopicBaseSchema):
+    subject_ids: List[int] = Field(..., description="List of subject IDs associated with this topic")
+    subtopic_ids: Optional[List[int]] = Field(None, description="List of subtopic IDs associated with this topic")
+
     @validator('name')
     def validate_name(cls, name):
         if not name.strip():
             raise ValueError('Topic name cannot be empty or whitespace')
-        if len(name) > 100:
-            raise ValueError('Topic name cannot exceed 100 characters')
+        return name
+
+class TopicUpdateSchema(BaseModel):
+    name: Optional[str] = Field(None, max_length=100, description="Name of the topic")
+    subject_ids: Optional[List[int]] = Field(None, description="List of subject IDs associated with this topic")
+    subtopic_ids: Optional[List[int]] = Field(None, description="List of subtopic IDs associated with this topic")
+
+    @validator('name')
+    def validate_name(cls, name):
+        if name is not None and not name.strip():
+            raise ValueError('Topic name cannot be empty or whitespace')
         return name
 
 class TopicSchema(TopicBaseSchema):
     id: int
+    subject_ids: List[int] = Field(..., description="List of subject IDs associated with this topic")
+    subtopic_ids: List[int] = Field(..., description="List of subtopic IDs associated with this topic")
 
     class Config:
         from_attributes = True
@@ -696,107 +917,75 @@ class TopicSchema(TopicBaseSchema):
 import string
 import re
 from typing import Optional, List
-from sqlalchemy.orm import Session
-from pydantic import BaseModel, validator, EmailStr, Field, model_validator
-from app.schemas.groups import GroupSchema
-from app.schemas.question_sets import QuestionSetSchema
-from app.models.groups import GroupModel
-from app.services.logging_service import logger
-
-
-def validate_password(password: str) -> str:
-    if len(password) < 8:
-        raise ValueError('Password must be at least 8 characters long')
-    if not any(char.isdigit() for char in password):
-        raise ValueError('Password must contain at least one digit')
-    if not any(char.isupper() for char in password):
-        raise ValueError('Password must contain at least one uppercase letter')
-    if not any(char.islower() for char in password):
-        raise ValueError('Password must contain at least one lowercase letter')
-    if not any(char in string.punctuation for char in password):
-        raise ValueError('Password must contain at least one special character')
-    if any(char.isspace() for char in password):
-        raise ValueError('Password must not contain whitespace characters')
-    weak_passwords = ['password', '123456', 'qwerty', 'abc123', 'letmein', 'admin', 'welcome', 'monkey', '111111', 'iloveyou']
-    if password.lower() in weak_passwords:
-        raise ValueError('Password is too common. Please choose a stronger password.')
-    return password
-
-def validate_username(username: str) -> str:
-    if len(username) < 3:
-        raise ValueError('Username must be at least 3 characters long')
-    if len(username) > 50:
-        raise ValueError('Username must not exceed 50 characters')
-    if not re.match(r'^[\w\-\.]+$', username):
-        raise ValueError('Username must contain only alphanumeric characters, hyphens, underscores, and periods')
-    return username
-
-def validate_email(email: str) -> str:
-    if not email:
-        raise ValueError('Email is required')
-    return email
+from pydantic import BaseModel, validator, EmailStr, Field, SecretStr
 
 class UserBaseSchema(BaseModel):
-    username: str
-    email: EmailStr
-    role: Optional[str] = Field(default='user')
-    db: Optional[Session] = Field(default=None, exclude=True)
+    username: str = Field(..., min_length=3, max_length=50, description="Username of the user")
+    email: EmailStr = Field(..., description="Email address of the user")
+    role: str = Field(default='user', description="Role of the user")
+
+    @validator('username')
+    def validate_username(cls, v):
+        if not re.match(r'^[\w\-\.]+$', v):
+            raise ValueError('Username must contain only alphanumeric characters, hyphens, underscores, and periods')
+        return v
 
     class Config:
         from_attributes = True
-        arbitrary_types_allowed = True
 
 class UserCreateSchema(UserBaseSchema):
-    password: str
+    password: SecretStr = Field(..., min_length=8, max_length=100, description="Password for the user")
 
     @validator('password')
-    def validate_password(cls, password):
-        return validate_password(password)
+    def validate_password(cls, v):
+        password = v.get_secret_value()
+        if not any(char.isdigit() for char in password):
+            raise ValueError('Password must contain at least one digit')
+        if not any(char.isupper() for char in password):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(char.islower() for char in password):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not any(char in string.punctuation for char in password):
+            raise ValueError('Password must contain at least one special character')
+        if any(char.isspace() for char in password):
+            raise ValueError('Password must not contain whitespace characters')
+        weak_passwords = ['password', '123456', 'qwerty', 'abc123', 'letmein', 'admin', 'welcome', 'monkey', '111111', 'iloveyou']
+        if password.lower() in weak_passwords:
+            raise ValueError('Password is too common. Please choose a stronger password.')
+        return v
+
+class UserUpdateSchema(BaseModel):
+    username: Optional[str] = Field(None, min_length=3, max_length=50, description="Username of the user")
+    email: Optional[EmailStr] = Field(None, description="Email address of the user")
+    password: Optional[SecretStr] = Field(None, min_length=8, max_length=100, description="Password for the user")
+    role: Optional[str] = Field(None, description="Role of the user")
+    group_ids: Optional[List[int]] = Field(None, min_items=1, description="List of group IDs the user belongs to")
 
     @validator('username')
-    def validate_username(cls, username):
-        return validate_username(username)
-
-    @validator('email')
-    def validate_email(cls, email):
-        return validate_email(email)
-
-class UserUpdateSchema(UserBaseSchema):
-    username: Optional[str] = None
-    password: Optional[str] = None
-    group_ids: Optional[List[int]] = None
-    email: Optional[str] = None
+    def validate_username(cls, v):
+        if v is not None and not re.match(r'^[\w\-\.]+$', v):
+            raise ValueError('Username must contain only alphanumeric characters, hyphens, underscores, and periods')
+        return v
 
     @validator('password')
-    def validate_password(cls, password):
-        return validate_password(password)
-
-    @model_validator(mode='before')
-    def validate_group_ids(cls, values):
-        logger.debug("UserUpdateSchema received data: %s", values)
-        if values.get('group_ids'):
-            group_ids = values.get('group_ids')
-            db = values.get('db')
-            if not db:
-                raise ValueError("Database session not provided")
-            for group_id in group_ids:
-                if not db.query(GroupModel).filter(GroupModel.id == group_id).first():
-                    raise ValueError(f"Invalid group_id: {group_id}")
-        return values
+    def validate_password(cls, v):
+        if v is not None:
+            return UserCreateSchema.validate_password(v)
+        return v
 
 class UserSchema(UserBaseSchema):
     id: int
-    username: str
-    email: str
-    role: str
     is_active: bool
     is_admin: bool
-    group_ids: List[GroupSchema] = []
-    created_groups: List[GroupSchema] = []
-    created_question_sets: List[QuestionSetSchema] = []
+    groups: List[int] = Field(default_factory=list, description="List of group IDs the user belongs to")
+    created_groups: List[int] = Field(default_factory=list, description="List of group IDs created by the user")
+    created_question_sets: List[int] = Field(default_factory=list, description="List of question set IDs created by the user")
+    responses: List[int] = Field(default_factory=list, description="List of user response IDs for this user")
+    leaderboards: List[int] = Field(default_factory=list, description="List of leaderboard entry IDs for this user")
 
     class Config:
         from_attributes = True
+
 ```
 
 ## File: user_responses.py
@@ -805,35 +994,34 @@ class UserSchema(UserBaseSchema):
 
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel
-
+from pydantic import BaseModel, Field, validator
 
 class UserResponseBaseSchema(BaseModel):
-    user_id: int
-    question_id: int
-    answer_choice_id: int
-    is_correct: Optional[bool] = None
-    timestamp: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
+    user_id: int = Field(..., gt=0, description="ID of the user who responded")
+    question_id: int = Field(..., gt=0, description="ID of the question answered")
+    answer_choice_id: int = Field(..., gt=0, description="ID of the chosen answer")
+    is_correct: bool = Field(..., description="Whether the answer is correct")
+    response_time: Optional[int] = Field(None, ge=0, description="Response time in seconds")
 
 class UserResponseCreateSchema(UserResponseBaseSchema):
-    pass
+    timestamp: datetime = Field(default_factory=datetime.now, description="Timestamp of the response")
 
-class UserResponseUpdateSchema(UserResponseBaseSchema):
-    answer_choice_id: Optional[int] = None
+class UserResponseUpdateSchema(BaseModel):
+    is_correct: Optional[bool] = Field(None, description="Whether the answer is correct")
+    response_time: Optional[int] = Field(None, ge=0, description="Response time in seconds")
 
 class UserResponseSchema(UserResponseBaseSchema):
     id: int
-    timestamp: datetime
+    timestamp: datetime = Field(..., description="Timestamp of the response")
 
     class Config:
         from_attributes = True
-        json_encoders = {
-            datetime: lambda dt: dt
-        }
+
+    @validator('timestamp', pre=True)
+    def parse_timestamp(cls, value):
+        if isinstance(value, str):
+            return datetime.fromisoformat(value)
+        return value
 
 ```
 
@@ -850,18 +1038,33 @@ class UserResponseSchema(UserResponseBaseSchema):
 
 from sqlalchemy.orm import Session
 from app.services.user_service import get_user_by_username
-from app.core.security import verify_password
+from app.core.security import verify_password, get_password_hash
 from app.models.users import UserModel
+from app.services.logging_service import logger
 
 
 def authenticate_user(db: Session, username: str, password: str) -> UserModel:
     user = get_user_by_username(db, username)
     if not user:
+        logger.error(f"User {username} not found")
         return False
-    if not verify_password(password, user.hashed_password):
+    logger.debug(f"Authenticating user: {username}")
+    logger.debug(f"Stored hashed password: {user.hashed_password}")
+    logger.debug(f"Provided password: {password}")
+    
+    # Add this line to log the result of verify_password
+    verification_result = verify_password(password, user.hashed_password)
+    logger.debug(f"Password verification result: {verification_result}")
+    
+    if not verification_result:
+        hashed_attempt = get_password_hash(password)
+        logger.debug(f"Hashed attempt: {hashed_attempt}")
+        logger.error(f"User {username} supplied an invalid password")
         return False
     if not user.is_active:
+        logger.error(f"User {username} is not active")
         return False
+    logger.info(f"User {username} authenticated successfully")
     return user
 
 ```
@@ -984,8 +1187,8 @@ from app.core.config import settings_core
 from app.services.logging_service import logger
 from app.models.permissions import PermissionModel
 
-def generate_permissions(app: FastAPI, db: Session):
-    permissions = []
+def generate_permissions(app: FastAPI):
+    permissions = set()
     method_map = {
         "GET": "read",
         "POST": "create",
@@ -1000,29 +1203,20 @@ def generate_permissions(app: FastAPI, db: Session):
                     path = route.path.replace("/", "_").replace("{", "").replace("}", "")
                     if path not in settings_core.UNPROTECTED_ENDPOINTS:
                         permission = f"{method_map[method]}_{path}"
-                        permissions.append(permission)
+                        permissions.add(permission)
                         logger.debug("Generated permission: %s", permission)
 
+    return permissions
 
+def ensure_permissions_in_db(db, permissions):
+    existing_permissions = set(p.name for p in db.query(PermissionModel).all())
+    new_permissions = permissions - existing_permissions
 
-    # Check if the generated permissions exist in the database and add them if they don't
-    for permission in permissions:
-        db_permission = db.query(PermissionModel).filter(PermissionModel.name == permission).first()
-        if not db_permission:
-            logger.debug("Adding permission to the database: %s", permission)
-            db_permission = PermissionModel(name=permission)
-            db.add(db_permission)
-
-    # Delete permissions from the database that are not in the generated list
-    db_permissions = db.query(PermissionModel).all()
-    for db_permission in db_permissions:
-        if db_permission.name not in permissions:
-            logger.debug("Deleting permission from the database: %s", db_permission.name)
-            db.delete(db_permission)
+    for permission in new_permissions:
+        db.add(PermissionModel(name=permission))
 
     db.commit()
-
-    return set(permissions)
+    logger.debug(f"Added {len(new_permissions)} new permissions to the database")
 
 ```
 
@@ -1047,6 +1241,7 @@ def randomize_answer_choices(answer_choices):
 from typing import Dict
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
+from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
 from app.models.user_responses import UserResponseModel
 from app.models.users import UserModel
 from app.models.time_period import TimePeriodModel
@@ -1093,6 +1288,20 @@ def calculate_leaderboard_scores(
 
     return user_scores
 
+def time_period_to_schema(time_period_model):
+    return TimePeriodSchema(
+        id=time_period_model.id,
+        name=time_period_model.name
+    )
+
+def leaderboard_to_schema(leaderboard_model):
+    return LeaderboardSchema(
+        id=leaderboard_model.id,
+        user_id=leaderboard_model.user_id,
+        score=leaderboard_model.score,
+        time_period=time_period_to_schema(leaderboard_model.time_period),
+        group_id=leaderboard_model.group_id
+    )
 ```
 
 ## File: user_service.py
@@ -1167,7 +1376,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.base import instance_state
 from sqlalchemy.orm.attributes import instance_dict
 from fastapi import HTTPException
-from app.db.base_class import Base
+from app.db.base import Base
 from app.services.logging_service import logger, sqlalchemy_obj_to_dict
 from app.models.questions import QuestionModel
 from app.models.groups import GroupModel
@@ -1182,7 +1391,6 @@ from app.models.leaderboard import LeaderboardModel
 from app.models.user_responses import UserResponseModel
 from app.models.answer_choices import AnswerChoiceModel
 from app.models.question_sets import QuestionSetModel
-from app.models.sessions import SessionModel
 from app.models.authentication import RevokedTokenModel
 
 
@@ -1294,7 +1502,6 @@ def find_related_class(attribute_name):
         'user_response_id': UserResponseModel,
         'answer_choice_id': AnswerChoiceModel,
         'question_set_id': QuestionSetModel,
-        'session_id': SessionModel,
         'token_id': RevokedTokenModel,
         
         # We don't need to map the association tables here, as their columns
@@ -1329,40 +1536,29 @@ def register_validation_listeners():
 
 ## File: crud_answer_choices.py
 ```py
-# filename: app/crud/crud_answer_choices.py
+# filename: /code/quiz-app/quiz-app-backend/app/crud/crud_answer_choices.py
 
-from typing import List, Dict
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.models.answer_choices import AnswerChoiceModel
-from app.schemas.answer_choices import AnswerChoiceCreateSchema
+from app.schemas.answer_choices import AnswerChoiceCreateSchema, AnswerChoiceUpdateSchema
+from app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
 def create_answer_choice_crud(db: Session, answer_choice: AnswerChoiceCreateSchema) -> AnswerChoiceModel:
     db_answer_choice = AnswerChoiceModel(**answer_choice.model_dump())
     db.add(db_answer_choice)
     db.commit()
     db.refresh(db_answer_choice)
+    logger.debug(f"create_answer_choice_crud: {sqlalchemy_obj_to_dict(db_answer_choice)}")
     return db_answer_choice
 
-def create_answer_choices_bulk(db: Session, answer_choices: List[AnswerChoiceCreateSchema], question_id: int) -> List[AnswerChoiceModel]:
-    db_answer_choices = [
-        AnswerChoiceModel(
-            text=choice.text,
-            is_correct=choice.is_correct,
-            explanation=choice.explanation,
-            question_id=question_id
-        )
-        for choice in answer_choices
-    ]
-    db.add_all(db_answer_choices)
-    db.commit()
-    for db_choice in db_answer_choices:
-        db.refresh(db_choice)
-    return db_answer_choices
-
-def read_answer_choice_crud(db: Session, answer_choice_id: int) -> AnswerChoiceModel:
+def read_answer_choice_crud(db: Session, answer_choice_id: int) -> Optional[AnswerChoiceModel]:
     return db.query(AnswerChoiceModel).filter(AnswerChoiceModel.id == answer_choice_id).first()
 
-def update_answer_choice_crud(db: Session, answer_choice_id: int, answer_choice: AnswerChoiceCreateSchema) -> AnswerChoiceModel:
+def read_answer_choices_crud(db: Session, skip: int = 0, limit: int = 100) -> List[AnswerChoiceModel]:
+    return db.query(AnswerChoiceModel).offset(skip).limit(limit).all()
+
+def update_answer_choice_crud(db: Session, answer_choice_id: int, answer_choice: AnswerChoiceUpdateSchema) -> Optional[AnswerChoiceModel]:
     db_answer_choice = read_answer_choice_crud(db, answer_choice_id)
     if db_answer_choice:
         update_data = answer_choice.model_dump(exclude_unset=True)
@@ -1372,38 +1568,135 @@ def update_answer_choice_crud(db: Session, answer_choice_id: int, answer_choice:
         db.refresh(db_answer_choice)
     return db_answer_choice
 
-def update_answer_choices_bulk(db: Session, question_id: int, new_answer_choices: List[Dict]) -> List[AnswerChoiceModel]:
-    # Get existing answer choices
-    existing_choices = db.query(AnswerChoiceModel).filter(AnswerChoiceModel.question_id == question_id).all()
-    existing_choices_dict = {choice.id: choice for choice in existing_choices}
-
-    updated_choices = []
-    for choice_data in new_answer_choices:
-        if 'id' in choice_data and choice_data['id'] in existing_choices_dict:
-            # Update existing choice
-            choice = existing_choices_dict[choice_data['id']]
-            for key, value in choice_data.items():
-                setattr(choice, key, value)
-            updated_choices.append(choice)
-        else:
-            # Create new choice
-            new_choice = AnswerChoiceModel(question_id=question_id, **choice_data)
-            db.add(new_choice)
-            updated_choices.append(new_choice)
-
-    # Remove choices that are not in the new data
-    for choice in existing_choices:
-        if choice not in updated_choices:
-            db.delete(choice)
-
-    db.flush()
-    return updated_choices
-
-def delete_answer_choice_crud(db: Session, answer_choice_id: int) -> None:
+def delete_answer_choice_crud(db: Session, answer_choice_id: int) -> bool:
     db_answer_choice = read_answer_choice_crud(db, answer_choice_id)
     if db_answer_choice:
         db.delete(db_answer_choice)
         db.commit()
+        return True
+    return False
+
+```
+
+## File: crud_concepts.py
+```py
+# filename: app/crud/crud_concepts.py
+
+from sqlalchemy.orm import Session
+from app.models.concepts import ConceptModel
+from app.schemas.concepts import ConceptCreateSchema, ConceptUpdateSchema
+
+def create_concept(db: Session, concept: ConceptCreateSchema) -> ConceptModel:
+    db_concept = ConceptModel(**concept.model_dump())
+    db.add(db_concept)
+    db.commit()
+    db.refresh(db_concept)
+    return db_concept
+
+def read_concept(db: Session, concept_id: int) -> ConceptModel:
+    return db.query(ConceptModel).filter(ConceptModel.id == concept_id).first()
+
+def read_concepts(db: Session, skip: int = 0, limit: int = 100) -> list[ConceptModel]:
+    return db.query(ConceptModel).offset(skip).limit(limit).all()
+
+def update_concept(db: Session, concept_id: int, concept: ConceptUpdateSchema) -> ConceptModel:
+    db_concept = read_concept(db, concept_id)
+    if db_concept:
+        update_data = concept.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_concept, key, value)
+        db.commit()
+        db.refresh(db_concept)
+    return db_concept
+
+def delete_concept(db: Session, concept_id: int) -> bool:
+    db_concept = read_concept(db, concept_id)
+    if db_concept:
+        db.delete(db_concept)
+        db.commit()
+        return True
+    return False
+
+```
+
+## File: crud_disciplines.py
+```py
+# filename: app/crud/crud_disciplines.py
+
+from sqlalchemy.orm import Session
+from app.models.disciplines import DisciplineModel
+from app.schemas.disciplines import DisciplineCreateSchema, DisciplineUpdateSchema
+
+def create_discipline(db: Session, discipline: DisciplineCreateSchema) -> DisciplineModel:
+    db_discipline = DisciplineModel(**discipline.model_dump())
+    db.add(db_discipline)
+    db.commit()
+    db.refresh(db_discipline)
+    return db_discipline
+
+def read_discipline(db: Session, discipline_id: int) -> DisciplineModel:
+    return db.query(DisciplineModel).filter(DisciplineModel.id == discipline_id).first()
+
+def read_disciplines(db: Session, skip: int = 0, limit: int = 100) -> list[DisciplineModel]:
+    return db.query(DisciplineModel).offset(skip).limit(limit).all()
+
+def update_discipline(db: Session, discipline_id: int, discipline: DisciplineUpdateSchema) -> DisciplineModel:
+    db_discipline = read_discipline(db, discipline_id)
+    if db_discipline:
+        update_data = discipline.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_discipline, key, value)
+        db.commit()
+        db.refresh(db_discipline)
+    return db_discipline
+
+def delete_discipline(db: Session, discipline_id: int) -> bool:
+    db_discipline = read_discipline(db, discipline_id)
+    if db_discipline:
+        db.delete(db_discipline)
+        db.commit()
+        return True
+    return False
+```
+
+## File: crud_domains.py
+```py
+# filename: app/crud/crud_domains.py
+
+from sqlalchemy.orm import Session
+from app.models.domains import DomainModel
+from app.schemas.domains import DomainCreateSchema, DomainUpdateSchema
+
+def create_domain(db: Session, domain: DomainCreateSchema) -> DomainModel:
+    db_domain = DomainModel(**domain.model_dump())
+    db.add(db_domain)
+    db.commit()
+    db.refresh(db_domain)
+    return db_domain
+
+def read_domain(db: Session, domain_id: int) -> DomainModel:
+    return db.query(DomainModel).filter(DomainModel.id == domain_id).first()
+
+def read_domains(db: Session, skip: int = 0, limit: int = 100) -> list[DomainModel]:
+    return db.query(DomainModel).offset(skip).limit(limit).all()
+
+def update_domain(db: Session, domain_id: int, domain: DomainUpdateSchema) -> DomainModel:
+    db_domain = read_domain(db, domain_id)
+    if db_domain:
+        update_data = domain.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_domain, key, value)
+        db.commit()
+        db.refresh(db_domain)
+    return db_domain
+
+def delete_domain(db: Session, domain_id: int) -> bool:
+    db_domain = read_domain(db, domain_id)
+    if db_domain:
+        db.delete(db_domain)
+        db.commit()
+        return True
+    return False
 
 ```
 
@@ -1422,6 +1715,7 @@ from app.models.subtopics import SubtopicModel
 from app.models.question_tags import QuestionTagModel
 from app.schemas.questions import QuestionSchema
 from app.schemas.filters import FilterParamsSchema
+from app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
 def filter_questions_crud(
     db: Session,
@@ -1429,20 +1723,20 @@ def filter_questions_crud(
     skip: int = 0,
     limit: int = 100
 ) -> Optional[List[QuestionSchema]]:
-    print("Entering filter_questions function")
-    print(f"Received filters: {filters}")
+    logger.debug("Entering filter_questions function")
+    logger.debug(f"Received filters: {filters}")
     try:
         # Validate filters dictionary against the Pydantic model
         validated_filters = FilterParamsSchema(**filters)
     except ValidationError as e:
-        print(f"Invalid filters: {str(e)}")
+        logger.debug(f"Invalid filters: {str(e)}")
         raise e
 
     if not any(value for value in filters.values()):
-        print("No filters provided")
+        logger.debug("No filters provided")
         return None
 
-    query = db.query(QuestionModel).join(SubjectModel).join(TopicModel).join(SubtopicModel).outerjoin(QuestionModel.tags)
+    query = db.query(QuestionModel).join(SubjectModel).join(TopicModel).join(SubtopicModel).outerjoin(QuestionModel.question_tags)
 
     if validated_filters.subject:
         query = query.filter(func.lower(SubjectModel.name) == func.lower(validated_filters.subject))
@@ -1452,12 +1746,12 @@ def filter_questions_crud(
         query = query.filter(func.lower(SubtopicModel.name) == func.lower(validated_filters.subtopic))
     if validated_filters.difficulty:
         query = query.filter(func.lower(QuestionModel.difficulty) == func.lower(validated_filters.difficulty))
-    if validated_filters.tags:
-        query = query.filter(QuestionTagModel.tag.in_([tag.lower() for tag in validated_filters.tags]))
+    if validated_filters.question_tags:
+        query = query.filter(QuestionTagModel.tag.in_([tag.lower() for tag in validated_filters.question_tags]))
 
     questions = query.offset(skip).limit(limit).all()
 
-    print("Returning filtered questions")
+    logger.debug(f"Filtered questions: {sqlalchemy_obj_to_dict(question) for question in questions}")
     return [QuestionSchema.model_validate(question) for question in questions]
 
 ```
@@ -1757,20 +2051,20 @@ from app.models.questions import QuestionModel
 from app.models.question_tags import QuestionTagModel
 
 
-def add_tag_to_question(db: Session, question_id: int, tag_id: int):
-    association = QuestionToTagAssociation(question_id=question_id, tag_id=tag_id)
+def add_tag_to_question(db: Session, question_id: int, question_tag_id: int):
+    association = QuestionToTagAssociation(question_id=question_id, question_tag_id=question_tag_id)
     db.add(association)
     db.commit()
 
-def remove_tag_from_question(db: Session, question_id: int, tag_id: int):
-    db.query(QuestionToTagAssociation).filter_by(question_id=question_id, tag_id=tag_id).delete()
+def remove_tag_from_question(db: Session, question_id: int, question_tag_id: int):
+    db.query(QuestionToTagAssociation).filter_by(question_id=question_id, question_tag_id=question_tag_id).delete()
     db.commit()
 
 def get_question_tags(db: Session, question_id: int):
     return db.query(QuestionTagModel).join(QuestionToTagAssociation).filter(QuestionToTagAssociation.question_id == question_id).all()
 
-def get_questions_by_tag(db: Session, tag_id: int):
-    return db.query(QuestionModel).join(QuestionToTagAssociation).filter(QuestionToTagAssociation.tag_id == tag_id).all()
+def read_questions_by_tag(db: Session, question_tag_id: int):
+    return db.query(QuestionModel).join(QuestionToTagAssociation).filter(QuestionToTagAssociation.question_tag_id == question_tag_id).all()
 
 ```
 
@@ -1813,93 +2107,169 @@ def delete_question_tag_crud(db: Session, question_tag_id: int) -> None:
 
 ## File: crud_questions.py
 ```py
-# filename: app/crud/crud_questions.py
+# filename: /code/quiz-app/quiz-app-backend/app/crud/crud_questions.py
 
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
-from app.crud.crud_answer_choices import create_answer_choices_bulk, update_answer_choices_bulk
-from app.crud.crud_question_tag_associations import add_tag_to_question
 from app.models.questions import QuestionModel
-from app.models.associations import QuestionToTagAssociation
-from app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema
+from app.models.answer_choices import AnswerChoiceModel
+from app.models.question_tags import QuestionTagModel
+from app.models.question_sets import QuestionSetModel
+from app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, QuestionWithAnswersCreateSchema, DetailedQuestionSchema
+from app.crud.crud_answer_choices import create_answer_choice_crud
 from app.services.randomization_service import randomize_questions, randomize_answer_choices
 from app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
-def create_question_crud(db: Session, question: QuestionCreateSchema) -> QuestionModel:
+def create_question(db: Session, question: QuestionCreateSchema) -> QuestionModel:
+    db_question = QuestionModel(
+        text=question.text,
+        subject=question.subject,
+        topic=question.topic,
+        subtopic=question.subtopic,
+        concept=question.concept,
+        difficulty=question.difficulty
+    )
+    db.add(db_question)
+    db.flush()
+
+    if question.answer_choices:
+        for question_answer_choice in question.answer_choices:
+            if not question_answer_choice.id:
+                db_answer_choice = create_answer_choice_crud(db, question_answer_choice)
+                db_question.answer_choices.append(db_answer_choice)
+            else:
+                db_answer_choice = db.query(AnswerChoiceModel).filter(AnswerChoiceModel.id == question_answer_choice.id).first()
+                db_question.answer_choices.append(db_answer_choice)
+
+    if question.question_tag_ids:
+        tags = db.query(QuestionTagModel).filter(QuestionTagModel.id.in_(question.question_tag_ids)).all()
+        db_question.question_tag_ids = tags
+
+    if question.question_set_ids:
+        question_sets = db.query(QuestionSetModel).filter(QuestionSetModel.id.in_(question.question_set_ids)).all()
+        db_question.question_set_ids = question_sets
+
+    db.commit()
+    db.refresh(db_question)
+    return db_question
+
+def create_question_with_answers(db: Session, question: QuestionWithAnswersCreateSchema) -> QuestionModel:
+    # First, create the question
     db_question = QuestionModel(
         text=question.text,
         subject_id=question.subject_id,
         topic_id=question.topic_id,
         subtopic_id=question.subtopic_id,
-        difficulty=question.difficulty
+        concept_id=question.concept_id,
+        difficulty=question.difficulty,
+        answer_choices=[]
     )
     db.add(db_question)
+    db.flush()  # This assigns an ID to db_question
+    
+    logger.debug(f"Created question: {sqlalchemy_obj_to_dict(db_question)}")
+
+    # Now create the answer choices and associate them with the question
+    for answer_choice in question.answer_choices:
+        db_answer_choice = create_answer_choice_crud(db, answer_choice)
+        db_question.answer_choices.append(db_answer_choice)
+        logger.debug(f"Question with answer choices: {sqlalchemy_obj_to_dict(db_question)}")
+
+    if question.question_tags:
+        question_tags = db.query(QuestionTagModel).filter(QuestionTagModel.id.in_(question.question_tags)).all()
+        db_question.question_tags = question_tags
+
+    if question.question_sets:
+        question_sets = db.query(QuestionSetModel).filter(QuestionSetModel.id.in_(question.question_sets)).all()
+        db_question.question_sets = question_sets
+
     db.commit()
     db.refresh(db_question)
-    logger.debug("Question created: %s", sqlalchemy_obj_to_dict(db_question))
-
-    if question.answer_choices:
-        answer_choices = create_answer_choices_bulk(db, question.answer_choices, db_question.id)
-        for choice in answer_choices:
-            db_question.answer_choices.append(choice)
-            logger.debug("Answer choices created: %s", sqlalchemy_obj_to_dict(choice))
-        db.commit()
-
-    if question.question_set_ids:
-        db_question.question_set_ids = question.question_set_ids
-        db.commit()
-
-    logger.debug("Question before the return: %s", sqlalchemy_obj_to_dict(db_question))
-
+    
     return db_question
 
-def read_questions_crud(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionModel]:
-    questions = db.query(QuestionModel).offset(skip).limit(limit).all()
-    questions = randomize_questions(questions)  # Randomize the order of questions
-    for question in questions:
-        question.answer_choices = randomize_answer_choices(question.answer_choices)  # Randomize the order of answer choices
-    return questions
-
-def read_question_crud(db: Session, question_id: int) -> QuestionModel:
-    return db.query(QuestionModel).options(
+def read_question(db: Session, question_id: int) -> Optional[DetailedQuestionSchema]:
+    db_question = db.query(QuestionModel).options(
         joinedload(QuestionModel.subject),
         joinedload(QuestionModel.topic),
         joinedload(QuestionModel.subtopic),
-        joinedload(QuestionModel.tags),
-        joinedload(QuestionModel.answer_choices)
+        joinedload(QuestionModel.concept),
+        joinedload(QuestionModel.answer_choices),
+        joinedload(QuestionModel.question_tags),
+        joinedload(QuestionModel.question_sets)
     ).filter(QuestionModel.id == question_id).first()
 
-def update_question_crud(db: Session, question_id: int, question: QuestionUpdateSchema) -> QuestionModel:
+    if db_question:
+        return DetailedQuestionSchema(
+            id=db_question.id,
+            text=db_question.text,
+            difficulty=db_question.difficulty,
+            subject=db_question.subject.name,
+            topic=db_question.topic.name,
+            subtopic=db_question.subtopic.name,
+            concept=db_question.concept.name,
+            answer_choices=[ac for ac in db_question.answer_choices],
+            question_tags=[tag.tag for tag in db_question.question_tags],
+            question_sets=[qs.name for qs in db_question.question_sets]
+        )
+    return None
+
+def read_questions(db: Session, skip: int = 0, limit: int = 100) -> List[DetailedQuestionSchema]:
+    db_questions = db.query(QuestionModel).options(
+        joinedload(QuestionModel.subject),
+        joinedload(QuestionModel.topic),
+        joinedload(QuestionModel.subtopic),
+        joinedload(QuestionModel.concept),
+        joinedload(QuestionModel.answer_choices),
+        joinedload(QuestionModel.question_tag_ids),
+        joinedload(QuestionModel.question_set_ids)
+    ).offset(skip).limit(limit).all()
+
+    questions = [
+        DetailedQuestionSchema(
+            id=q.id,
+            text=q.text,
+            difficulty=q.difficulty,
+            subject=q.subject.name,
+            topic=q.topic.name,
+            subtopic=q.subtopic.name,
+            concept=q.concept.name,
+            answer_choices=randomize_answer_choices(q.answer_choices),
+            question_tags=[tag.tag for tag in q.question_tags],
+            question_sets=[qs.name for qs in q.question_sets]
+        ) for q in randomize_questions(db_questions)
+    ]
+    return questions
+
+def update_question(db: Session, question_id: int, question: QuestionUpdateSchema) -> Optional[QuestionModel]:
     db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
-    if not db_question:
-        return None
+    if db_question:
+        update_data = question.model_dump(exclude_unset=True)
+        
+        if 'answer_choice_ids' in update_data:
+            answer_choice_ids = update_data.pop('answer_choice_ids')
+            answer_choices = db.query(AnswerChoiceModel).filter(AnswerChoiceModel.id.in_(answer_choice_ids)).all()
+            db_question.answer_choices = answer_choices
 
-    update_data = question.model_dump(exclude_unset=True)
-    
-    if "answer_choices" in update_data:
-        answer_choices = update_data.pop("answer_choices")
-        update_answer_choices_bulk(db, question_id, answer_choices)
+        if 'question_tag_ids' in update_data:
+            tag_ids = update_data.pop('question_tag_ids')
+            tags = db.query(QuestionTagModel).filter(QuestionTagModel.id.in_(tag_ids)).all()
+            db_question.question_tag_ids = tags
 
-    if "tags" in update_data:
-        # Remove existing tags
-        db.query(QuestionToTagAssociation).filter_by(question_id=question_id).delete()
-        # Add new tags
-        for tag_id in update_data["tags"]:
-            add_tag_to_question(db, question_id, tag_id)
+        if 'question_set_ids' in update_data:
+            set_ids = update_data.pop('question_set_ids')
+            question_sets = db.query(QuestionSetModel).filter(QuestionSetModel.id.in_(set_ids)).all()
+            db_question.question_set_ids = question_sets
 
-    for field, value in update_data.items():
-        setattr(db_question, field, value)
+        for key, value in update_data.items():
+            setattr(db_question, key, value)
 
-    if question.question_set_ids is not None:
-        db_question.question_set_ids = question.question_set_ids
-
-    db.flush()
-    db.refresh(db_question)
+        db.commit()
+        db.refresh(db_question)
     return db_question
 
-def delete_question_crud(db: Session, question_id: int) -> bool:
+def delete_question(db: Session, question_id: int) -> bool:
     db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
-
     if db_question:
         db.delete(db_question)
         db.commit()
@@ -1908,9 +2278,9 @@ def delete_question_crud(db: Session, question_id: int) -> bool:
 
 ```
 
-## File: crud_role_permission_associations.py
+## File: crud_role_to_permission_associations.py
 ```py
-# filename: app/crud/crud_role_permission_associations.py
+# filename: app/crud/crud_role_to_permission_associations.py
 
 from sqlalchemy.orm import Session
 from app.models.associations import RoleToPermissionAssociation
@@ -1951,7 +2321,7 @@ from fastapi import HTTPException, status
 from app.models.roles import RoleModel
 from app.models.permissions import PermissionModel
 from app.schemas.roles import RoleCreateSchema, RoleUpdateSchema
-from app.crud.crud_role_permission_associations import add_permission_to_role, remove_permission_from_role, get_role_permissions
+from app.crud.crud_role_to_permission_associations import add_permission_to_role, remove_permission_from_role, get_role_permissions
 from app.services.logging_service import logger
 
 def create_role_crud(db: Session, role: RoleCreateSchema) -> RoleModel:
@@ -2019,30 +2389,36 @@ def delete_role_crud(db: Session, role_id: int) -> bool:
 ## File: crud_subjects.py
 ```py
 # filename: app/crud/crud_subjects.py
+
 from sqlalchemy.orm import Session
 from app.models.subjects import SubjectModel
-from app.schemas.subjects import SubjectCreateSchema
+from app.schemas.subjects import SubjectCreateSchema, SubjectUpdateSchema
 
-def create_subject_crud(db: Session, subject: SubjectCreateSchema) -> SubjectModel:
+def create_subject(db: Session, subject: SubjectCreateSchema) -> SubjectModel:
     db_subject = SubjectModel(**subject.model_dump())
     db.add(db_subject)
     db.commit()
     db.refresh(db_subject)
     return db_subject
 
-def read_subject_crud(db: Session, subject_id: int) -> SubjectModel:
+def read_subject(db: Session, subject_id: int) -> SubjectModel:
     return db.query(SubjectModel).filter(SubjectModel.id == subject_id).first()
 
-def update_subject_crud(db: Session, subject_id: int, subject: SubjectCreateSchema) -> SubjectModel:
-    db_subject = db.query(SubjectModel).filter(SubjectModel.id == subject_id).first()
+def read_subjects(db: Session, skip: int = 0, limit: int = 100) -> list[SubjectModel]:
+    return db.query(SubjectModel).offset(skip).limit(limit).all()
+
+def update_subject(db: Session, subject_id: int, subject: SubjectUpdateSchema) -> SubjectModel:
+    db_subject = read_subject(db, subject_id)
     if db_subject:
-        db_subject.name = subject.name
+        update_data = subject.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_subject, key, value)
         db.commit()
         db.refresh(db_subject)
     return db_subject
 
-def delete_subject_crud(db: Session, subject_id: int) -> bool:
-    db_subject = db.query(SubjectModel).filter(SubjectModel.id == subject_id).first()
+def delete_subject(db: Session, subject_id: int) -> bool:
+    db_subject = read_subject(db, subject_id)
     if db_subject:
         db.delete(db_subject)
         db.commit()
@@ -2053,24 +2429,27 @@ def delete_subject_crud(db: Session, subject_id: int) -> bool:
 
 ## File: crud_subtopics.py
 ```py
-# crud/crud_subtopics.py
+# filename: app/crud/crud_subtopics.py
 
 from sqlalchemy.orm import Session
 from app.models.subtopics import SubtopicModel
-from app.schemas.subtopics import SubtopicCreateSchema
+from app.schemas.subtopics import SubtopicCreateSchema, SubtopicUpdateSchema
 
-def create_subtopic_crud(db: Session, subtopic: SubtopicCreateSchema) -> SubtopicModel:
+def create_subtopic(db: Session, subtopic: SubtopicCreateSchema) -> SubtopicModel:
     db_subtopic = SubtopicModel(**subtopic.model_dump())
     db.add(db_subtopic)
     db.commit()
     db.refresh(db_subtopic)
     return db_subtopic
 
-def read_subtopic_crud(db: Session, subtopic_id: int) -> SubtopicModel:
+def read_subtopic(db: Session, subtopic_id: int) -> SubtopicModel:
     return db.query(SubtopicModel).filter(SubtopicModel.id == subtopic_id).first()
 
-def update_subtopic_crud(db: Session, subtopic_id: int, subtopic: SubtopicCreateSchema) -> SubtopicModel:
-    db_subtopic = read_subtopic_crud(db, subtopic_id)
+def read_subtopics(db: Session, skip: int = 0, limit: int = 100) -> list[SubtopicModel]:
+    return db.query(SubtopicModel).offset(skip).limit(limit).all()
+
+def update_subtopic(db: Session, subtopic_id: int, subtopic: SubtopicUpdateSchema) -> SubtopicModel:
+    db_subtopic = read_subtopic(db, subtopic_id)
     if db_subtopic:
         update_data = subtopic.model_dump(exclude_unset=True)
         for key, value in update_data.items():
@@ -2079,11 +2458,13 @@ def update_subtopic_crud(db: Session, subtopic_id: int, subtopic: SubtopicCreate
         db.refresh(db_subtopic)
     return db_subtopic
 
-def delete_subtopic_crud(db: Session, subtopic_id: int) -> None:
-    db_subtopic = read_subtopic_crud(db, subtopic_id)
+def delete_subtopic(db: Session, subtopic_id: int) -> bool:
+    db_subtopic = read_subtopic(db, subtopic_id)
     if db_subtopic:
         db.delete(db_subtopic)
         db.commit()
+        return True
+    return False
 
 ```
 
@@ -2093,29 +2474,33 @@ def delete_subtopic_crud(db: Session, subtopic_id: int) -> None:
 
 from sqlalchemy.orm import Session
 from app.models.topics import TopicModel
-from app.schemas.topics import TopicCreateSchema
+from app.schemas.topics import TopicCreateSchema, TopicUpdateSchema
 
-def create_topic_crud(db: Session, topic: TopicCreateSchema) -> TopicModel:
+def create_topic(db: Session, topic: TopicCreateSchema) -> TopicModel:
     db_topic = TopicModel(**topic.model_dump())
     db.add(db_topic)
     db.commit()
     db.refresh(db_topic)
     return db_topic
 
-def read_topic_crud(db: Session, topic_id: int) -> TopicModel:
+def read_topic(db: Session, topic_id: int) -> TopicModel:
     return db.query(TopicModel).filter(TopicModel.id == topic_id).first()
 
-def update_topic_crud(db: Session, topic_id: int, topic: TopicCreateSchema) -> TopicModel:
-    db_topic = db.query(TopicModel).filter(TopicModel.id == topic_id).first()
+def read_topics(db: Session, skip: int = 0, limit: int = 100) -> list[TopicModel]:
+    return db.query(TopicModel).offset(skip).limit(limit).all()
+
+def update_topic(db: Session, topic_id: int, topic: TopicUpdateSchema) -> TopicModel:
+    db_topic = read_topic(db, topic_id)
     if db_topic:
-        db_topic.name = topic.name
-        db_topic.subject_id = topic.subject_id
+        update_data = topic.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_topic, key, value)
         db.commit()
         db.refresh(db_topic)
     return db_topic
 
-def delete_topic_crud(db: Session, topic_id: int) -> bool:
-    db_topic = db.query(TopicModel).filter(TopicModel.id == topic_id).first()
+def delete_topic(db: Session, topic_id: int) -> bool:
+    db_topic = read_topic(db, topic_id)
     if db_topic:
         db.delete(db_topic)
         db.commit()
@@ -2132,19 +2517,19 @@ from sqlalchemy.orm import Session
 from app.models.users import UserModel
 from app.models.groups import GroupModel
 from app.models.roles import RoleModel
+from app.models.question_sets import QuestionSetModel
 from app.schemas.user import UserCreateSchema, UserUpdateSchema
 from app.core.security import get_password_hash
 from app.services.logging_service import logger
 
 def create_user_crud(db: Session, user: UserCreateSchema) -> UserModel:
-    hashed_password = get_password_hash(user.password)
     default_role = db.query(RoleModel).filter(RoleModel.default == True).first()
     logger.debug("Default role: %s", default_role)
     user_role = user.role if user.role else default_role.name
     logger.debug("User role: %s", user_role)
     db_user = UserModel(
         username=user.username,
-        hashed_password=hashed_password,
+        hashed_password=user.password,  # This is already hashed, don't hash it again
         email=user.email,
         role=user_role
     )
@@ -2172,13 +2557,30 @@ def update_user_crud(db: Session, user_id: int, updated_user: UserUpdateSchema) 
     db.refresh(user)
     return user
 
-def delete_user_crud(db: Session, user_id: int) -> UserModel:
+def delete_user(db: Session, user_id: int):
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
-    if user:
-        db.delete(user)
-        db.commit()
-        return user
-    return None
+    if not user:
+        return None
+    
+    # Check for public question sets
+    public_sets = db.query(QuestionSetModel).filter(
+        QuestionSetModel.creator_id == user_id,
+        QuestionSetModel.is_public == True
+    ).first()
+    if public_sets:
+        raise ValueError("Cannot delete user with public question sets")
+    
+    # Check for groups with active members
+    active_groups = db.query(GroupModel).filter(
+        GroupModel.creator_id == user_id,
+        GroupModel.users.any()
+    ).first()
+    if active_groups:
+        raise ValueError("Cannot delete user who created groups with active members")
+    
+    db.delete(user)
+    db.commit()
+    return user
 
 ```
 
@@ -2289,9 +2691,9 @@ def delete_user_response_crud(db: Session, user_response_id: int) -> None:
 
 ```
 
-## File: base_class.py
+## File: base.py
 ```py
-# filename: app/db/base_class.py
+# filename: app/db/base.py
 
 from sqlalchemy.orm import declarative_base
 
@@ -2306,7 +2708,7 @@ Base = declarative_base()
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.db.base_class import Base
+from app.db.base import Base
 from app.core.config import settings_core
 from app.models.permissions import PermissionModel
 from app.models.roles import RoleModel
@@ -2363,6 +2765,81 @@ def get_db():
 
 ```
 
+## File: answer_choices.py
+```py
+# filename: /code/quiz-app/quiz-app-backend/app/api/endpoints/answer_choices.py
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List
+
+from app.db.session import get_db
+from app.schemas.answer_choices import AnswerChoiceSchema, AnswerChoiceCreateSchema, AnswerChoiceUpdateSchema
+from app.crud.crud_answer_choices import (
+    create_answer_choice_crud,
+    read_answer_choice_crud,
+    read_answer_choices_crud,
+    update_answer_choice_crud,
+    delete_answer_choice_crud
+)
+from app.services.user_service import get_current_user
+from app.models.users import UserModel
+
+router = APIRouter()
+
+@router.post("/answer-choices/", response_model=AnswerChoiceSchema, status_code=status.HTTP_201_CREATED)
+def create_answer_choice(
+    answer_choice: AnswerChoiceCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    return create_answer_choice_crud(db=db, answer_choice=answer_choice)
+
+@router.get("/answer-choices/", response_model=List[AnswerChoiceSchema])
+def get_answer_choices(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    return read_answer_choices_crud(db, skip=skip, limit=limit)
+
+@router.get("/answer-choices/{answer_choice_id}", response_model=AnswerChoiceSchema)
+def get_answer_choice(
+    answer_choice_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_answer_choice = read_answer_choice_crud(db, answer_choice_id=answer_choice_id)
+    if db_answer_choice is None:
+        raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
+    return db_answer_choice
+
+@router.put("/answer-choices/{answer_choice_id}", response_model=AnswerChoiceSchema)
+def update_answer_choice(
+    answer_choice_id: int,
+    answer_choice: AnswerChoiceUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_answer_choice = update_answer_choice_crud(db, answer_choice_id, answer_choice)
+    if db_answer_choice is None:
+        raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
+    return db_answer_choice
+
+@router.delete("/answer-choices/{answer_choice_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_answer_choice(
+    answer_choice_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    success = delete_answer_choice_crud(db, answer_choice_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
+    return None
+
+```
+
 ## File: authentication.py
 ```py
 # filename: app/api/endpoints/authentication.py
@@ -2377,6 +2854,7 @@ from app.db.session import get_db
 from app.models.authentication import RevokedTokenModel
 from app.schemas.authentication import TokenSchema
 from app.services.authentication_service import authenticate_user
+from app.services.logging_service import logger
 
 router = APIRouter()
 
@@ -2389,10 +2867,13 @@ async def login_endpoint(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
+    logger.debug(f"User {form_data.username} is trying to log in")
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
+        logger.error(f"User {form_data.username} failed to log in")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_active:
+        logger.error(f"User {form_data.username} is not active")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -2403,6 +2884,15 @@ async def login_endpoint(
     )
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires)
+    if access_token:
+        logger.debug(f"User {form_data.username} logged in successfully")
+    else:
+        logger.error(f"User {form_data.username} failed to log in")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
@@ -2425,6 +2915,216 @@ async def logout_endpoint(token: str = Depends(oauth2_scheme), db: Session = Dep
             ) from e
     else:
         return {"message": "Token already revoked"}
+
+```
+
+## File: concepts.py
+```py
+# filename: app/api/endpoints/concepts.py
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+
+from app.db.session import get_db
+from app.schemas.concepts import ConceptSchema, ConceptCreateSchema, ConceptUpdateSchema
+from app.crud.crud_concepts import create_concept, read_concept, read_concepts, update_concept, delete_concept
+from app.services.user_service import get_current_user
+from app.models.users import UserModel
+
+router = APIRouter()
+
+@router.post("/concepts/", response_model=ConceptSchema, status_code=201)
+def post_concept(
+    concept: ConceptCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    return create_concept(db=db, concept=concept)
+
+@router.get("/concepts/", response_model=List[ConceptSchema])
+def get_concepts(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    concepts = read_concepts(db, skip=skip, limit=limit)
+    return concepts
+
+@router.get("/concepts/{concept_id}", response_model=ConceptSchema)
+def get_concept(
+    concept_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_concept = read_concept(db, concept_id=concept_id)
+    if db_concept is None:
+        raise HTTPException(status_code=404, detail="Concept not found")
+    return db_concept
+
+@router.put("/concepts/{concept_id}", response_model=ConceptSchema)
+def put_concept(
+    concept_id: int,
+    concept: ConceptUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_concept = update_concept(db, concept_id, concept)
+    if db_concept is None:
+        raise HTTPException(status_code=404, detail="Concept not found")
+    return db_concept
+
+@router.delete("/concepts/{concept_id}", status_code=204)
+def delete_concept_endpoint(
+    concept_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    success = delete_concept(db, concept_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Concept not found")
+    return success
+
+```
+
+## File: disciplines.py
+```py
+# filename: app/api/endpoints/disciplines.py
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+
+from app.db.session import get_db
+from app.schemas.disciplines import DisciplineSchema, DisciplineCreateSchema, DisciplineUpdateSchema
+from app.crud.crud_disciplines import create_discipline, read_discipline, read_disciplines, update_discipline, delete_discipline
+from app.services.user_service import get_current_user
+from app.models.users import UserModel
+
+router = APIRouter()
+
+@router.post("/disciplines/", response_model=DisciplineSchema, status_code=201)
+def post_discipline(
+    discipline: DisciplineCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    return create_discipline(db=db, discipline=discipline)
+
+@router.get("/disciplines/", response_model=List[DisciplineSchema])
+def get_disciplines(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    disciplines = read_disciplines(db, skip=skip, limit=limit)
+    return disciplines
+
+@router.get("/disciplines/{discipline_id}", response_model=DisciplineSchema)
+def get_discipline(
+    discipline_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_discipline = read_discipline(db, discipline_id=discipline_id)
+    if db_discipline is None:
+        raise HTTPException(status_code=404, detail="Discipline not found")
+    return db_discipline
+
+@router.put("/disciplines/{discipline_id}", response_model=DisciplineSchema)
+def put_discipline(
+    discipline_id: int,
+    discipline: DisciplineUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_discipline = update_discipline(db, discipline_id, discipline)
+    if db_discipline is None:
+        raise HTTPException(status_code=404, detail="Discipline not found")
+    return db_discipline
+
+@router.delete("/disciplines/{discipline_id}", status_code=204)
+def delete_discipline_endpoint(
+    discipline_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    success = delete_discipline(db, discipline_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Discipline not found")
+    return success
+
+```
+
+## File: domains.py
+```py
+# filename: app/api/endpoints/domains.py
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+
+from app.db.session import get_db
+from app.schemas.domains import DomainSchema, DomainCreateSchema, DomainUpdateSchema
+from app.crud.crud_domains import create_domain, read_domain, read_domains, update_domain, delete_domain
+from app.services.user_service import get_current_user
+from app.models.users import UserModel
+
+router = APIRouter()
+
+@router.post("/domains/", response_model=DomainSchema, status_code=201)
+def post_domain(
+    domain: DomainCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    return create_domain(db=db, domain=domain)
+
+@router.get("/domains/", response_model=List[DomainSchema])
+def get_domains(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    domains = read_domains(db, skip=skip, limit=limit)
+    return domains
+
+@router.get("/domains/{domain_id}", response_model=DomainSchema)
+def get_domain(
+    domain_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_domain = read_domain(db, domain_id=domain_id)
+    if db_domain is None:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    return db_domain
+
+@router.put("/domains/{domain_id}", response_model=DomainSchema)
+def put_domain(
+    domain_id: int,
+    domain: DomainUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_domain = update_domain(db, domain_id, domain)
+    if db_domain is None:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    return db_domain
+
+@router.delete("/domains/{domain_id}", status_code=204)
+def delete_domain_endpoint(
+    domain_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    success = delete_domain(db, domain_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    return success
 
 ```
 
@@ -2488,7 +3188,7 @@ async def forbid_extra_params(request: Request):
         If any extra parameters are found in the request.
     """
     allowed_params = {'subject', 'topic', 'subtopic',
-                      'difficulty', 'tags', 'skip', 'limit'}
+                      'difficulty', 'question_tags', 'skip', 'limit'}
     actual_params = set(request.query_params.keys())
     extra_params = actual_params - allowed_params
     if extra_params:
@@ -2504,7 +3204,7 @@ async def filter_questions_endpoint(
     topic: Optional[str] = Query(None),
     subtopic: Optional[str] = Query(None),
     difficulty: Optional[str] = Query(None),
-    tags: Optional[List[str]] = Query(None),
+    question_tags: Optional[List[str]] = Query(None),
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
@@ -2526,7 +3226,7 @@ async def filter_questions_endpoint(
         The subtopic to filter the questions by.
     difficulty: Optional[str]
         The difficulty level to filter the questions by.
-    tags: Optional[List[str]]
+    question_tags: Optional[List[str]]
         The tags to filter the questions by.
     db: Session
         The database session.
@@ -2548,7 +3248,7 @@ async def filter_questions_endpoint(
             topic=topic,
             subtopic=subtopic,
             difficulty=difficulty,
-            tags=tags
+            question_tags=question_tags
         )
         questions = filter_questions_crud(
             db=db,
@@ -2667,121 +3367,43 @@ def delete_group_endpoint(
 ```py
 # filename: app/api/endpoints/leaderboard.py
 
-# filename: app/api/endpoints/leaderboard.py
-
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models.time_period import TimePeriodModel
 from app.models.users import UserModel
-from app.models.leaderboard import LeaderboardModel
-from app.schemas.leaderboard import LeaderboardSchema
-from app.services.scoring_service import calculate_leaderboard_scores
+from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
+from app.services.scoring_service import calculate_leaderboard_scores, time_period_to_schema
 from app.services.user_service import get_current_user
+from app.models.time_period import TimePeriodModel
 
 router = APIRouter()
 
 @router.get("/leaderboard/", response_model=List[LeaderboardSchema])
 def get_leaderboard(
-    time_period: TimePeriodModel,
+    time_period: int = Query(..., description="Time period ID (1: daily, 7: weekly, 30: monthly, 365: yearly)"),
     group_id: int = None,
     db: Session = Depends(get_db),
     limit: int = 10,
     current_user: UserModel = Depends(get_current_user)
 ):
-    leaderboard_scores = calculate_leaderboard_scores(db, time_period, group_id)
+    time_period_model = db.query(TimePeriodModel).filter(TimePeriodModel.id == time_period).first()
+    if not time_period_model:
+        raise ValueError("Invalid time period")
+
+    leaderboard_scores = calculate_leaderboard_scores(db, time_period_model, group_id)
     leaderboard_data = [
-        {
-            "id": index + 1,
-            "user_id": user_id,
-            "score": score,
-            "time_period": time_period,
-            "group_id": group_id,
-            "db": db
-        }
+        LeaderboardSchema(
+            id=index + 1,
+            user_id=user_id,
+            score=score,
+            time_period=time_period_to_schema(time_period_model),
+            group_id=group_id
+        )
         for index, (user_id, score) in enumerate(leaderboard_scores.items())
     ]
-    leaderboard_schemas = [LeaderboardSchema(**data) for data in leaderboard_data]
-    leaderboard_schemas.sort(key=lambda x: x.score, reverse=True)
-    return leaderboard_schemas[:limit]
-
-```
-
-## File: question.py
-```py
-# filename: app/api/endpoints/question.py
-
-from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy.orm import Session
-from app.crud.crud_questions import (
-    create_question_crud,
-    read_question_crud,
-    update_question_crud,
-    delete_question_crud
-)
-from app.db.session import get_db
-from app.schemas.answer_choices import AnswerChoiceSchema
-from app.schemas.questions import (
-    QuestionCreateSchema,
-    QuestionUpdateSchema,
-    QuestionSchema,
-    QuestionTagSchema
-)
-from app.services.user_service import get_current_user
-from app.models.users import UserModel
-
-
-router = APIRouter()
-
-@router.post("/question", response_model=QuestionSchema, status_code=201)
-def create_question_endpoint(
-    question_data: dict,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
-):
-    question_data['db'] = db
-    question = QuestionCreateSchema(**question_data)
-    db_question = create_question_crud(db, question)
-    return db_question
-
-@router.get("/question/question_id}", response_model=QuestionSchema)
-# pylint: disable=unused-argument
-def get_question_endpoint(
-    question_id: int,
-    question: QuestionUpdateSchema,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
-):
-    question = read_question_crud(db, question_id)
-    return question
-
-@router.put("/question/{question_id}", response_model=QuestionSchema)
-def update_question_endpoint(
-    question_id: int,
-    question_data: dict,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
-):
-    question_data['db'] = db
-    question = QuestionUpdateSchema(**question_data)
-    db_question = update_question_crud(db, question_id=question_id, question=question)
-    if db_question is None:
-        raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
-    return db_question
-
-@router.delete("/question/{question_id}", status_code=204)
-# pylint: disable=unused-argument
-def delete_question_endpoint(
-    question_id: int,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
-):
-    deleted = delete_question_crud(db, question_id=question_id)
-    if not deleted:
-        raise HTTPException(
-            status_code=404, detail=f"Question with ID {question_id} not found")
-    return Response(status_code=204)
+    leaderboard_data.sort(key=lambda x: x.score, reverse=True)
+    return leaderboard_data[:limit]
 
 ```
 
@@ -2803,7 +3425,7 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 from pydantic import ValidationError
-from app.crud.crud_questions import create_question_crud
+from app.crud.crud_questions import create_question
 from app.crud.crud_question_sets import (
     read_question_sets_crud,
     read_question_set_crud,
@@ -2851,7 +3473,7 @@ async def upload_question_set_endpoint(
         for question in question_data:
             question['question_set_id'] = question_set_created.id
             question['db'] = db
-            create_question_crud(db, QuestionCreateSchema(**question))
+            create_question(db, QuestionCreateSchema(**question))
 
         return {"message": "Question set uploaded successfully"}
 
@@ -2993,31 +3615,82 @@ def delete_question_set_endpoint(
 
 ## File: questions.py
 ```py
-# filename: app/api/endpoints/questions.py
+# filename: /code/quiz-app/quiz-app-backend/app/api/endpoints/questions.py
 
-from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.crud.crud_questions import read_questions_crud
-from app.db.session import get_db
-from app.schemas.questions import QuestionSchema
-from app.services.user_service import get_current_user
-from app.models.users import UserModel
+from typing import List
 
+from app.db.session import get_db
+from app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, QuestionWithAnswersCreateSchema, QuestionSchema, DetailedQuestionSchema
+from app.crud.crud_questions import create_question, read_question, read_questions, update_question, delete_question, create_question_with_answers
+from app.services.user_service import get_current_user
+from app.services.logging_service import logger
+from app.models.users import UserModel
 
 router = APIRouter()
 
-@router.get("/questions/", response_model=List[QuestionSchema])
-def get_questions_endpoint(
+@router.post("/questions/", response_model=QuestionSchema, status_code=status.HTTP_201_CREATED)
+def create_question_endpoint(
+    question: QuestionCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    created_question = create_question(db=db, question=question)
+    return QuestionSchema.model_validate(created_question)
+
+@router.post("/questions/with-answers/", response_model=DetailedQuestionSchema, status_code=status.HTTP_201_CREATED)
+def create_question_with_answers_endpoint(
+    question: QuestionWithAnswersCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    return create_question_with_answers(db=db, question=question)
+
+@router.get("/questions/", response_model=List[DetailedQuestionSchema])
+def get_questions(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    questions = read_questions_crud(db, skip=skip, limit=limit)
-    if not questions:
-        return []
+    questions = read_questions(db, skip=skip, limit=limit)
     return questions
+
+@router.get("/questions/{question_id}", response_model=DetailedQuestionSchema)
+def get_question(
+    question_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    logger.debug("Reading question with ID: %s", question_id)
+    db_question = read_question(db, question_id=question_id)
+    if db_question is None:
+        raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+    return db_question
+
+@router.put("/questions/{question_id}", response_model=DetailedQuestionSchema)
+def update_question_endpoint(
+    question_id: int,
+    question: QuestionUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_question = update_question(db, question_id, question)
+    if db_question is None:
+        raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+    return db_question
+
+@router.delete("/questions/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_question_endpoint(
+    question_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    success = delete_question(db, question_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+    return None
 
 ```
 
@@ -3039,41 +3712,35 @@ from app.crud.crud_user import create_user_crud
 from app.db.session import get_db
 from app.schemas.user import UserCreateSchema
 from app.models.roles import RoleModel
+from app.services.logging_service import logger
 
 router = APIRouter()
 
 @router.post("/register", status_code=201)
 def register_user(user: UserCreateSchema, db: Session = Depends(get_db)):
-    """
-    Endpoint to register a new user.
-    
-    Args:
-        user: A UserCreate schema object containing the user's registration information.
-        db: A database session dependency injected by FastAPI.
-        
-    Raises:
-        HTTPException: If the username is already registered.
-        
-    Returns:
-        The newly created user object.
-    """
+    logger.info(f"Registering user: {user.username}")
     db_user = get_user_by_username(db, username=user.username)
     if db_user:
+        logger.error(f"Username already registered: {user.username}")
         raise HTTPException(status_code=422, detail="Username already registered")
     db_email = get_user_by_email(db, email=user.email)
     if db_email:
+        logger.error(f"Email already registered: {user.email}")
         raise HTTPException(status_code=422, detail="Email already registered")
     hashed_password = get_password_hash(user.password)
+    logger.debug(f"Hashed password for user {user.username}: {hashed_password}")
     if not user.role:
         default_role = db.query(RoleModel).filter(RoleModel.default == True).first()
         user.role = default_role.name
+        logger.debug(f"Default role assigned: {user.role}")
     user_create = UserCreateSchema(
         username=user.username,
-        password=hashed_password,
+        password=hashed_password,  # Pass the hashed password here
         email=user.email,
         role=user.role
     )
     created_user = create_user_crud(db=db, user=user_create)
+    logger.debug(f"User registered: {user.username}")
     return created_user
 
 ```
@@ -3081,259 +3748,210 @@ def register_user(user: UserCreateSchema, db: Session = Depends(get_db)):
 ## File: subjects.py
 ```py
 # filename: app/api/endpoints/subjects.py
-"""
-This module defines the API endpoints for managing subjects in the application.
-
-It includes endpoints to create and read subjects.
-It also includes a service to get the database session and CRUD operations to manage subjects.
-
-Imports:
-----------
-fastapi: For creating API routes and handling HTTP exceptions.
-sqlalchemy.orm: For handling database sessions.
-app.db.session: For getting the database session.
-app.schemas.subjects: For validating and deserializing subject data.
-app.crud: For performing CRUD operations on the subjects.
-
-Variables:
-----------
-router: The API router instance.
-"""
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
+
 from app.db.session import get_db
-from app.schemas.subjects import SubjectSchema, SubjectCreateSchema
-from app.crud.crud_subjects import (
-    create_subject_crud,
-    read_subject_crud,
-    update_subject_crud,
-    delete_subject_crud
-)
+from app.schemas.subjects import SubjectSchema, SubjectCreateSchema, SubjectUpdateSchema
+from app.crud.crud_subjects import create_subject, read_subject, read_subjects, update_subject, delete_subject
 from app.services.user_service import get_current_user
 from app.models.users import UserModel
 
 router = APIRouter()
 
 @router.post("/subjects/", response_model=SubjectSchema, status_code=201)
-# pylint: disable=unused-argument
-def create_subject_endpoint(
+def post_subject(
     subject: SubjectCreateSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """
-    Create a new subject.
+    return create_subject(db=db, subject=subject)
 
-    Args:
-        subject (SubjectCreateSchema): The subject data to be created.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
-
-    Returns:
-        SubjectSchema: The created subject.
-    """
-    return create_subject_crud(db=db, subject=subject)
+@router.get("/subjects/", response_model=List[SubjectSchema])
+def get_subjects(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    subjects = read_subjects(db, skip=skip, limit=limit)
+    return subjects
 
 @router.get("/subjects/{subject_id}", response_model=SubjectSchema)
-# pylint: disable=unused-argument
-def read_subject_endpoint(
+def get_subject(
     subject_id: int,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """
-    Read a subject by ID.
-
-    Args:
-        subject_id (int): The ID of the subject to be read.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
-
-    Returns:
-        SubjectSchema: The read subject.
-
-    Raises:
-        HTTPException: If the subject is not found.
-    """
-    subject = read_subject_crud(db, subject_id)
-    if not subject:
+    db_subject = read_subject(db, subject_id=subject_id)
+    if db_subject is None:
         raise HTTPException(status_code=404, detail="Subject not found")
-    return subject
+    return db_subject
 
 @router.put("/subjects/{subject_id}", response_model=SubjectSchema)
-# pylint: disable=unused-argument
-def update_subject_endpoint(
+def put_subject(
     subject_id: int,
-    subject: SubjectCreateSchema,
+    subject: SubjectUpdateSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """
-    Update a subject by ID.
-
-    Args:
-        subject_id (int): The ID of the subject to be updated.
-        subject (SubjectCreateSchema): The updated subject data.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
-
-    Returns:
-        SubjectSchema: The updated subject.
-
-    Raises:
-        HTTPException: If the subject is not found.
-    """
-    updated_subject = update_subject_crud(db, subject_id, subject)
-    if not updated_subject:
+    db_subject = update_subject(db, subject_id, subject)
+    if db_subject is None:
         raise HTTPException(status_code=404, detail="Subject not found")
-    return updated_subject
+    return db_subject
 
 @router.delete("/subjects/{subject_id}", status_code=204)
-# pylint: disable=unused-argument
 def delete_subject_endpoint(
     subject_id: int,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """
-    Delete a subject by ID.
-
-    Args:
-        subject_id (int): The ID of the subject to be deleted.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
-
-    Raises:
-        HTTPException: If the subject is not found.
-    """
-    deleted = delete_subject_crud(db, subject_id)
-    if not deleted:
+    success = delete_subject(db, subject_id)
+    if not success:
         raise HTTPException(status_code=404, detail="Subject not found")
-    return None
+    return success
+
+```
+
+## File: subtopics.py
+```py
+# filename: app/api/endpoints/subtopics.py
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+
+from app.db.session import get_db
+from app.schemas.subtopics import SubtopicSchema, SubtopicCreateSchema, SubtopicUpdateSchema
+from app.crud.crud_subtopics import create_subtopic, read_subtopic, read_subtopics, update_subtopic, delete_subtopic
+from app.services.user_service import get_current_user
+from app.models.users import UserModel
+
+router = APIRouter()
+
+@router.post("/subtopics/", response_model=SubtopicSchema, status_code=201)
+def post_subtopic(
+    subtopic: SubtopicCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    return create_subtopic(db=db, subtopic=subtopic)
+
+@router.get("/subtopics/", response_model=List[SubtopicSchema])
+def get_subtopics(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    subtopics = read_subtopics(db, skip=skip, limit=limit)
+    return subtopics
+
+@router.get("/subtopics/{subtopic_id}", response_model=SubtopicSchema)
+def get_subtopic(
+    subtopic_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_subtopic = read_subtopic(db, subtopic_id=subtopic_id)
+    if db_subtopic is None:
+        raise HTTPException(status_code=404, detail="Subtopic not found")
+    return db_subtopic
+
+@router.put("/subtopics/{subtopic_id}", response_model=SubtopicSchema)
+def put_subtopic(
+    subtopic_id: int,
+    subtopic: SubtopicUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    db_subtopic = update_subtopic(db, subtopic_id, subtopic)
+    if db_subtopic is None:
+        raise HTTPException(status_code=404, detail="Subtopic not found")
+    return db_subtopic
+
+@router.delete("/subtopics/{subtopic_id}", status_code=204)
+def delete_subtopic_endpoint(
+    subtopic_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    success = delete_subtopic(db, subtopic_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Subtopic not found")
+    return success
 
 ```
 
 ## File: topics.py
 ```py
 # filename: app/api/endpoints/topics.py
-"""
-This module defines the API endpoints for managing topics in the application.
-
-It includes endpoints to create and read topics.
-It also includes a service to get the database session and CRUD operations to manage topics.
-
-Imports:
-----------
-fastapi: For creating API routes and handling HTTP exceptions.
-sqlalchemy.orm: For handling database sessions.
-app.db: For getting the database session.
-app.schemas: For validating and deserializing topic data.
-app.crud: For performing CRUD operations on the topics.
-
-Variables:
-----------
-router: The API router instance.
-"""
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
+
 from app.db.session import get_db
-from app.schemas.topics import TopicSchema, TopicCreateSchema
-from app.crud.crud_topics import create_topic_crud, read_topic_crud, update_topic_crud, delete_topic_crud
+from app.schemas.topics import TopicSchema, TopicCreateSchema, TopicUpdateSchema
+from app.crud.crud_topics import create_topic, read_topic, read_topics, update_topic, delete_topic
 from app.services.user_service import get_current_user
 from app.models.users import UserModel
 
 router = APIRouter()
 
 @router.post("/topics/", response_model=TopicSchema, status_code=201)
-# pylint: disable=unused-argument
-def create_topic_endpoint(
+def post_topic(
     topic: TopicCreateSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """
-    Create a new topic.
+    return create_topic(db=db, topic=topic)
 
-    Args:
-        topic (TopicCreateSchema): The topic data to be created.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
-
-    Returns:
-        TopicSchema: The created topic.
-    """
-    return create_topic_crud(db=db, topic=topic)
+@router.get("/topics/", response_model=List[TopicSchema])
+def get_topics(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    topics = read_topics(db, skip=skip, limit=limit)
+    return topics
 
 @router.get("/topics/{topic_id}", response_model=TopicSchema)
-# pylint: disable=unused-argument
-def read_topic_endpoint(
+def get_topic(
     topic_id: int,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """
-    Read a topic by its ID.
-
-    Args:
-        topic_id (int): The ID of the topic to be read.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
-
-    Returns:
-        TopicSchema: The read topic.
-
-    Raises:
-        HTTPException: If the topic is not found.
-    """
-    topic = read_topic_crud(db, topic_id)
-    if not topic:
+    db_topic = read_topic(db, topic_id=topic_id)
+    if db_topic is None:
         raise HTTPException(status_code=404, detail="Topic not found")
-    return topic
+    return db_topic
 
 @router.put("/topics/{topic_id}", response_model=TopicSchema)
-# pylint: disable=unused-argument
-def update_topic_endpoint(
+def put_topic(
     topic_id: int,
-    topic: TopicCreateSchema,
+    topic: TopicUpdateSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """
-    Update a topic by its ID.
-
-    Args:
-        topic_id (int): The ID of the topic to be updated.
-        topic (TopicCreateSchema): The updated topic data.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
-
-    Returns:
-        TopicSchema: The updated topic.
-
-    Raises:
-        HTTPException: If the topic is not found.
-    """
-    updated_topic = update_topic_crud(db, topic_id, topic)
-    if not updated_topic:
+    db_topic = update_topic(db, topic_id, topic)
+    if db_topic is None:
         raise HTTPException(status_code=404, detail="Topic not found")
-    return updated_topic
+    return db_topic
 
 @router.delete("/topics/{topic_id}", status_code=204)
-# pylint: disable=unused-argument
 def delete_topic_endpoint(
     topic_id: int,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """
-    Delete a topic by its ID.
-
-    Args:
-        topic_id (int): The ID of the topic to be deleted.
-        db (Session, optional): The database session. Defaults to Depends(get_db).
-
-    Raises:
-        HTTPException: If the topic is not found.
-    """
-    deleted = delete_topic_crud(db, topic_id)
-    if not deleted:
+    success = delete_topic(db, topic_id)
+    if not success:
         raise HTTPException(status_code=404, detail="Topic not found")
-    return None
+    return success
 
 ```
 
@@ -3534,21 +4152,23 @@ def update_user_me(
 ```py
 # filename: app/models/answer_choices.py
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-
+from app.db.base import Base
 
 class AnswerChoiceModel(Base):
     __tablename__ = "answer_choices"
 
     id = Column(Integer, primary_key=True, index=True)
-    text = Column(String, index=True)
-    is_correct = Column(Boolean)
-    explanation = Column(Text)  # Add the explanation field
-    question_id = Column(Integer, ForeignKey('questions.id'))
+    text = Column(String(10000), nullable=False)
+    is_correct = Column(Boolean, nullable=False)
+    explanation = Column(String(10000))
 
-    question = relationship("QuestionModel", back_populates="answer_choices")
+    questions = relationship("QuestionModel", secondary="question_to_answer_association", back_populates="answer_choices")
+    user_responses = relationship("UserResponseModel", back_populates="answer_choice")
+
+    def __repr__(self):
+        return f"<AnswerChoiceModel(id={self.id}, text='{self.text[:50]}...', is_correct={self.is_correct})>"
 
 ```
 
@@ -3557,7 +4177,7 @@ class AnswerChoiceModel(Base):
 # filename: app/models/associations.py
 
 from sqlalchemy import Column, Integer, ForeignKey
-from app.db.base_class import Base
+from app.db.base import Base
 
 
 class UserToGroupAssociation(Base):
@@ -3566,11 +4186,20 @@ class UserToGroupAssociation(Base):
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
     group_id = Column(Integer, ForeignKey("groups.id"), primary_key=True)
 
+
+class QuestionToAnswerAssociation(Base):
+    __tablename__ = "question_to_answer_association"
+    
+    question_id = Column(Integer, ForeignKey('questions.id'), primary_key=True)
+    answer_choice_id = Column(Integer, ForeignKey('answer_choices.id'), primary_key=True)
+
+
 class QuestionToTagAssociation(Base):
     __tablename__ = "question_to_tag_association"
 
     question_id = Column(Integer, ForeignKey("questions.id"), primary_key=True)
-    tag_id = Column(Integer, ForeignKey("question_tags.id"), primary_key=True)
+    question_tag_id = Column(Integer, ForeignKey("question_tags.id"), primary_key=True)
+
 
 class QuestionSetToQuestionAssociation(Base):
     __tablename__ = "question_set_to_question_association"
@@ -3578,17 +4207,72 @@ class QuestionSetToQuestionAssociation(Base):
     question_id = Column(ForeignKey('questions.id'), primary_key=True)
     question_set_id = Column(ForeignKey('question_sets.id'), primary_key=True)
 
+
 class QuestionSetToGroupAssociation(Base):
     __tablename__ = "question_set_to_group_association"
 
     question_set_id = Column(ForeignKey('question_sets.id'), primary_key=True)
     group_id = Column(Integer, ForeignKey("groups.id"), primary_key=True)
 
+
 class RoleToPermissionAssociation(Base):
-    __tablename__ = "role_permission_association"
+    __tablename__ = "role_to_permission_association"
 
     role_id = Column(Integer, ForeignKey("roles.id"), primary_key=True)
     permission_id = Column(Integer, ForeignKey("permissions.id"), primary_key=True)
+
+
+class QuestionToSubjectAssociation(Base):
+    __tablename__ = 'question_to_subject_association'
+    question_id = Column(Integer, ForeignKey('questions.id'), primary_key=True)
+    subject_id = Column(Integer, ForeignKey('subjects.id'), primary_key=True)
+
+
+class QuestionToTopicAssociation(Base):
+    __tablename__ = 'question_to_topic_association'
+    question_id = Column(Integer, ForeignKey('questions.id'), primary_key=True)
+    topic_id = Column(Integer, ForeignKey('topics.id'), primary_key=True)
+
+
+class QuestionToSubtopicAssociation(Base):
+    __tablename__ = 'question_to_subtopic_association'
+    question_id = Column(Integer, ForeignKey('questions.id'), primary_key=True)
+    subtopic_id = Column(Integer, ForeignKey('subtopics.id'), primary_key=True)
+
+
+class QuestionToConceptAssociation(Base):
+    __tablename__ = 'question_to_concept_association'
+    question_id = Column(Integer, ForeignKey('questions.id'), primary_key=True)
+    concept_id = Column(Integer, ForeignKey('concepts.id'), primary_key=True)
+
+
+class DomainToDisciplineAssociation(Base):
+    __tablename__ = 'domain_to_discipline_association'
+    domain_id = Column(Integer, ForeignKey('domains.id'), primary_key=True)
+    discipline_id = Column(Integer, ForeignKey('disciplines.id'), primary_key=True)
+
+class DisciplineToSubjectAssociation(Base):
+    __tablename__ = 'discipline_to_subject_association'
+    discipline_id = Column(Integer, ForeignKey('disciplines.id'), primary_key=True)
+    subject_id = Column(Integer, ForeignKey('subjects.id'), primary_key=True)
+
+
+class SubjectToTopicAssociation(Base):
+    __tablename__ = 'subject_to_topic_association'
+    subject_id = Column(Integer, ForeignKey('subjects.id'), primary_key=True)
+    topic_id = Column(Integer, ForeignKey('topics.id'), primary_key=True)
+
+
+class TopicToSubtopicAssociation(Base):
+    __tablename__ = 'topic_to_subtopic_association'
+    topic_id = Column(Integer, ForeignKey('topics.id'), primary_key=True)
+    subtopic_id = Column(Integer, ForeignKey('subtopics.id'), primary_key=True)
+
+
+class SubtopicToConceptAssociation(Base):
+    __tablename__ = 'subtopic_to_concept_association'
+    subtopic_id = Column(Integer, ForeignKey('subtopics.id'), primary_key=True)
+    concept_id = Column(Integer, ForeignKey('concepts.id'), primary_key=True)
 
 ```
 
@@ -3596,17 +4280,86 @@ class RoleToPermissionAssociation(Base):
 ```py
 # filename: app/models/authentication.py
 
-from sqlalchemy import Column, Integer, String, DateTime, func
-from app.db.base_class import Base
-
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.sql import func
+from app.db.base import Base
 
 class RevokedTokenModel(Base):
     __tablename__ = "revoked_tokens"
 
     id = Column(Integer, primary_key=True, index=True)
-    token = Column(String, unique=True, index=True)
-    # pylint: disable=not-callable
-    revoked_at = Column(DateTime, server_default=func.now())
+    jti = Column(String(36), unique=True, nullable=False, index=True)  # JWT ID
+    token = Column(String(500), unique=True, nullable=False)
+    revoked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+
+    def __repr__(self):
+        return f"<RevokedTokenModel(id={self.id}, jti='{self.jti}', revoked_at='{self.revoked_at}')>"
+
+```
+
+## File: concepts.py
+```py
+# filename: app/models/concepts.py
+
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
+from app.db.base import Base
+
+class ConceptModel(Base):
+    __tablename__ = "concepts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, index=True)
+
+    subtopics = relationship("SubtopicModel", secondary="subtopic_to_concept_association", back_populates="concepts")
+    questions = relationship("QuestionModel", secondary="question_to_concept_association", back_populates="concepts")
+
+    def __repr__(self):
+        return f"<Concept(id={self.id}, name='{self.name}')>"
+
+```
+
+## File: disciplines.py
+```py
+# filename: app/models/disciplines.py
+
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
+from app.db.base import Base
+
+class DisciplineModel(Base):
+    __tablename__ = "disciplines"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+
+    domains = relationship("DomainModel", secondary="domain_to_discipline_association", back_populates="disciplines")
+    subjects = relationship("SubjectModel", secondary="discipline_to_subject_association", back_populates="disciplines")
+
+    def __repr__(self):
+        return f"<Discipline(id={self.id}, name='{self.name}', domain_id={self.domain_id})>"
+
+```
+
+## File: domains.py
+```py
+# filename: app/models/domains.py
+
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
+from app.db.base import Base
+
+class DomainModel(Base):
+    __tablename__ = "domains"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+
+    disciplines = relationship("DisciplineModel", secondary="domain_to_discipline_association", back_populates="domains")
+
+    def __repr__(self):
+        return f"<Domain(id={self.id}, name='{self.name}')>"
 
 ```
 
@@ -3614,33 +4367,27 @@ class RevokedTokenModel(Base):
 ```py
 # filename: app/models/groups.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-from app.models.associations import UserToGroupAssociation, QuestionSetToGroupAssociation
-
+from app.db.base import Base
 
 class GroupModel(Base):
     __tablename__ = "groups"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
-    description = Column(String)
-    creator_id = Column(Integer, ForeignKey("users.id"))
+    name = Column(String(100), unique=True, index=True, nullable=False)
+    description = Column(String(500))
+    creator_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
 
-# Define relationships after all classes have been defined
-GroupModel.users = relationship(
-    "UserModel",
-    secondary=UserToGroupAssociation.__tablename__,
-    back_populates="groups"
-)
-GroupModel.creator = relationship("UserModel", back_populates="created_groups")
-GroupModel.leaderboards = relationship("LeaderboardModel", back_populates="group")
-GroupModel.question_sets = relationship(
-    "QuestionSetModel",
-    secondary=QuestionSetToGroupAssociation.__tablename__,
-    back_populates="groups"
-)
+    # Relationships
+    users = relationship("UserModel", secondary="user_to_group_association", back_populates="groups")
+    creator = relationship("UserModel", back_populates="created_groups", foreign_keys=[creator_id])
+    leaderboards = relationship("LeaderboardModel", back_populates="group", cascade="all, delete-orphan")
+    question_sets = relationship("QuestionSetModel", secondary="question_set_to_group_association", back_populates="groups")
+
+    def __repr__(self):
+        return f"<GroupModel(id={self.id}, name='{self.name}', creator_id={self.creator_id}, is_active={self.is_active})>"
 
 ```
 
@@ -3648,45 +4395,51 @@ GroupModel.question_sets = relationship(
 ```py
 # filename: app/models/leaderboard.py
 
-from sqlalchemy import Column, Integer, ForeignKey, Enum
+from sqlalchemy import Column, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-from app.models.time_period import TimePeriodModel
-
+from sqlalchemy.sql import func
+from app.db.base import Base
 
 class LeaderboardModel(Base):
     __tablename__ = "leaderboards"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    score = Column(Integer)
-    time_period = Column(Enum(TimePeriodModel))
-    group_id = Column(Integer, ForeignKey("groups.id"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    score = Column(Integer, nullable=False)
+    time_period_id = Column(Integer, ForeignKey("time_periods.id"), nullable=False, index=True)
+    group_id = Column(Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-# Define relationships after all classes have been defined
-LeaderboardModel.user = relationship("UserModel", back_populates="leaderboards")
-LeaderboardModel.group = relationship("GroupModel", back_populates="leaderboards")
+    # Relationships
+    user = relationship("UserModel", back_populates="leaderboards")
+    group = relationship("GroupModel", back_populates="leaderboards")
+    time_period = relationship("TimePeriodModel")
 
+    def __repr__(self):
+        return f"<LeaderboardModel(id={self.id}, user_id={self.user_id}, score={self.score}, time_period={self.time_period}, group_id={self.group_id})>"
 
 ```
 
 ## File: permissions.py
 ```py
-# filename: app/models/roles.py
+# filename: app/models/permissions.py
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
+from sqlalchemy.sql import func
+from app.db.base import Base
 from app.models.associations import RoleToPermissionAssociation
-
 
 class PermissionModel(Base):
     __tablename__ = "permissions"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
-    description = Column(String)
+    name = Column(String(100), unique=True, nullable=False, index=True)
+    description = Column(String(200))
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    # Relationships
     roles = relationship(
         "RoleModel",
         secondary=RoleToPermissionAssociation.__tablename__,
@@ -3702,35 +4455,29 @@ class PermissionModel(Base):
 ```py
 # filename: app/models/question_sets.py
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, inspect, ARRAY
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-from app.models.associations import QuestionSetToQuestionAssociation, QuestionSetToGroupAssociation
-
+from sqlalchemy.sql import func
+from app.db.base import Base
 
 class QuestionSetModel(Base):
     __tablename__ = "question_sets"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    is_public = Column(Boolean, default=True)
-    creator_id = Column(Integer, ForeignKey("users.id"))
+    name = Column(String(200), nullable=False, index=True)
+    description = Column(String(1000))
+    is_public = Column(Boolean, default=True, nullable=False)
+    creator_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    # Relationships
     creator = relationship("UserModel", back_populates="created_question_sets")
-    questions = relationship(
-        "QuestionModel",
-        secondary=QuestionSetToQuestionAssociation.__table__,
-        back_populates="question_sets"
-    )
-    sessions = relationship("SessionQuestionSetModel", back_populates="question_set")
-    groups = relationship(
-        "GroupModel",
-        secondary=QuestionSetToGroupAssociation.__table__,
-        back_populates="question_sets"
-    )
+    questions = relationship("QuestionModel", secondary="question_set_to_question_association", back_populates="question_sets")
+    groups = relationship("GroupModel", secondary="question_set_to_group_association", back_populates="question_sets")
 
-    def to_dict(self):
-        return {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}
+    def __repr__(self):
+        return f"<QuestionSetModel(id={self.id}, name='{self.name}', is_public={self.is_public}, creator_id={self.creator_id})>"
 
 ```
 
@@ -3738,19 +4485,25 @@ class QuestionSetModel(Base):
 ```py
 # filename: app/models/question_tags.py
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-from app.models.associations import QuestionToTagAssociation
-
+from sqlalchemy.sql import func
+from app.db.base import Base
 
 class QuestionTagModel(Base):
     __tablename__ = "question_tags"
 
     id = Column(Integer, primary_key=True, index=True)
-    tag = Column(String, unique=True, index=True)
+    tag = Column(String(50), unique=True, nullable=False, index=True)
+    description = Column(String(200))
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    questions = relationship("QuestionModel", secondary=QuestionToTagAssociation.__table__, overlaps="tags")
+    # Relationships
+    questions = relationship("QuestionModel", secondary="question_to_tag_association", back_populates="question_tags")
+
+    def __repr__(self):
+        return f"<QuestionTagModel(id={self.id}, tag='{self.tag}')>"
 
 ```
 
@@ -3758,41 +4511,42 @@ class QuestionTagModel(Base):
 ```py
 # filename: app/models/questions.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, Enum, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.inspection import inspect
-from app.db.base_class import Base
-from app.models.associations import (
-    QuestionSetToQuestionAssociation,
-    QuestionToTagAssociation
-)
-from app.models.sessions import SessionQuestionModel
+from sqlalchemy.sql import func
+from app.db.base import Base
+from enum import Enum as PyEnum
 
+class DifficultyLevel(PyEnum):
+    BEGINNER = "Beginner"
+    EASY = "Easy"
+    MEDIUM = "Medium"
+    HARD = "Hard"
+    EXPERT = "Expert"
 
 class QuestionModel(Base):
     __tablename__ = "questions"
 
     id = Column(Integer, primary_key=True, index=True)
-    text = Column(String, index=True)
-    subject_id = Column(Integer, ForeignKey("subjects.id"))
-    topic_id = Column(Integer, ForeignKey("topics.id"))
-    subtopic_id = Column(Integer, ForeignKey("subtopics.id"))
-    difficulty = Column(String)
+    text = Column(String(10000), nullable=False)
+    difficulty = Column(Enum(DifficultyLevel), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    creator_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
-    subject = relationship("SubjectModel", back_populates="questions")
-    topic = relationship("TopicModel", back_populates="questions")
-    subtopic = relationship("SubtopicModel", back_populates="questions")
-    tags = relationship("QuestionTagModel", secondary=QuestionToTagAssociation.__table__)
-    answer_choices = relationship("AnswerChoiceModel", back_populates="question")
-    question_sets = relationship(
-        "QuestionSetModel",
-        secondary=QuestionSetToQuestionAssociation.__table__,
-        back_populates="questions"
-    )
-    session_questions = relationship("SessionQuestionModel", back_populates="question")
+    # Relationships
+    subjects = relationship("SubjectModel", secondary="question_to_subject_association", back_populates="questions")
+    topics = relationship("TopicModel", secondary="question_to_topic_association", back_populates="questions")
+    subtopics = relationship("SubtopicModel", secondary="question_to_subtopic_association", back_populates="questions")
+    concepts = relationship("ConceptModel", secondary="question_to_concept_association", back_populates="questions")
+    question_tags = relationship("QuestionTagModel", secondary="question_to_tag_association", back_populates="questions")
+    answer_choices = relationship("AnswerChoiceModel", secondary="question_to_answer_association", back_populates="questions")
+    question_sets = relationship("QuestionSetModel", secondary="question_set_to_question_association", back_populates="questions")
+    user_responses = relationship("UserResponseModel", back_populates="question", cascade="all, delete-orphan")
+    creator = relationship("UserModel", back_populates="created_questions")
 
-    def as_dict(self):
-        return {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}
+    def __repr__(self):
+        return f"<QuestionModel(id={self.id}, text='{self.text[:50]}...', difficulty='{self.difficulty}')>"
 
 ```
 
@@ -3800,20 +4554,24 @@ class QuestionModel(Base):
 ```py
 # filename: app/models/roles.py
 
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
+from sqlalchemy.sql import func
+from app.db.base import Base
 from app.models.associations import RoleToPermissionAssociation
-
 
 class RoleModel(Base):
     __tablename__ = "roles"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
-    description = Column(String)
-    default = Column(Boolean, default=False)
+    name = Column(String(50), unique=True, nullable=False, index=True)
+    description = Column(String(200))
+    default = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    # Relationships
+    users = relationship("UserModel", back_populates="role")
     permissions = relationship(
         "PermissionModel",
         secondary=RoleToPermissionAssociation.__tablename__,
@@ -3821,47 +4579,7 @@ class RoleModel(Base):
     )
 
     def __repr__(self):
-        return f"<RoleModel(id={self.id}, name='{self.name}')>"
-
-```
-
-## File: sessions.py
-```py
-# filename: app/models/sessions.py
-
-from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, ForeignKey, Boolean, DateTime
-from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-
-
-class SessionQuestionModel(Base):
-    __tablename__ = 'session_questions'
-    session_id = Column(Integer, ForeignKey('sessions.id'), primary_key=True)
-    question_id = Column(Integer, ForeignKey('questions.id'), primary_key=True)
-    answered = Column(Boolean, default=False)
-    correct = Column(Boolean, nullable=True)
-    timestamp = Column(DateTime, default=datetime.now(timezone.utc))
-
-    session = relationship("SessionModel", back_populates="questions")
-    question = relationship("QuestionModel", back_populates="session_questions")
-
-class SessionQuestionSetModel(Base):
-    __tablename__ = 'session_question_sets'
-    session_id = Column(Integer, ForeignKey('sessions.id'), primary_key=True)
-    question_set_id = Column(Integer, ForeignKey('question_sets.id'), primary_key=True)
-    question_limit = Column(Integer, nullable=True)  # Optional limit on questions from this set
-
-    session = relationship("SessionModel", back_populates="question_sets")
-    question_set = relationship("QuestionSetModel", back_populates="sessions")
-
-class SessionModel(Base):
-    __tablename__ = 'sessions'
-    id = Column(Integer, primary_key=True)
-    # Additional fields as needed, e.g., session name, date, etc.
-
-    questions = relationship("SessionQuestionModel", back_populates="session")
-    question_sets = relationship("SessionQuestionSetModel", back_populates="session")
+        return f"<RoleModel(id={self.id}, name='{self.name}', default={self.default})>"
 
 ```
 
@@ -3871,17 +4589,20 @@ class SessionModel(Base):
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-
+from app.db.base import Base
 
 class SubjectModel(Base):
     __tablename__ = "subjects"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
+    name = Column(String, unique=True, nullable=False, index=True)
 
-    topics = relationship("TopicModel", back_populates="subject")
-    questions = relationship("QuestionModel", back_populates="subject")
+    disciplines = relationship("DisciplineModel", secondary="discipline_to_subject_association", back_populates="subjects")
+    topics = relationship("TopicModel", secondary="subject_to_topic_association", back_populates="subjects")
+    questions = relationship("QuestionModel", secondary="question_to_subject_association", back_populates="subjects")
+
+    def __repr__(self):
+        return f"<Subject(id={self.id}, name='{self.name}')>"
 
 ```
 
@@ -3889,30 +4610,22 @@ class SubjectModel(Base):
 ```py
 # filename: app/models/subtopics.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-
+from app.db.base import Base
 
 class SubtopicModel(Base):
-    """
-    The Subtopic model.
-
-    Attributes:
-        id (int): The primary key of the subtopic.
-        name (str): The name of the subtopic.
-        topic_id (int): The foreign key referencing the associated topic.
-        topic (Topic): The relationship to the associated topic.
-        questions (List[Question]): The relationship to the associated questions.
-    """
     __tablename__ = "subtopics"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    topic_id = Column(Integer, ForeignKey('topics.id'))
+    name = Column(String, nullable=False, index=True)
 
-    topic = relationship("TopicModel", back_populates="subtopics")
-    questions = relationship("QuestionModel", back_populates="subtopic")
+    topics = relationship("TopicModel", secondary="topic_to_subtopic_association", back_populates="subtopics")
+    concepts = relationship("ConceptModel", secondary="subtopic_to_concept_association", back_populates="subtopics")
+    questions = relationship("QuestionModel", secondary="question_to_subtopic_association", back_populates="subtopics")
+
+    def __repr__(self):
+        return f"<Subtopic(id={self.id}, name='{self.name}')>"
 
 ```
 
@@ -3920,14 +4633,33 @@ class SubtopicModel(Base):
 ```py
 # filename: app/models/time_period.py
 
-from enum import Enum
+from sqlalchemy import Column, Integer, String
+from app.db.base import Base
 
+class TimePeriodModel(Base):
+    __tablename__ = "time_periods"
 
-class TimePeriodModel(str, Enum):
-    DAILY = "daily"
-    WEEKLY = "weekly"
-    MONTHLY = "monthly"
-    YEARLY = "yearly"
+    id = Column(Integer, primary_key=True, autoincrement=False)
+    name = Column(String(20), unique=True, nullable=False)
+
+    @classmethod
+    def daily(cls):
+        return cls(id=1, name="daily")
+
+    @classmethod
+    def weekly(cls):
+        return cls(id=7, name="weekly")
+
+    @classmethod
+    def monthly(cls):
+        return cls(id=30, name="monthly")
+
+    @classmethod
+    def yearly(cls):
+        return cls(id=365, name="yearly")
+
+    def __repr__(self):
+        return f"<TimePeriodModel(id={self.id}, name='{self.name}')>"
 
 ```
 
@@ -3935,46 +4667,52 @@ class TimePeriodModel(str, Enum):
 ```py
 # filename: app/models/topics.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-
+from app.db.base import Base
 
 class TopicModel(Base):
     __tablename__ = "topics"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    subject_id = Column(Integer, ForeignKey('subjects.id'))
+    name = Column(String, nullable=False, index=True)
 
-    subject = relationship("SubjectModel", back_populates="topics")
-    subtopics = relationship("SubtopicModel", back_populates="topic")
-    questions = relationship("QuestionModel", back_populates="topic")
+    subjects = relationship("SubjectModel", secondary="subject_to_topic_association", back_populates="topics")
+    subtopics = relationship("SubtopicModel", secondary="topic_to_subtopic_association", back_populates="topics")
+    questions = relationship("QuestionModel", secondary="question_to_topic_association", back_populates="topics")
+
+    def __repr__(self):
+        return f"<Topic(id={self.id}, name='{self.name}')>"
+
 ```
 
 ## File: user_responses.py
 ```py
 # filename: app/models/user_responses.py
 
-from sqlalchemy import Column, Integer, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from sqlalchemy.sql.sqltypes import DateTime
-from app.db.base_class import Base
+from app.db.base import Base
 
 class UserResponseModel(Base):
     __tablename__ = "user_responses"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
-    question_id = Column(Integer, ForeignKey('questions.id'))
-    answer_choice_id = Column(Integer, ForeignKey('answer_choices.id'))
-    is_correct = Column(Boolean)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    question_id = Column(Integer, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True)
+    answer_choice_id = Column(Integer, ForeignKey("answer_choices.id", ondelete="SET NULL"), nullable=False)
+    is_correct = Column(Boolean, nullable=False)
+    response_time = Column(Integer, nullable=True)  # Response time in seconds
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
+    # Relationships
     user = relationship("UserModel", back_populates="responses")
-    question = relationship("QuestionModel")
-    answer_choice = relationship("AnswerChoiceModel")
+    question = relationship("QuestionModel", back_populates="user_responses")
+    answer_choice = relationship("AnswerChoiceModel", back_populates="user_responses")
+
+    def __repr__(self):
+        return f"<UserResponseModel(id={self.id}, user_id={self.user_id}, question_id={self.question_id}, is_correct={self.is_correct})>"
 
 ```
 
@@ -3982,33 +4720,32 @@ class UserResponseModel(Base):
 ```py
 # filename: app/models/users.py
 
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from app.db.base_class import Base
-from app.models.associations import UserToGroupAssociation
-
+from app.db.base import Base
 
 class UserModel(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
-    role = Column(String)
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
 
-# Define relationships after all classes have been defined
-UserModel.responses = relationship("UserResponseModel", back_populates="user")
-UserModel.groups = relationship(
-    "GroupModel",
-    secondary=UserToGroupAssociation.__table__,
-    back_populates="users"
-)
-UserModel.leaderboards = relationship("LeaderboardModel", back_populates="user")
-UserModel.created_groups = relationship("GroupModel", back_populates="creator")
-UserModel.created_question_sets = relationship("QuestionSetModel", back_populates="creator")
+    # Relationships
+    role = relationship("RoleModel", back_populates="users")
+    responses = relationship("UserResponseModel", back_populates="user", cascade="all, delete-orphan")
+    groups = relationship("GroupModel", secondary="user_to_group_association", back_populates="users")
+    leaderboards = relationship("LeaderboardModel", back_populates="user", cascade="all, delete-orphan")
+    created_groups = relationship("GroupModel", back_populates="creator", cascade="all, delete-orphan")
+    created_question_sets = relationship("QuestionSetModel", back_populates="creator", cascade="all, delete-orphan")
+    created_questions = relationship("QuestionModel", back_populates="creator")  # Add this line
+
+    def __repr__(self):
+        return f"<User(id={self.id}, username='{self.username}', email='{self.email}', role_id='{self.role_id}')>"
 
 ```
 
@@ -4322,40 +5059,24 @@ def verify_token(token: str, credentials_exception):
 ## File: security.py
 ```py
 # filename: app/core/security.py
-"""
-This module provides security-related utilities for the Quiz App backend.
-
-It includes functions for password hashing and verification using the bcrypt algorithm.
-"""
 
 from passlib.context import CryptContext
+from app.services.logging_service import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password, hashed_password):
-    """
-    Verify a plain-text password against a hashed password.
-
-    Args:
-        plain_password (str): The plain-text password to be verified.
-        hashed_password (str): The hashed password to compare against.
-
-    Returns:
-        bool: True if the password matches, False otherwise.
-    """
-    return pwd_context.verify(plain_password, hashed_password)
+    result = pwd_context.verify(plain_password, hashed_password)
+    logger.debug(f"verify_password called with plain_password: {plain_password}, hashed_password: {hashed_password}")
+    logger.debug(f"verify_password result: {result}")
+    return result
 
 def get_password_hash(password):
-    """
-    Generate a hash for the provided password.
+    hashed = pwd_context.hash(password)
+    logger.debug(f"get_password_hash called with password: {password}")
+    logger.debug(f"get_password_hash result: {hashed}")
+    return hashed
 
-    Args:
-        password (str): The password to be hashed.
-
-    Returns:
-        str: The generated hash of the password.
-    """
-    return pwd_context.hash(password)
 ```
 
 # Directory: /code/quiz-app/quiz-app-backend/tests
@@ -4375,34 +5096,41 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.main import app
-from app.db.base_class import Base
+from app.db.base import Base
 from app.db.session import get_db, init_db
+
+# CRUD imports
+from app.crud.crud_answer_choices import create_answer_choice_crud
 from app.crud.crud_user import create_user_crud
-from app.crud.crud_questions import create_question_crud
 from app.crud.crud_question_sets import create_question_set_crud
 from app.crud.crud_question_tags import create_question_tag_crud, delete_question_tag_crud
 from app.crud.crud_roles import create_role_crud, delete_role_crud
-from app.crud.crud_subtopics import create_subtopic_crud
-from app.crud.crud_subjects import create_subject_crud
-from app.crud.crud_topics import create_topic_crud
 from app.crud.crud_groups import create_group_crud, read_group_crud
+from app.crud.crud_domains import create_domain
+from app.crud.crud_disciplines import create_discipline
+from app.crud.crud_subjects import create_subject
+from app.crud.crud_topics import create_topic
+from app.crud.crud_subtopics import create_subtopic
+from app.crud.crud_concepts import create_concept
+from app.crud.crud_questions import create_question, create_question_with_answers
+
+# Schema imports
 from app.schemas.user import UserCreateSchema
 from app.schemas.groups import GroupCreateSchema
 from app.schemas.question_sets import QuestionSetCreateSchema
 from app.schemas.question_tags import QuestionTagCreateSchema
-from app.schemas.questions import QuestionCreateSchema
+from app.schemas.questions import QuestionCreateSchema, QuestionWithAnswersCreateSchema
 from app.schemas.roles import RoleCreateSchema
 from app.schemas.answer_choices import AnswerChoiceCreateSchema
-from app.schemas.subtopics import SubtopicCreateSchema
+from app.schemas.domains import DomainCreateSchema
+from app.schemas.disciplines import DisciplineCreateSchema
 from app.schemas.subjects import SubjectCreateSchema
 from app.schemas.topics import TopicCreateSchema
-from app.models.associations import (
-    UserToGroupAssociation,
-    QuestionSetToGroupAssociation,
-    QuestionToTagAssociation,
-    QuestionSetToQuestionAssociation,
-    RoleToPermissionAssociation
-)
+from app.schemas.subtopics import SubtopicCreateSchema
+from app.schemas.concepts import ConceptCreateSchema
+
+# Model imports
+from app.models.associations import UserToGroupAssociation
 from app.models.answer_choices import AnswerChoiceModel
 from app.models.authentication import RevokedTokenModel
 from app.models.groups import GroupModel
@@ -4410,18 +5138,21 @@ from app.models.leaderboard import LeaderboardModel
 from app.models.permissions import PermissionModel
 from app.models.question_sets import QuestionSetModel
 from app.models.question_tags import QuestionTagModel
-from app.models.questions import QuestionModel
+from app.models.questions import QuestionModel, DifficultyLevel
 from app.models.roles import RoleModel
-from app.models.sessions import SessionQuestionModel, SessionQuestionSetModel, SessionModel
+from app.models.domains import DomainModel
+from app.models.disciplines import DisciplineModel
 from app.models.subjects import SubjectModel
+from app.models.concepts import ConceptModel
 from app.models.subtopics import SubtopicModel
 from app.models.time_period import TimePeriodModel
 from app.models.topics import TopicModel
 from app.models.user_responses import UserResponseModel
 from app.models.users import UserModel
 from app.core.jwt import create_access_token
+from app.core.security import get_password_hash
 from app.services.permission_generator_service import generate_permissions
-from app.services.logging_service import logger
+from app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
 
 # Set the environment to test for pytest
@@ -4455,6 +5186,7 @@ def db_session():
         yield session
     finally:
         logger.debug("Begin tearing down database fixture")
+        session.rollback()
         session.close()
         reset_database(SQLALCHEMY_TEST_DATABASE_URL)
         logger.debug("Finished tearing down database fixture")
@@ -4474,7 +5206,7 @@ def client(db_session):
     app.dependency_overrides.clear()
     logger.debug("Finished tearing down client fixture")
 
-@pytest.fixture
+@pytest.fixture(scope='function')
 def test_permission(db_session):
     from app.models.permissions import PermissionModel
     permission = PermissionModel(name="test_permission", description="A test permission")
@@ -4485,18 +5217,18 @@ def test_permission(db_session):
 @pytest.fixture(scope="function")
 def test_permissions(db_session):
     from app.main import app  # Import the actual FastAPI app instance
-    from app.services.permission_generator_service import generate_permissions
+    from app.services.permission_generator_service import generate_permissions, ensure_permissions_in_db
 
     # Generate permissions
-    permissions = generate_permissions(app, db_session)
+    permissions = generate_permissions(app)
     
     # Ensure permissions are in the database
-    for permission_name in permissions:
-        if not db_session.query(PermissionModel).filter_by(name=permission_name).first():
-            db_session.add(PermissionModel(name=permission_name))
-    db_session.commit()
+    ensure_permissions_in_db(db_session, permissions)
+
+    # Fetch and return the permissions from the database
+    db_permissions = db_session.query(PermissionModel).all()
     
-    yield permissions
+    yield db_permissions
 
     # Clean up (optional, depending on your test isolation needs)
     db_session.query(PermissionModel).delete()
@@ -4504,22 +5236,25 @@ def test_permissions(db_session):
 
 @pytest.fixture(scope="function")
 def test_role(db_session, test_permissions):
-    # Create a test role with all permissions
-    role_data = {
-        "name": "test_role",
-        "description": "Test Role",
-        "permissions": list(test_permissions),
-        "default": False
-    }
-    logger.debug("Creating test role with data: %s", role_data)
-    role_create_schema = RoleCreateSchema(**role_data)
-    logger.debug("Role create schema: %s", role_create_schema.model_dump())
-    role = create_role_crud(db_session, role_create_schema)
-    logger.debug("Role created: %s", role)
-    yield role
-
-    # Clean up
-    delete_role_crud(db_session, role.id)
+    try:
+        # Create a test role with all permissions
+        role = RoleModel(
+            name="test_role",
+            description="Test Role",
+            default=False
+        )
+        role.permissions.extend(test_permissions)
+        db_session.add(role)
+        db_session.commit()
+        db_session.refresh(role)
+        
+        yield role
+    except Exception as e:
+        logger.exception(f"Error in test_role fixture: {str(e)}")
+        raise
+    finally:
+        logger.debug("Tearing down test_role fixture")
+        db_session.rollback()
 
 @pytest.fixture(scope="function")
 def random_username():
@@ -4530,22 +5265,30 @@ def test_user(db_session, random_username, test_role):
     try:
         logger.debug("Setting up test_user fixture")
         email = f"{random_username}@example.com"
-        user_data = UserCreateSchema(
+        hashed_password = get_password_hash("TestPassword123!")
+        
+        logger.error(f"Creating test user with role ID: {test_role.id}")
+        user = UserModel(
             username=random_username,
             email=email,
-            password="TestPassword123!",
-            role=test_role.name
+            hashed_password=hashed_password,
+            is_active=True,
+            is_admin=True,
+            role_id=test_role.id
         )
-        user = create_user_crud(db_session, user_data)
-        user.is_admin = True
+        
         db_session.add(user)
         db_session.commit()
+        db_session.refresh(user)
+        
+        logger.error(f"Created test user: {sqlalchemy_obj_to_dict(user)}")
         yield user
     except Exception as e:
-        logger.exception("Error in test_user fixture: %s", str(e))
+        logger.exception(f"Error in test_user fixture: {str(e)}")
         raise
     finally:
         logger.debug("Tearing down test_user fixture")
+        db_session.rollback()
 
 @pytest.fixture(scope="function")
 def test_group(db_session, test_user):
@@ -4591,12 +5334,11 @@ def test_tag(db_session):
     yield tag
     delete_question_tag_crud(db_session, tag.id)
 
-@pytest.fixture
+@pytest.fixture(scope='function')
 def test_question_set_data(db_session, test_user_with_group):
     try:
         logger.debug("Setting up test_question_set_data fixture")
         test_question_set_data_create = {
-            "db": db_session,
             "name": "Test Question Set",
             "is_public": True,
             "creator_id": test_user_with_group.id
@@ -4626,36 +5368,42 @@ def test_question_set(db_session, test_user, test_question_set_data):
         logger.debug("Tearing down test_question_set fixture")
 
 @pytest.fixture(scope="function")
-def test_questions(db_session, test_subject, test_topic, test_subtopic):
+def test_answer_choices(db_session):
+    answer_choices = [
+        AnswerChoiceModel(text="Answer 1", is_correct=True, explanation="Explanation 1"),
+        AnswerChoiceModel(text="Answer 2", is_correct=False, explanation="Explanation 2"),
+        AnswerChoiceModel(text="Answer 3", is_correct=False, explanation="Explanation 3"),
+        AnswerChoiceModel(text="Answer 4", is_correct=True, explanation="Explanation 4")
+    ]
+    
+    db_answer_choices = []
+    for answer_choice in answer_choices:
+        db_session.add(answer_choice)
+        db_session.commit()
+        db_session.refresh(answer_choice)
+        db_answer_choices.append(answer_choice)
+    
+    yield db_answer_choices
+
+@pytest.fixture(scope="function")
+def test_questions(db_session, test_subject, test_topic, test_subtopic, test_concept, test_answer_choices):
     try:
         logger.debug("Setting up test_questions fixture")
-        questions_data = [
-            QuestionCreateSchema(
-                db=db_session,
-                text="Test Question 1",
-                subject_id=test_subject.id,
-                topic_id=test_topic.id,
-                subtopic_id=test_subtopic.id,
-                difficulty="Easy",
-                answer_choices=[
-                    AnswerChoiceCreateSchema(text="Answer 1", is_correct=True, explanation="Explanation 1"),
-                    AnswerChoiceCreateSchema(text="Answer 2", is_correct=False, explanation="Explanation 2")
-                ]
-            ),
-            QuestionCreateSchema(
-                db=db_session,
-                text="Test Question 2",
-                subject_id=test_subject.id,
-                topic_id=test_topic.id,
-                subtopic_id=test_subtopic.id,
-                difficulty="Medium",
-                answer_choices=[
-                    AnswerChoiceCreateSchema(text="Answer 3", is_correct=False, explanation="Explanation 3"),
-                    AnswerChoiceCreateSchema(text="Answer 4", is_correct=True, explanation="Explanation 4")
-                ]
-            )
-        ]
-        questions = [create_question_crud(db_session, q) for q in questions_data]
+        question1 = QuestionModel(text="Test Question 1", difficulty=DifficultyLevel.EASY)
+        #question1.answer_choices.append([test_answer_choices[0], test_answer_choices[1]])
+        question2 = QuestionModel(text="Test Question 2", difficulty=DifficultyLevel.MEDIUM)
+        #question2.answer_choices.append([test_answer_choices[2], test_answer_choices[3]])
+        questions = [question1, question2]
+        
+        for question in questions:
+            question.subjects.append(test_subject)
+            question.topics.append(test_topic)
+            question.subtopics.append(test_subtopic)
+            question.concepts.append(test_concept)
+        
+        db_session.add_all(questions)
+        db_session.commit()
+
         yield questions
     except Exception as e:
         logger.exception("Error in test_questions fixture: %s", str(e))
@@ -4664,67 +5412,54 @@ def test_questions(db_session, test_subject, test_topic, test_subtopic):
         logger.debug("Tearing down test_questions fixture")
 
 @pytest.fixture(scope="function")
-def test_subject(db_session):
-    try:
-        logger.debug("Setting up test_subject fixture")
-        subject_data = SubjectCreateSchema(name="Test Subject")
-        subject = create_subject_crud(db=db_session, subject=subject_data)
-        yield subject
-    except Exception as e:
-        logger.exception("Error in test_subject fixture: %s", str(e))
-        raise
-    finally:
-        logger.debug("Tearing down test_subject fixture")
+def test_domain(db_session):
+    domain = DomainModel(name="Test Domain")
+    yield domain
+
+
+@pytest.fixture(scope="function")
+def test_discipline(db_session, test_domain):
+    discipline = DisciplineModel(name="Test Discipline")
+    db_session.add(discipline)
+    db_session.commit()
+    yield discipline
+
+
+@pytest.fixture(scope="function")
+def test_subject(db_session, test_discipline):
+    subject = SubjectModel(name="Test Subject")
+    subject.disciplines.append(test_discipline)
+    db_session.add(subject)
+    db_session.commit()
+    yield subject
+
 
 @pytest.fixture(scope="function")
 def test_topic(db_session, test_subject):
-    try:
-        logger.debug("Setting up test_topic fixture")
-        topic_data = TopicCreateSchema(name="Test Topic", subject_id=test_subject.id)
-        topic = create_topic_crud(db=db_session, topic=topic_data)
-        yield topic
-    except Exception as e:
-        logger.exception("Error in test_topic fixture: %s", str(e))
-        raise
-    finally:
-        logger.debug("Tearing down test_topic fixture")
+    topic = TopicModel(name="Test Topic")
+    topic.subjects.append(test_subject)
+    db_session.add(topic)
+    db_session.commit()
+    yield topic
+
 
 @pytest.fixture(scope="function")
 def test_subtopic(db_session, test_topic):
-    try:
-        logger.debug("Setting up test_subtopic fixture")
-        subtopic_data = SubtopicCreateSchema(name="Test Subtopic", topic_id=test_topic.id)
-        subtopic = create_subtopic_crud(db=db_session, subtopic=subtopic_data)
-        yield subtopic
-    except Exception as e:
-        logger.exception("Error in test_subtopic fixture: %s", str(e))
-        raise
-    finally:
-        logger.debug("Tearing down test_subtopic fixture")
+    subtopic = SubtopicModel(name="Test Subtopic")
+    subtopic.topics.append(test_topic)
+    db_session.add(subtopic)
+    db_session.commit()
+    yield subtopic
+
 
 @pytest.fixture(scope="function")
-def test_question(db_session, test_question_set, test_subtopic, test_topic, test_subject):
-    try:
-        logger.debug("Setting up test_question fixture")
-        answer_choice_1 = AnswerChoiceCreateSchema(text="Test Answer 1", is_correct=True, explanation="Test Explanation 1")
-        answer_choice_2 = AnswerChoiceCreateSchema(text="Test Answer 2", is_correct=False, explanation="Test Explanation 2")
-        question_data = QuestionCreateSchema(
-            db=db_session,
-            text="Test Question",
-            subject_id=test_subject.id,
-            topic_id=test_topic.id,
-            subtopic_id=test_subtopic.id,
-            difficulty="Easy",
-            answer_choices=[answer_choice_1, answer_choice_2],
-            question_set_ids=[test_question_set.id]
-        )
-        question = create_question_crud(db_session, question_data)
-        yield question
-    except Exception as e:
-        logger.exception("Error in test_question fixture: %s", str(e))
-        raise
-    finally:
-        logger.debug("Tearing down test_question fixture")
+def test_concept(db_session, test_subtopic):
+    concept = ConceptModel(name="Test Concept")
+    concept.subtopics.append(test_subtopic)
+    db_session.add(concept)
+    db_session.commit()
+    yield concept
+
 
 @pytest.fixture(scope="function")
 def test_token(test_user):
@@ -4737,34 +5472,6 @@ def test_token(test_user):
         raise
     finally:
         logger.debug("Tearing down test_token fixture")
-
-@pytest.fixture(scope="function")
-def test_answer_choice_1(db_session, test_question):
-    try:
-        logger.debug("Setting up test_answer_choice_1 fixture")
-        answer_choice = AnswerChoiceModel(text="Test Answer 1", is_correct=True, question=test_question)
-        db_session.add(answer_choice)
-        db_session.commit()
-        yield answer_choice
-    except Exception as e:
-        logger.exception("Error in test_answer_choice_1 fixture: %s", str(e))
-        raise
-    finally:
-        logger.debug("Tearing down test_answer_choice_1 fixture")
-
-@pytest.fixture(scope="function")
-def test_answer_choice_2(db_session, test_question):
-    try:
-        logger.debug("Setting up test_answer_choice_2 fixture")
-        answer_choice = AnswerChoiceModel(text="Test Answer 2", is_correct=False, question=test_question)
-        db_session.add(answer_choice)
-        db_session.commit()
-        yield answer_choice
-    except Exception as e:
-        logger.exception("Error in test_answer_choice_2 fixture: %s", str(e))
-        raise
-    finally:
-        logger.debug("Tearing down test_answer_choice_2 fixture")
 
 @pytest.fixture(scope="function")
 def logged_in_client(client, test_user_with_group):
@@ -4791,62 +5498,87 @@ def setup_filter_questions_data(db_session):
     try:
         logger.debug("Setting up filter questions data")
 
-        subject1 = create_subject_crud(db_session, SubjectCreateSchema(name="Math"))
-        subject2 = create_subject_crud(db_session, SubjectCreateSchema(name="Science"))
+        # Create Domains
+        domain1 = create_domain(db_session, DomainCreateSchema(name="Science"))
+        domain2 = create_domain(db_session, DomainCreateSchema(name="Mathematics"))
 
-        topic1 = create_topic_crud(db_session, TopicCreateSchema(name="Algebra", subject_id=subject1.id))
-        topic2 = create_topic_crud(db_session, TopicCreateSchema(name="Geometry", subject_id=subject1.id))
-        topic3 = create_topic_crud(db_session, TopicCreateSchema(name="Physics", subject_id=subject2.id))
+        # Create Disciplines
+        discipline1 = create_discipline(db_session, DisciplineCreateSchema(name="Physics", domain=domain1))
+        discipline2 = create_discipline(db_session, DisciplineCreateSchema(name="Pure Mathematics", domain=domain2))
 
-        subtopic1 = create_subtopic_crud(db_session, SubtopicCreateSchema(name="Linear Equations", topic_id=topic1.id))
-        subtopic2 = create_subtopic_crud(db_session, SubtopicCreateSchema(name="Quadratic Equations", topic_id=topic1.id))
-        subtopic3 = create_subtopic_crud(db_session, SubtopicCreateSchema(name="Triangles", topic_id=topic2.id))
-        subtopic4 = create_subtopic_crud(db_session, SubtopicCreateSchema(name="Mechanics", topic_id=topic3.id))
+        # Create Subjects
+        subject1 = create_subject(db_session, SubjectCreateSchema(name="Classical Mechanics", discipline=discipline1))
+        subject2 = create_subject(db_session, SubjectCreateSchema(name="Algebra", discipline=discipline2))
 
-        tag1 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="equations"))
-        tag2 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="solving"))
-        tag3 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="geometry"))
-        tag4 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="physics"))
+        # Create Topics
+        topic1 = create_topic(db_session, TopicCreateSchema(name="Newton's Laws", subject=subject1))
+        topic2 = create_topic(db_session, TopicCreateSchema(name="Linear Algebra", subject=subject2))
 
-        question_set1 = create_question_set_crud(db_session, QuestionSetCreateSchema(name="Math Question Set", is_public=True))
-        question_set2 = create_question_set_crud(db_session, QuestionSetCreateSchema(name="Science Question Set", is_public=True))
+        # Create Subtopics
+        subtopic1 = create_subtopic(db_session, SubtopicCreateSchema(name="First Law of Motion", topic=topic1))
+        subtopic2 = create_subtopic(db_session, SubtopicCreateSchema(name="Second Law of Motion", topic=topic1))
+        subtopic3 = create_subtopic(db_session, SubtopicCreateSchema(name="Matrices", topic=topic2))
+        subtopic4 = create_subtopic(db_session, SubtopicCreateSchema(name="Vector Spaces", topic=topic2))
 
-        question1 = create_question_crud(db_session, QuestionCreateSchema(
-            db=db_session,
-            text="What is x if 2x + 5 = 11?",
-            subject_id=subject1.id,
-            topic_id=topic1.id,
-            subtopic_id=subtopic1.id,
-            difficulty="Easy",
-            tags=[tag1, tag2]
+        # Create Concepts
+        concept1 = create_concept(db_session, ConceptCreateSchema(name="Inertia", subtopic=subtopic1))
+        concept2 = create_concept(db_session, ConceptCreateSchema(name="Force and Acceleration", subtopic=subtopic2))
+        concept3 = create_concept(db_session, ConceptCreateSchema(name="Matrix Operations", subtopic=subtopic3))
+        concept4 = create_concept(db_session, ConceptCreateSchema(name="Linear Independence", subtopic=subtopic4))
+
+        # Create Tags
+        tag1 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="physics"))
+        tag2 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="mathematics"))
+        tag3 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="mechanics"))
+        tag4 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="linear algebra"))
+
+        # Create Question Sets
+        question_set1 = create_question_set_crud(db_session, QuestionSetCreateSchema(name="Physics Question Set", is_public=True))
+        question_set2 = create_question_set_crud(db_session, QuestionSetCreateSchema(name="Math Question Set", is_public=True))
+
+        # Create Questions
+        question1 = create_question(db_session, QuestionCreateSchema(
+            text="What is Newton's First Law of Motion?",
+            subject=subject1,
+            topic=topic1,
+            subtopic=subtopic1,
+            concept=concept1,
+            difficulty=DifficultyLevel.EASY,
+            question_tag_ids=[tag1.id, tag3.id],
+            question_set_ids=[question_set1.id]
         ))
-        question2 = create_question_crud(db_session, QuestionCreateSchema(
-            db=db_session,
-            text="Find the roots of the equation: x^2 - 5x + 6 = 0",
-            subject_id=subject1.id,
-            topic_id=topic1.id,
-            subtopic_id=subtopic2.id,
-            difficulty="Medium",
-            tags=[tag1, tag2]
+        question2 = create_question(db_session, QuestionCreateSchema(
+            text="How does force relate to acceleration according to Newton's Second Law?",
+            subject=subject1,
+            topic=topic1,
+            subtopic=subtopic2,
+            concept=concept2,
+            difficulty=DifficultyLevel.MEDIUM,
+            question_tag_ids=[tag1.id, tag3.id],
+            question_set_ids=[question_set1.id]
         ))
-        question3 = create_question_crud(db_session, QuestionCreateSchema(
-            db=db_session,
-            text="Calculate the area of a right-angled triangle with base 4 cm and height 3 cm.",
-            subject_id=subject1.id,
-            topic_id=topic2.id,
-            subtopic_id=subtopic3.id,
-            difficulty="Easy",
-            tags=[tag3]
+        question3 = create_question(db_session, QuestionCreateSchema(
+            text="What is the result of multiplying a 2x2 identity matrix with any 2x2 matrix?",
+            subject=subject2,
+            topic=topic2,
+            subtopic=subtopic3,
+            concept=concept3,
+            difficulty=DifficultyLevel.MEDIUM,
+            question_tag_ids=[tag2.id, tag4.id],
+            question_set_ids=[question_set2.id]
         ))
-        question4 = create_question_crud(db_session, QuestionCreateSchema(
-            db=db_session,
-            text="A car accelerates from rest at 2 m/s^2. What is its velocity after 5 seconds?",
-            subject_id=subject2.id,
-            topic_id=topic3.id,
-            subtopic_id=subtopic4.id,
-            difficulty="Medium",
-            tags=[tag4]
+        question4 = create_question(db_session, QuestionCreateSchema(
+            text="What does it mean for a set of vectors to be linearly independent?",
+            subject=subject2,
+            topic=topic2,
+            subtopic=subtopic4,
+            concept=concept4,
+            difficulty=DifficultyLevel.HARD,
+            question_tag_ids=[tag2.id, tag4.id],
+            question_set_ids=[question_set2.id]
         ))
+
+        logger.debug("Filter questions data setup completed successfully")
 
     except Exception as e:
         logger.exception("Error in setup_filter_questions_data fixture: %s", str(e))
@@ -4905,65 +5637,1306 @@ def test_cors_configuration(logged_in_client):
 
 # Directory: /code/quiz-app/quiz-app-backend/tests/test_schemas
 
+## File: test_schemas_answer_choices.py
+```py
+# filename: tests/test_schemas_answer_choices.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.answer_choices import AnswerChoiceBaseSchema, AnswerChoiceCreateSchema, AnswerChoiceUpdateSchema, AnswerChoiceSchema
+
+def test_answer_choice_base_schema_valid():
+    data = {
+        "text": "This is a valid answer choice",
+        "is_correct": True,
+        "explanation": "This is a valid explanation"
+    }
+    schema = AnswerChoiceBaseSchema(**data)
+    assert schema.text == "This is a valid answer choice"
+    assert schema.is_correct is True
+    assert schema.explanation == "This is a valid explanation"
+
+def test_answer_choice_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        AnswerChoiceBaseSchema(text="", is_correct=True)
+    assert "String should have at least 1 character" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        AnswerChoiceBaseSchema(text="a" * 10001, is_correct=True)
+    assert "String should have at most 10000 characters" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        AnswerChoiceBaseSchema(text="Valid text", is_correct="not a boolean")
+    assert "Input should be a valid boolean" in str(exc_info.value)
+
+def test_answer_choice_create_schema():
+    data = {
+        "text": "This is a new answer choice",
+        "is_correct": False,
+        "explanation": "This is an explanation for the new answer choice"
+    }
+    schema = AnswerChoiceCreateSchema(**data)
+    assert schema.text == "This is a new answer choice"
+    assert schema.is_correct is False
+    assert schema.explanation == "This is an explanation for the new answer choice"
+
+def test_answer_choice_update_schema():
+    data = {
+        "text": "Updated answer choice",
+        "is_correct": True
+    }
+    schema = AnswerChoiceUpdateSchema(**data)
+    assert schema.text == "Updated answer choice"
+    assert schema.is_correct is True
+    assert schema.explanation is None
+
+    # Test partial update
+    partial_data = {"text": "Partially updated answer"}
+    partial_schema = AnswerChoiceUpdateSchema(**partial_data)
+    assert partial_schema.text == "Partially updated answer"
+    assert partial_schema.is_correct is None
+    assert partial_schema.explanation is None
+
+def test_answer_choice_schema():
+    data = {
+        "id": 1,
+        "text": "This is a complete answer choice",
+        "is_correct": True,
+        "explanation": "This is a complete explanation"
+    }
+    schema = AnswerChoiceSchema(**data)
+    assert schema.id == 1
+    assert schema.text == "This is a complete answer choice"
+    assert schema.is_correct is True
+    assert schema.explanation == "This is a complete explanation"
+
+def test_answer_choice_schema_from_orm(test_answer_choices):
+    orm_object = test_answer_choices[0]
+    schema = AnswerChoiceSchema.model_validate(orm_object)
+    assert schema.id == orm_object.id
+    assert schema.text == orm_object.text
+    assert schema.is_correct == orm_object.is_correct
+    assert schema.explanation == orm_object.explanation
+
+```
+
+## File: test_schemas_concepts.py
+```py
+# filename: tests/test_schemas_concepts.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.concepts import ConceptBaseSchema, ConceptCreateSchema, ConceptUpdateSchema, ConceptSchema
+
+def test_concept_base_schema_valid():
+    data = {
+        "name": "Pythagorean Theorem"
+    }
+    schema = ConceptBaseSchema(**data)
+    assert schema.name == "Pythagorean Theorem"
+
+def test_concept_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        ConceptBaseSchema(name="")
+    assert "Concept name cannot be empty or whitespace" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        ConceptBaseSchema(name="a" * 101)
+    assert "ensure this value has at most 100 characters" in str(exc_info.value)
+
+def test_concept_create_schema():
+    data = {
+        "name": "Law of Cosines",
+        "subtopic_ids": [1, 2]
+    }
+    schema = ConceptCreateSchema(**data)
+    assert schema.name == "Law of Cosines"
+    assert schema.subtopic_ids == [1, 2]
+
+def test_concept_create_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        ConceptCreateSchema(name="Law of Cosines", subtopic_ids=[])
+    assert "List should have at least 1 item after validation" in str(exc_info.value)
+
+def test_concept_update_schema():
+    data = {
+        "name": "Updated Law of Cosines",
+        "subtopic_ids": [2, 3]
+    }
+    schema = ConceptUpdateSchema(**data)
+    assert schema.name == "Updated Law of Cosines"
+    assert schema.subtopic_ids == [2, 3]
+
+    # Test partial update
+    partial_data = {"name": "Partially Updated Concept"}
+    partial_schema = ConceptUpdateSchema(**partial_data)
+    assert partial_schema.name == "Partially Updated Concept"
+    assert partial_schema.subtopic_ids is None
+
+def test_concept_schema():
+    data = {
+        "id": 1,
+        "name": "Complete Concept",
+        "subtopic_ids": [1, 2],
+        "question_ids": [1, 2]
+    }
+    schema = ConceptSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "Complete Concept"
+    assert schema.subtopic_ids == [1, 2]
+    assert schema.question_ids == [1, 2]
+
+def test_concept_schema_from_attributes(test_concept):
+    schema = ConceptSchema.model_validate(test_concept)
+    assert schema.id == test_concept.id
+    assert schema.name == test_concept.name
+    assert set(schema.subtopic_ids) == set(st.id for st in test_concept.subtopics)
+
+```
+
+## File: test_schemas_disciplines.py
+```py
+# filename: tests/test_schemas_disciplines.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.disciplines import DisciplineBaseSchema, DisciplineCreateSchema, DisciplineUpdateSchema, DisciplineSchema
+
+def test_discipline_base_schema_valid():
+    data = {
+        "name": "Natural Sciences"
+    }
+    schema = DisciplineBaseSchema(**data)
+    assert schema.name == "Natural Sciences"
+
+def test_discipline_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        DisciplineBaseSchema(name="")
+    assert "ensure this value has at least 1 characters" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        DisciplineBaseSchema(name="a" * 101)
+    assert "ensure this value has at most 100 characters" in str(exc_info.value)
+
+def test_discipline_create_schema():
+    data = {
+        "name": "Social Sciences",
+        "domain_ids": [1, 2],
+        "subject_ids": [3, 4, 5]
+    }
+    schema = DisciplineCreateSchema(**data)
+    assert schema.name == "Social Sciences"
+    assert schema.domain_ids == [1, 2]
+    assert schema.subject_ids == [3, 4, 5]
+
+def test_discipline_create_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        DisciplineCreateSchema(name="Social Sciences", domain_ids=[])
+    assert "List should have at least 1 item after validation" in str(exc_info.value)
+
+def test_discipline_update_schema():
+    data = {
+        "name": "Updated Social Sciences",
+        "domain_ids": [2, 3],
+        "subject_ids": [4, 5, 6]
+    }
+    schema = DisciplineUpdateSchema(**data)
+    assert schema.name == "Updated Social Sciences"
+    assert schema.domain_ids == [2, 3]
+    assert schema.subject_ids == [4, 5, 6]
+
+    # Test partial update
+    partial_data = {"name": "Partially Updated Discipline"}
+    partial_schema = DisciplineUpdateSchema(**partial_data)
+    assert partial_schema.name == "Partially Updated Discipline"
+    assert partial_schema.domain_ids is None
+    assert partial_schema.subject_ids is None
+
+def test_discipline_schema():
+    data = {
+        "id": 1,
+        "name": "Complete Discipline",
+        "domain_ids": [1, 2],
+        "subject_ids": [3, 4, 5]
+    }
+    schema = DisciplineSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "Complete Discipline"
+    assert schema.domain_ids == [1, 2]
+    assert schema.subject_ids == [3, 4, 5]
+
+def test_discipline_schema_from_attributes(db_session, test_discipline):
+    schema = DisciplineSchema.model_validate(test_discipline)
+    assert schema.id == test_discipline.id
+    assert schema.name == test_discipline.name
+    assert set(schema.domain_ids) == set(d.id for d in test_discipline.domains)
+    assert set(schema.subject_ids) == set(s.id for s in test_discipline.subjects)
+
+```
+
+## File: test_schemas_domains.py
+```py
+# filename: tests/test_schemas_domains.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.domains import DomainBaseSchema, DomainCreateSchema, DomainUpdateSchema, DomainSchema
+
+def test_domain_base_schema_valid():
+    data = {
+        "name": "Science and Technology"
+    }
+    schema = DomainBaseSchema(**data)
+    assert schema.name == "Science and Technology"
+
+def test_domain_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        DomainBaseSchema(name="")
+    assert "ensure this value has at least 1 characters" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        DomainBaseSchema(name="a" * 101)
+    assert "ensure this value has at most 100 characters" in str(exc_info.value)
+
+def test_domain_create_schema():
+    data = {
+        "name": "Arts and Humanities",
+        "discipline_ids": [1, 2, 3]
+    }
+    schema = DomainCreateSchema(**data)
+    assert schema.name == "Arts and Humanities"
+    assert schema.discipline_ids == [1, 2, 3]
+
+def test_domain_create_schema_optional_disciplines():
+    data = {
+        "name": "New Domain"
+    }
+    schema = DomainCreateSchema(**data)
+    assert schema.name == "New Domain"
+    assert schema.discipline_ids is None
+
+def test_domain_update_schema():
+    data = {
+        "name": "Updated Arts and Humanities",
+        "discipline_ids": [2, 3, 4]
+    }
+    schema = DomainUpdateSchema(**data)
+    assert schema.name == "Updated Arts and Humanities"
+    assert schema.discipline_ids == [2, 3, 4]
+
+    # Test partial update
+    partial_data = {"name": "Partially Updated Domain"}
+    partial_schema = DomainUpdateSchema(**partial_data)
+    assert partial_schema.name == "Partially Updated Domain"
+    assert partial_schema.discipline_ids is None
+
+def test_domain_schema():
+    data = {
+        "id": 1,
+        "name": "Complete Domain",
+        "discipline_ids": [1, 2, 3]
+    }
+    schema = DomainSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "Complete Domain"
+    assert schema.discipline_ids == [1, 2, 3]
+
+def test_domain_schema_from_attributes(db_session, test_domain):
+    schema = DomainSchema.model_validate(test_domain)
+    assert schema.id == test_domain.id
+    assert schema.name == test_domain.name
+    assert set(schema.discipline_ids) == set(d.id for d in test_domain.disciplines)
+
+```
+
 ## File: test_schemas_filters.py
 ```py
+# filename: tests/test_schemas_filters.py
+
 import pytest
 from pydantic import ValidationError
 from app.schemas.filters import FilterParamsSchema
+from app.schemas.questions import DifficultyLevel
 
-
-def test_filter_params_schema_invalid_params():
-    invalid_data = {
-        "subject": "Math",
+def test_filter_params_schema_valid():
+    data = {
+        "subject": "Mathematics",
         "topic": "Algebra",
         "subtopic": "Linear Equations",
-        "difficulty": "Easy",
-        "tags": ["equations", "solving"],
-        "invalid_param": "value"  # Invalid parameter
+        "difficulty": DifficultyLevel.MEDIUM,
+        "question_tags": ["math", "algebra"]
     }
-    
+    schema = FilterParamsSchema(**data)
+    assert schema.subject == "Mathematics"
+    assert schema.topic == "Algebra"
+    assert schema.subtopic == "Linear Equations"
+    assert schema.difficulty == DifficultyLevel.MEDIUM
+    assert schema.question_tags == ["math", "algebra"]
+
+def test_filter_params_schema_optional_fields():
+    data = {
+        "subject": "Physics"
+    }
+    schema = FilterParamsSchema(**data)
+    assert schema.subject == "Physics"
+    assert schema.topic is None
+    assert schema.subtopic is None
+    assert schema.difficulty is None
+    assert schema.question_tags is None
+
+def test_filter_params_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
-        FilterParamsSchema(**invalid_data)
-    
+        FilterParamsSchema(subject="a" * 101)
+    assert "String should have at most 100 characters" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        FilterParamsSchema(difficulty="Invalid")
+    assert "Input should be 'Beginner', 'Easy', 'Medium', 'Hard' or 'Expert'" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        FilterParamsSchema(question_tags=["tag1", "tag2"] * 6)
+    assert "List should have at most 10 items after validation" in str(exc_info.value)
+
+def test_filter_params_schema_question_tags_lowercase():
+    data = {
+        "question_tags": ["MATH", "Algebra", "LINEAR"]
+    }
+    schema = FilterParamsSchema(**data)
+    assert schema.question_tags == ["math", "algebra", "linear"]
+
+def test_filter_params_schema_extra_fields():
+    with pytest.raises(ValidationError) as exc_info:
+        FilterParamsSchema(subject="Math", extra_field="Invalid")
     assert "Extra inputs are not permitted" in str(exc_info.value)
+
+```
+
+## File: test_schemas_groups.py
+```py
+# filename: tests/test_schemas_groups.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.groups import GroupBaseSchema, GroupCreateSchema, GroupUpdateSchema, GroupSchema
+
+def test_group_base_schema_valid():
+    data = {
+        "name": "Test Group",
+        "description": "This is a test group"
+    }
+    schema = GroupBaseSchema(**data)
+    assert schema.name == "Test Group"
+    assert schema.description == "This is a test group"
+
+def test_group_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        GroupBaseSchema(name="", description="Invalid group")
+    assert "String should have at least 1 character" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        GroupBaseSchema(name="a" * 101, description="Invalid group")
+    assert "String should have at most 100 characters" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        GroupBaseSchema(name="Invalid@Group", description="Invalid group")
+    assert "Group name can only contain alphanumeric characters, hyphens, underscores, and spaces" in str(exc_info.value)
+
+def test_group_create_schema(test_user):
+    data = {
+        "name": "New Group",
+        "description": "This is a new group",
+        "creator_id": test_user.id
+    }
+    schema = GroupCreateSchema(**data)
+    assert schema.name == "New Group"
+    assert schema.description == "This is a new group"
+    assert schema.creator_id == test_user.id
+
+def test_group_update_schema():
+    data = {
+        "name": "Updated Group",
+        "description": "This group has been updated"
+    }
+    schema = GroupUpdateSchema(**data)
+    assert schema.name == "Updated Group"
+    assert schema.description == "This group has been updated"
+
+    # Test partial update
+    partial_data = {"name": "Partially Updated Group"}
+    partial_schema = GroupUpdateSchema(**partial_data)
+    assert partial_schema.name == "Partially Updated Group"
+    assert partial_schema.description is None
+
+def test_group_schema(test_user):
+    data = {
+        "id": 1,
+        "name": "Complete Group",
+        "description": "This is a complete group",
+        "creator_id": test_user.id,
+        "user_ids": [test_user.id],
+        "question_set_ids": [1, 2, 3]
+    }
+    schema = GroupSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "Complete Group"
+    assert schema.description == "This is a complete group"
+    assert schema.creator_id == test_user.id
+    assert schema.user_ids == [test_user.id]
+    assert schema.question_set_ids == [1, 2, 3]
+
+def test_group_schema_from_orm(test_group):
+    schema = GroupSchema.model_validate(test_group)
+    assert schema.id == test_group.id
+    assert schema.name == test_group.name
+    assert schema.description == test_group.description
+    assert schema.creator_id == test_group.creator_id
+    assert set(schema.user_ids) == set(user.id for user in test_group.users)
+    assert set(schema.question_set_ids) == set(qs.id for qs in test_group.question_sets)
+
+```
+
+## File: test_schemas_leaderboard.py
+```py
+# filename: tests/test_schemas_leaderboard.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.leaderboard import LeaderboardBaseSchema, LeaderboardCreateSchema, LeaderboardUpdateSchema, LeaderboardSchema, TimePeriodSchema
+
+def test_leaderboard_base_schema_valid():
+    data = {
+        "user_id": 1,
+        "score": 100,
+        "time_period_id": 1
+    }
+    schema = LeaderboardBaseSchema(**data)
+    assert schema.user_id == 1
+    assert schema.score == 100
+    assert schema.time_period_id == 1
+    assert schema.group_id is None
+
+def test_leaderboard_base_schema_with_group():
+    data = {
+        "user_id": 1,
+        "score": 100,
+        "time_period_id": 1,
+        "group_id": 5
+    }
+    schema = LeaderboardBaseSchema(**data)
+    assert schema.user_id == 1
+    assert schema.score == 100
+    assert schema.time_period_id == 1
+    assert schema.group_id == 5
+
+def test_leaderboard_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        LeaderboardBaseSchema(user_id=0, score=100, time_period_id=1)
+    assert "Input should be greater than 0" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        LeaderboardBaseSchema(user_id=1, score=-1, time_period_id=1)
+    assert "Input should be greater than or equal to 0" in str(exc_info.value)
+
+def test_leaderboard_create_schema():
+    data = {
+        "user_id": 1,
+        "score": 100,
+        "time_period_id": 1,
+        "group_id": 5
+    }
+    schema = LeaderboardCreateSchema(**data)
+    assert schema.user_id == 1
+    assert schema.score == 100
+    assert schema.time_period_id == 1
+    assert schema.group_id == 5
+
+def test_leaderboard_update_schema():
+    data = {
+        "score": 150
+    }
+    schema = LeaderboardUpdateSchema(**data)
+    assert schema.score == 150
+
+def test_leaderboard_schema():
+    time_period = TimePeriodSchema(id=1, name="daily")
+    data = {
+        "id": 1,
+        "user_id": 1,
+        "score": 100,
+        "time_period": time_period,
+        "group_id": 5
+    }
+    schema = LeaderboardSchema(**data)
+    assert schema.id == 1
+    assert schema.user_id == 1
+    assert schema.score == 100
+    assert schema.time_period == time_period
+    assert schema.group_id == 5
+
+def test_leaderboard_schema_from_attributes(db_session, test_user):
+    from app.models.leaderboard import LeaderboardModel
+    from app.models.time_period import TimePeriodModel
+
+    time_period = TimePeriodModel(id=1, name="daily")
+    db_session.add(time_period)
+    db_session.commit()
+
+    leaderboard_entry = LeaderboardModel(
+        user_id=test_user.id,
+        score=100,
+        time_period_id=time_period.id,
+        group_id=None
+    )
+    db_session.add(leaderboard_entry)
+    db_session.commit()
+    db_session.refresh(leaderboard_entry)
+
+    schema = LeaderboardSchema.model_validate(leaderboard_entry)
+    assert schema.id == leaderboard_entry.id
+    assert schema.user_id == test_user.id
+    assert schema.score == 100
+    assert schema.time_period.id == time_period.id
+    assert schema.time_period.name == "daily"
+    assert schema.group_id is None
+
+def test_time_period_schema():
+    data = {
+        "id": 1,
+        "name": "daily"
+    }
+    schema = TimePeriodSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "daily"
+
+```
+
+## File: test_schemas_permissions.py
+```py
+# filename: tests/test_schemas_permissions.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.permissions import PermissionBaseSchema, PermissionCreateSchema, PermissionUpdateSchema, PermissionSchema
+
+def test_permission_base_schema_valid():
+    data = {
+        "name": "create_user",
+        "description": "Permission to create a new user"
+    }
+    schema = PermissionBaseSchema(**data)
+    assert schema.name == "create_user"
+    assert schema.description == "Permission to create a new user"
+
+def test_permission_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        PermissionBaseSchema(name="", description="Invalid permission")
+    assert "String should have at least 1 character" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        PermissionBaseSchema(name="a" * 101, description="Invalid permission")
+    assert "String should have at most 100 characters" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        PermissionBaseSchema(name="invalid@permission", description="Invalid permission")
+    assert "Permission name can only contain alphanumeric characters, underscores, and hyphens" in str(exc_info.value)
+
+def test_permission_create_schema():
+    data = {
+        "name": "delete_user",
+        "description": "Permission to delete a user"
+    }
+    schema = PermissionCreateSchema(**data)
+    assert schema.name == "delete_user"
+    assert schema.description == "Permission to delete a user"
+
+def test_permission_update_schema():
+    data = {
+        "name": "update_user",
+        "description": "Updated permission to modify a user"
+    }
+    schema = PermissionUpdateSchema(**data)
+    assert schema.name == "update_user"
+    assert schema.description == "Updated permission to modify a user"
+
+    # Test partial update
+    partial_data = {"description": "Partially updated description"}
+    partial_schema = PermissionUpdateSchema(**partial_data)
+    assert partial_schema.name is None
+    assert partial_schema.description == "Partially updated description"
+
+def test_permission_schema():
+    data = {
+        "id": 1,
+        "name": "read_user",
+        "description": "Permission to read user information"
+    }
+    schema = PermissionSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "read_user"
+    assert schema.description == "Permission to read user information"
+
+def test_permission_schema_from_attributes(db_session, test_permission):
+    schema = PermissionSchema.model_validate(test_permission)
+    assert schema.id == test_permission.id
+    assert schema.name == test_permission.name
+    assert schema.description == test_permission.description
+
+```
+
+## File: test_schemas_question_sets.py
+```py
+# filename: tests/test_schemas_question_sets.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.question_sets import QuestionSetBaseSchema, QuestionSetCreateSchema, QuestionSetUpdateSchema, QuestionSetSchema
+
+def test_question_set_base_schema_valid():
+    data = {
+        "name": "Math Quiz Set",
+        "description": "A set of math questions",
+        "is_public": True
+    }
+    schema = QuestionSetBaseSchema(**data)
+    assert schema.name == "Math Quiz Set"
+    assert schema.description == "A set of math questions"
+    assert schema.is_public is True
+
+def test_question_set_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        QuestionSetBaseSchema(name="", description="Invalid set", is_public=True)
+    assert "String should have at least 1 character" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        QuestionSetBaseSchema(name="a" * 201, description="Invalid set", is_public=True)
+    assert "String should have at most 200 characters" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        QuestionSetBaseSchema(name="Invalid@Set", description="Invalid set", is_public=True)
+    assert "Question set name can only contain alphanumeric characters, hyphens, underscores, and spaces" in str(exc_info.value)
+
+def test_question_set_create_schema(test_user):
+    data = {
+        "name": "Science Quiz Set",
+        "description": "A set of science questions",
+        "is_public": False,
+        "creator_id": test_user.id,
+        "question_ids": [1, 2, 3],
+        "group_ids": [1, 2]
+    }
+    schema = QuestionSetCreateSchema(**data)
+    assert schema.name == "Science Quiz Set"
+    assert schema.description == "A set of science questions"
+    assert schema.is_public is False
+    assert schema.creator_id == test_user.id
+    assert schema.question_ids == [1, 2, 3]
+    assert schema.group_ids == [1, 2]
+
+def test_question_set_update_schema():
+    data = {
+        "name": "Updated Quiz Set",
+        "description": "This set has been updated",
+        "is_public": True,
+        "question_ids": [4, 5, 6],
+        "group_ids": [3, 4]
+    }
+    schema = QuestionSetUpdateSchema(**data)
+    assert schema.name == "Updated Quiz Set"
+    assert schema.description == "This set has been updated"
+    assert schema.is_public is True
+    assert schema.question_ids == [4, 5, 6]
+    assert schema.group_ids == [3, 4]
+
+    # Test partial update
+    partial_data = {"name": "Partially Updated Set"}
+    partial_schema = QuestionSetUpdateSchema(**partial_data)
+    assert partial_schema.name == "Partially Updated Set"
+    assert partial_schema.description is None
+    assert partial_schema.is_public is None
+    assert partial_schema.question_ids is None
+    assert partial_schema.group_ids is None
+
+def test_question_set_schema():
+    data = {
+        "id": 1,
+        "name": "Complete Quiz Set",
+        "description": "This is a complete question set",
+        "is_public": True,
+        "creator_id": 1,
+        "question_ids": [1, 2, 3, 4],
+        "group_ids": [1, 2, 3]
+    }
+    schema = QuestionSetSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "Complete Quiz Set"
+    assert schema.description == "This is a complete question set"
+    assert schema.is_public is True
+    assert schema.creator_id == 1
+    assert schema.question_ids == [1, 2, 3, 4]
+    assert schema.group_ids == [1, 2, 3]
+
+def test_question_set_schema_from_attributes(db_session, test_question_set):
+    schema = QuestionSetSchema.model_validate(test_question_set)
+    assert schema.id == test_question_set.id
+    assert schema.name == test_question_set.name
+    assert schema.description == test_question_set.description
+    assert schema.is_public == test_question_set.is_public
+    assert schema.creator_id == test_question_set.creator_id
+    assert set(schema.question_ids) == set(q.id for q in test_question_set.questions)
+    assert set(schema.group_ids) == set(g.id for g in test_question_set.groups)
+
+```
+
+## File: test_schemas_question_tags.py
+```py
+# filename: tests/test_schemas_question_tags.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.question_tags import QuestionTagBaseSchema, QuestionTagCreateSchema, QuestionTagUpdateSchema, QuestionTagSchema
+
+def test_question_tag_base_schema_valid():
+    data = {
+        "tag": "mathematics"
+    }
+    schema = QuestionTagBaseSchema(**data)
+    assert schema.tag == "mathematics"
+
+def test_question_tag_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        QuestionTagBaseSchema(tag="")
+    assert "String should have at least 1 character" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        QuestionTagBaseSchema(tag="a" * 51)
+    assert "String should have at most 50 characters" in str(exc_info.value)
+
+def test_question_tag_base_schema_lowercase():
+    data = {
+        "tag": "UPPERCASE"
+    }
+    schema = QuestionTagBaseSchema(**data)
+    assert schema.tag == "uppercase"
+
+def test_question_tag_create_schema():
+    data = {
+        "tag": "physics"
+    }
+    schema = QuestionTagCreateSchema(**data)
+    assert schema.tag == "physics"
+
+def test_question_tag_update_schema():
+    data = {
+        "tag": "updated_tag"
+    }
+    schema = QuestionTagUpdateSchema(**data)
+    assert schema.tag == "updated_tag"
+
+    # Test partial update (although in this case, there's only one field)
+    partial_data = {}
+    partial_schema = QuestionTagUpdateSchema(**partial_data)
+    assert partial_schema.tag is None
+
+def test_question_tag_schema():
+    data = {
+        "id": 1,
+        "tag": "biology"
+    }
+    schema = QuestionTagSchema(**data)
+    assert schema.id == 1
+    assert schema.tag == "biology"
+
+def test_question_tag_schema_from_attributes(db_session, test_tag):
+    schema = QuestionTagSchema.model_validate(test_tag)
+    assert schema.id == test_tag.id
+    assert schema.tag == test_tag.tag
 
 ```
 
 ## File: test_schemas_questions.py
 ```py
-# filename: tests/test_schemas.py
+# filename: tests/test_schemas_questions.py
 
-from app.schemas.questions import QuestionCreateSchema
+import pytest
+from pydantic import ValidationError
+from app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, QuestionWithAnswersCreateSchema, DetailedQuestionSchema, DifficultyLevel
+from app.schemas.answer_choices import AnswerChoiceSchema
 
-
-def test_question_create_schema(
-    db_session,
-    test_subtopic,
-    test_question_set,
-    test_subject,
-    test_topic
-):
+def test_question_create_schema(test_subject, test_topic, test_subtopic, test_concept):
     question_data = {
-        "db": db_session,
-        "text": "Test question",
-        "subject_id": test_subject.id,
-        "topic_id": test_topic.id,
-        "subtopic_id": test_subtopic.id,
-        "question_set_ids": [test_question_set.id],
-        "difficulty": "Easy",
-        "answer_choices": [
-            {"text": "Answer 1", "is_correct": True, "explanation": "Test explanation 1"},
-            {"text": "Answer 2", "is_correct": False, "explanation": "Test explanation 2"}
-        ]
+        "text": "What is the capital of France?",
+        "difficulty": DifficultyLevel.EASY,
+        "subject_ids": [test_subject.id],
+        "topic_ids": [test_topic.id],
+        "subtopic_ids": [test_subtopic.id],
+        "concept_ids": [test_concept.id],
     }
     question_schema = QuestionCreateSchema(**question_data)
-    assert question_schema.text == "Test question"
-    assert question_schema.subject_id == 1
-    assert question_schema.topic_id == 1
-    assert question_schema.subtopic_id == 1
-    assert question_schema.question_set_ids == [1]
-    assert question_schema.difficulty == "Easy"
+    assert question_schema.text == "What is the capital of France?"
+    assert question_schema.difficulty == DifficultyLevel.EASY
+    assert question_schema.subject_ids == [test_subject.id]
+    assert question_schema.topic_ids == [test_topic.id]
+    assert question_schema.subtopic_ids == [test_subtopic.id]
+    assert question_schema.concept_ids == [test_concept.id]
+
+def test_question_create_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        QuestionCreateSchema(text="", difficulty=DifficultyLevel.EASY)
+    assert "String should have at least 1 character" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        QuestionCreateSchema(text="Valid question", difficulty="Invalid")
+    assert "Input should be 'Beginner', 'Easy', 'Medium', 'Hard' or 'Expert'" in str(exc_info.value)
+
+def test_question_update_schema():
+    update_data = {
+        "text": "Updated question text",
+        "difficulty": DifficultyLevel.MEDIUM,
+    }
+    update_schema = QuestionUpdateSchema(**update_data)
+    assert update_schema.text == "Updated question text"
+    assert update_schema.difficulty == DifficultyLevel.MEDIUM
+
+def test_question_with_answers_create_schema(test_subject, test_topic, test_subtopic, test_concept):
+    question_data = {
+        "text": "What is the capital of France?",
+        "difficulty": DifficultyLevel.EASY,
+        "subject_ids": [test_subject.id],
+        "topic_ids": [test_topic.id],
+        "subtopic_ids": [test_subtopic.id],
+        "concept_ids": [test_concept.id],
+        "answer_choices": [
+            {"text": "Paris", "is_correct": True, "explanation": "Paris is the capital of France"},
+            {"text": "London", "is_correct": False, "explanation": "London is the capital of the UK"},
+        ]
+    }
+    question_schema = QuestionWithAnswersCreateSchema(**question_data)
+    assert question_schema.text == "What is the capital of France?"
+    assert question_schema.difficulty == DifficultyLevel.EASY
     assert len(question_schema.answer_choices) == 2
+    assert question_schema.answer_choices[0].text == "Paris"
+    assert question_schema.answer_choices[0].is_correct is True
+
+def test_detailed_question_schema(test_subject, test_topic, test_subtopic, test_concept):
+    question_data = {
+        "id": 1,
+        "text": "What is the capital of France?",
+        "difficulty": DifficultyLevel.EASY,
+        "subject": test_subject.name,
+        "topic": test_topic.name,
+        "subtopic": test_subtopic.name,
+        "concept": test_concept.name,
+        "answer_choices": [
+            AnswerChoiceSchema(id=1, text="Paris", is_correct=True, explanation="Paris is the capital of France"),
+            AnswerChoiceSchema(id=2, text="London", is_correct=False, explanation="London is the capital of the UK"),
+        ],
+        "question_tags": ["geography", "capitals"],
+        "question_sets": ["European Capitals"]
+    }
+    detailed_schema = DetailedQuestionSchema(**question_data)
+    assert detailed_schema.id == 1
+    assert detailed_schema.text == "What is the capital of France?"
+    assert detailed_schema.difficulty == DifficultyLevel.EASY
+    assert detailed_schema.subject == test_subject.name
+    assert detailed_schema.topic == test_topic.name
+    assert detailed_schema.subtopic == test_subtopic.name
+    assert detailed_schema.concept == test_concept.name
+    assert len(detailed_schema.answer_choices) == 2
+    assert detailed_schema.question_tags == ["geography", "capitals"]
+    assert detailed_schema.question_sets == ["European Capitals"]
+
+```
+
+## File: test_schemas_roles.py
+```py
+# filename: tests/test_schemas_roles.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.roles import RoleBaseSchema, RoleCreateSchema, RoleUpdateSchema, RoleSchema
+
+def test_role_base_schema_valid():
+    data = {
+        "name": "admin",
+        "description": "Administrator role",
+        "default": False
+    }
+    schema = RoleBaseSchema(**data)
+    assert schema.name == "admin"
+    assert schema.description == "Administrator role"
+    assert schema.default is False
+
+def test_role_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        RoleBaseSchema(name="", description="Invalid role", default=False)
+    assert "String should have at least 1 character" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        RoleBaseSchema(name="a" * 51, description="Invalid role", default=False)
+    assert "String should have at most 50 characters" in str(exc_info.value)
+
+def test_role_create_schema():
+    data = {
+        "name": "moderator",
+        "description": "Moderator role",
+        "default": False,
+        "permissions": ["read_post", "edit_post", "delete_post"]
+    }
+    schema = RoleCreateSchema(**data)
+    assert schema.name == "moderator"
+    assert schema.description == "Moderator role"
+    assert schema.default is False
+    assert set(schema.permissions) == set(["read_post", "edit_post", "delete_post"])
+
+def test_role_create_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        RoleCreateSchema(name="invalid", description="Invalid role", default=False, permissions=[])
+    assert "List should have at least 1 item after validation" in str(exc_info.value)
+
+def test_role_update_schema():
+    data = {
+        "name": "editor",
+        "description": "Updated editor role",
+        "permissions": ["read_post", "edit_post"]
+    }
+    schema = RoleUpdateSchema(**data)
+    assert schema.name == "editor"
+    assert schema.description == "Updated editor role"
+    assert schema.permissions == ["read_post", "edit_post"]
+
+    # Test partial update
+    partial_data = {"description": "Partially updated description"}
+    partial_schema = RoleUpdateSchema(**partial_data)
+    assert partial_schema.name is None
+    assert partial_schema.description == "Partially updated description"
+    assert partial_schema.permissions is None
+
+def test_role_schema():
+    data = {
+        "id": 1,
+        "name": "user",
+        "description": "Regular user role",
+        "default": True,
+        "permissions": ["read_post", "create_post"]
+    }
+    schema = RoleSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "user"
+    assert schema.description == "Regular user role"
+    assert schema.default is True
+    assert schema.permissions == ["read_post", "create_post"]
+
+def test_role_schema_from_attributes(test_role):
+    schema = RoleSchema.model_validate(test_role)
+    assert schema.id == test_role.id
+    assert schema.name == test_role.name
+    assert schema.description == test_role.description
+    assert schema.default == test_role.default
+    assert set(schema.permissions) == set(permission.name for permission in test_role.permissions)
+
+```
+
+## File: test_schemas_subjects.py
+```py
+# filename: tests/test_schemas_subjects.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.subjects import SubjectBaseSchema, SubjectCreateSchema, SubjectUpdateSchema, SubjectSchema
+
+def test_subject_base_schema_valid():
+    data = {
+        "name": "Mathematics"
+    }
+    schema = SubjectBaseSchema(**data)
+    assert schema.name == "Mathematics"
+
+def test_subject_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        SubjectBaseSchema(name="")
+    assert "Subject name cannot be empty or whitespace" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        SubjectBaseSchema(name="a" * 101)
+    assert "ensure this value has at most 100 characters" in str(exc_info.value)
+
+def test_subject_create_schema():
+    data = {
+        "name": "Physics",
+        "discipline_ids": [1, 2],
+        "topic_ids": [3, 4, 5]
+    }
+    schema = SubjectCreateSchema(**data)
+    assert schema.name == "Physics"
+    assert schema.discipline_ids == [1, 2]
+    assert schema.topic_ids == [3, 4, 5]
+
+def test_subject_create_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        SubjectCreateSchema(name="Physics", discipline_ids=[])
+    assert "ensure this value has at least 1 items" in str(exc_info.value)
+
+def test_subject_update_schema():
+    data = {
+        "name": "Updated Physics",
+        "discipline_ids": [2, 3],
+        "topic_ids": [4, 5, 6]
+    }
+    schema = SubjectUpdateSchema(**data)
+    assert schema.name == "Updated Physics"
+    assert schema.discipline_ids == [2, 3]
+    assert schema.topic_ids == [4, 5, 6]
+
+    # Test partial update
+    partial_data = {"name": "Partially Updated Subject"}
+    partial_schema = SubjectUpdateSchema(**partial_data)
+    assert partial_schema.name == "Partially Updated Subject"
+    assert partial_schema.discipline_ids is None
+    assert partial_schema.topic_ids is None
+
+def test_subject_schema():
+    data = {
+        "id": 1,
+        "name": "Complete Subject",
+        "discipline_ids": [1, 2],
+        "topic_ids": [3, 4, 5]
+    }
+    schema = SubjectSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "Complete Subject"
+    assert schema.discipline_ids == [1, 2]
+    assert schema.topic_ids == [3, 4, 5]
+
+def test_subject_schema_from_attributes(db_session, test_subject):
+    schema = SubjectSchema.model_validate(test_subject)
+    assert schema.id == test_subject.id
+    assert schema.name == test_subject.name
+    assert set(schema.discipline_ids) == set(d.id for d in test_subject.disciplines)
+    assert set(schema.topic_ids) == set(t.id for t in test_subject.topics)
+
+```
+
+## File: test_schemas_subtopics.py
+```py
+# filename: tests/test_schemas_subtopics.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.subtopics import SubtopicBaseSchema, SubtopicCreateSchema, SubtopicUpdateSchema, SubtopicSchema
+
+def test_subtopic_base_schema_valid():
+    data = {
+        "name": "Linear Equations"
+    }
+    schema = SubtopicBaseSchema(**data)
+    assert schema.name == "Linear Equations"
+
+def test_subtopic_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        SubtopicBaseSchema(name="")
+    assert "Subtopic name cannot be empty or whitespace" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        SubtopicBaseSchema(name="a" * 101)
+    assert "ensure this value has at most 100 characters" in str(exc_info.value)
+
+def test_subtopic_create_schema():
+    data = {
+        "name": "Quadratic Equations",
+        "topic_ids": [1, 2],
+        "concept_ids": [3, 4, 5]
+    }
+    schema = SubtopicCreateSchema(**data)
+    assert schema.name == "Quadratic Equations"
+    assert schema.topic_ids == [1, 2]
+    assert schema.concept_ids == [3, 4, 5]
+
+def test_subtopic_create_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        SubtopicCreateSchema(name="Quadratic Equations", topic_ids=[])
+    assert "ensure this value has at least 1 items" in str(exc_info.value)
+
+def test_subtopic_update_schema():
+    data = {
+        "name": "Updated Quadratic Equations",
+        "topic_ids": [2, 3],
+        "concept_ids": [4, 5, 6]
+    }
+    schema = SubtopicUpdateSchema(**data)
+    assert schema.name == "Updated Quadratic Equations"
+    assert schema.topic_ids == [2, 3]
+    assert schema.concept_ids == [4, 5, 6]
+
+    # Test partial update
+    partial_data = {"name": "Partially Updated Subtopic"}
+    partial_schema = SubtopicUpdateSchema(**partial_data)
+    assert partial_schema.name == "Partially Updated Subtopic"
+    assert partial_schema.topic_ids is None
+    assert partial_schema.concept_ids is None
+
+def test_subtopic_schema():
+    data = {
+        "id": 1,
+        "name": "Complete Subtopic",
+        "topic_ids": [1, 2],
+        "concept_ids": [3, 4, 5]
+    }
+    schema = SubtopicSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "Complete Subtopic"
+    assert schema.topic_ids == [1, 2]
+    assert schema.concept_ids == [3, 4, 5]
+
+def test_subtopic_schema_from_attributes(db_session, test_subtopic):
+    schema = SubtopicSchema.model_validate(test_subtopic)
+    assert schema.id == test_subtopic.id
+    assert schema.name == test_subtopic.name
+    assert set(schema.topic_ids) == set(t.id for t in test_subtopic.topics)
+    assert set(schema.concept_ids) == set(c.id for c in test_subtopic.concepts)
+
+```
+
+## File: test_schemas_time_period.py
+```py
+# filename: tests/test_schemas_time_period.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.time_period import TimePeriodSchema
+
+def test_time_period_schema_valid():
+    data = {
+        "id": 1,
+        "name": "daily"
+    }
+    schema = TimePeriodSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "daily"
+
+def test_time_period_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        TimePeriodSchema(id=0, name="invalid")
+    assert "Input should be greater than 0" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        TimePeriodSchema(id=1, name="")
+    assert "ensure this value has at least 1 characters" in str(exc_info.value)
+
+def test_time_period_schema_from_attributes(db_session):
+    from app.models.time_period import TimePeriodModel
+    
+    time_periods = [
+        TimePeriodModel.daily(),
+        TimePeriodModel.weekly(),
+        TimePeriodModel.monthly(),
+        TimePeriodModel.yearly()
+    ]
+    
+    for model in time_periods:
+        db_session.add(model)
+    db_session.commit()
+
+    for model in time_periods:
+        schema = TimePeriodSchema.model_validate(model)
+        assert schema.id == model.id
+        assert schema.name == model.name
+
+def test_time_period_schema_predefined_values():
+    daily = TimePeriodSchema(id=1, name="daily")
+    assert daily.id == 1
+    assert daily.name == "daily"
+
+    weekly = TimePeriodSchema(id=7, name="weekly")
+    assert weekly.id == 7
+    assert weekly.name == "weekly"
+
+    monthly = TimePeriodSchema(id=30, name="monthly")
+    assert monthly.id == 30
+    assert monthly.name == "monthly"
+
+    yearly = TimePeriodSchema(id=365, name="yearly")
+    assert yearly.id == 365
+    assert yearly.name == "yearly"
+
+```
+
+## File: test_schemas_topics.py
+```py
+# filename: tests/test_schemas_topics.py
+
+import pytest
+from pydantic import ValidationError
+from app.schemas.topics import TopicBaseSchema, TopicCreateSchema, TopicUpdateSchema, TopicSchema
+
+def test_topic_base_schema_valid():
+    data = {
+        "name": "Algebra"
+    }
+    schema = TopicBaseSchema(**data)
+    assert schema.name == "Algebra"
+
+def test_topic_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        TopicBaseSchema(name="")
+    assert "Topic name cannot be empty or whitespace" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        TopicBaseSchema(name="a" * 101)
+    assert "ensure this value has at most 100 characters" in str(exc_info.value)
+
+def test_topic_create_schema():
+    data = {
+        "name": "Calculus",
+        "subject_ids": [1, 2],
+        "subtopic_ids": [3, 4, 5]
+    }
+    schema = TopicCreateSchema(**data)
+    assert schema.name == "Calculus"
+    assert schema.subject_ids == [1, 2]
+    assert schema.subtopic_ids == [3, 4, 5]
+
+def test_topic_create_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        TopicCreateSchema(name="Calculus", subject_ids=[])
+    assert "ensure this value has at least 1 items" in str(exc_info.value)
+
+def test_topic_update_schema():
+    data = {
+        "name": "Updated Calculus",
+        "subject_ids": [2, 3],
+        "subtopic_ids": [4, 5, 6]
+    }
+    schema = TopicUpdateSchema(**data)
+    assert schema.name == "Updated Calculus"
+    assert schema.subject_ids == [2, 3]
+    assert schema.subtopic_ids == [4, 5, 6]
+
+    # Test partial update
+    partial_data = {"name": "Partially Updated Topic"}
+    partial_schema = TopicUpdateSchema(**partial_data)
+    assert partial_schema.name == "Partially Updated Topic"
+    assert partial_schema.subject_ids is None
+    assert partial_schema.subtopic_ids is None
+
+def test_topic_schema():
+    data = {
+        "id": 1,
+        "name": "Complete Topic",
+        "subject_ids": [1, 2],
+        "subtopic_ids": [3, 4, 5]
+    }
+    schema = TopicSchema(**data)
+    assert schema.id == 1
+    assert schema.name == "Complete Topic"
+    assert schema.subject_ids == [1, 2]
+    assert schema.subtopic_ids == [3, 4, 5]
+
+def test_topic_schema_from_attributes(db_session, test_topic):
+    schema = TopicSchema.model_validate(test_topic)
+    assert schema.id == test_topic.id
+    assert schema.name == test_topic.name
+    assert set(schema.subject_ids) == set(s.id for s in test_topic.subjects)
+    assert set(schema.subtopic_ids) == set(st.id for st in test_topic.subtopics)
 
 ```
 
@@ -4972,10 +6945,11 @@ def test_question_create_schema(
 # filename: tests/test_schemas_user.py
 
 import pytest
-from app.schemas.user import UserCreateSchema
+from pydantic import ValidationError
+from app.schemas.user import UserCreateSchema, UserUpdateSchema, UserSchema
+from app.core.security import verify_password
 
-
-def test_user_create_schema():
+def test_user_create_schema_valid():
     user_data = {
         "username": "testuser",
         "password": "TestPassword123!",
@@ -4983,102 +6957,180 @@ def test_user_create_schema():
     }
     user_schema = UserCreateSchema(**user_data)
     assert user_schema.username == "testuser"
-    assert user_schema.password == "TestPassword123!"
+    assert verify_password("TestPassword123!", user_schema.password)
     assert user_schema.email == "testuser@example.com"
 
 def test_user_create_schema_password_validation():
-    user_data = {
-        "username": "testuser",
-        "password": "ValidPassword123!",
-        "email": "testuser@example.com"
+    with pytest.raises(ValidationError) as exc_info:
+        UserCreateSchema(username="testuser", password="weak", email="test@example.com")
+    assert "Value should have at least 8 items after validation" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        UserCreateSchema(username="testuser", password="nodigits!", email="test@example.com")
+    assert "Password must contain at least one digit" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        UserCreateSchema(username="testuser", password="nouppercase123!", email="test@example.com")
+    assert "Password must contain at least one uppercase letter" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        UserCreateSchema(username="testuser", password="NOLOWERCASE123!", email="test@example.com")
+    assert "Password must contain at least one lowercase letter" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        UserCreateSchema(username="testuser", password="NoSpecialChar123", email="test@example.com")
+    assert "Password must contain at least one special character" in str(exc_info.value)
+
+def test_user_create_schema_username_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        UserCreateSchema(username="ab", password="ValidPass123!", email="test@example.com")
+    assert "String should have at least 3 characters" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        UserCreateSchema(username="a" * 51, password="ValidPass123!", email="test@example.com")
+    assert "String should have at most 50 characters" in str(exc_info.value)
+
+    with pytest.raises(ValidationError) as exc_info:
+        UserCreateSchema(username="invalid@user", password="ValidPass123!", email="test@example.com")
+    assert "Username must contain only alphanumeric characters" in str(exc_info.value)
+
+def test_user_create_schema_email_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        UserCreateSchema(username="testuser", password="ValidPass123!", email="invalidemail")
+    assert "value is not a valid email address" in str(exc_info.value)
+
+def test_user_update_schema():
+    update_data = {
+        "username": "updateduser",
+        "email": "updated@example.com",
+        "password": "NewPassword123!"
     }
-    user_schema = UserCreateSchema(**user_data)
-    assert user_schema.password == "ValidPassword123!"
+    update_schema = UserUpdateSchema(**update_data)
+    assert update_schema.username == "updateduser"
+    assert update_schema.email == "updated@example.com"
+    assert verify_password("NewPassword123!", update_schema.password)
 
-def test_user_create_schema_password_too_short():
-    """
-    Test password too short validation in UserCreate schema.
-    """
-    with pytest.raises(ValueError):
-        UserCreateSchema(username="testuser", password="short")
+def test_user_schema(test_user):
+    user_schema = UserSchema.model_validate(test_user)
+    assert user_schema.id == test_user.id
+    assert user_schema.username == test_user.username
+    assert user_schema.email == test_user.email
+    assert user_schema.is_active == test_user.is_active
+    assert user_schema.is_admin == test_user.is_admin
+    assert user_schema.groups == test_user.groups
+    assert user_schema.created_groups == test_user.created_groups
+    assert user_schema.created_question_sets == test_user.created_question_sets
+    assert user_schema.responses == test_user.responses
+    assert user_schema.leaderboards == test_user.leaderboards
 
-def test_user_create_schema_password_valid():
-    """
-    Test valid password validation in UserCreate schema.
-    """
-    user_data = {
-        "username": "testuser",
-        "password": "ValidPassword123!",
-        "email": "testuser@example.com"
+```
+
+## File: test_schemas_user_responses.py
+```py
+# filename: tests/test_schemas_user_responses.py
+
+import pytest
+from pydantic import ValidationError
+from datetime import datetime, timezone
+from app.schemas.user_responses import UserResponseBaseSchema, UserResponseCreateSchema, UserResponseUpdateSchema, UserResponseSchema
+
+def test_user_response_base_schema_valid():
+    data = {
+        "user_id": 1,
+        "question_id": 1,
+        "answer_choice_id": 1,
+        "is_correct": True,
+        "response_time": 30
     }
-    user_schema = UserCreateSchema(**user_data)
-    assert user_schema.password == "ValidPassword123!"
+    schema = UserResponseBaseSchema(**data)
+    assert schema.user_id == 1
+    assert schema.question_id == 1
+    assert schema.answer_choice_id == 1
+    assert schema.is_correct is True
+    assert schema.response_time == 30
 
-def test_user_create_schema_password_missing_digit():
-    """
-    Test password missing a digit validation in UserCreate schema.
-    """
-    with pytest.raises(ValueError, match="Password must contain at least one digit"):
-        UserCreateSchema(username="testuser", password="NoDigitPassword")
+def test_user_response_base_schema_validation():
+    with pytest.raises(ValidationError) as exc_info:
+        UserResponseBaseSchema(user_id=0, question_id=1, answer_choice_id=1, is_correct=True)
+    assert "Input should be greater than 0" in str(exc_info.value)
 
-def test_user_create_schema_password_missing_uppercase():
-    """
-    Test password missing an uppercase letter validation in UserCreate schema.
-    """
-    with pytest.raises(ValueError, match="Password must contain at least one uppercase letter"):
-        UserCreateSchema(username="testuser", password="nouppercasepassword123")
+    with pytest.raises(ValidationError) as exc_info:
+        UserResponseBaseSchema(user_id=1, question_id=1, answer_choice_id=1, is_correct=True, response_time=-1)
+    assert "Input should be greater than or equal to 0" in str(exc_info.value)
 
-def test_user_create_schema_password_missing_lowercase():
-    """
-    Test password missing a lowercase letter validation in UserCreate schema.
-    """
-    with pytest.raises(ValueError, match="Password must contain at least one lowercase letter"):
-        UserCreateSchema(username="testuser", password="NOLOWERCASEPASSWORD123")
-
-def test_user_create_schema_password_valid_complexity():
-    """
-    Test valid password complexity validation in UserCreate schema.
-    """
-    user_data = {
-        "username": "testuser",
-        "password": "ValidPassword123!",
-        "email": "testuser@example.com"
+def test_user_response_create_schema():
+    data = {
+        "user_id": 1,
+        "question_id": 1,
+        "answer_choice_id": 1,
+        "is_correct": True,
+        "response_time": 30,
+        "timestamp": datetime.now(timezone.utc)
     }
-    user_schema = UserCreateSchema(**user_data)
-    assert user_schema.password == "ValidPassword123!"
+    schema = UserResponseCreateSchema(**data)
+    assert schema.user_id == 1
+    assert schema.question_id == 1
+    assert schema.answer_choice_id == 1
+    assert schema.is_correct is True
+    assert schema.response_time == 30
+    assert isinstance(schema.timestamp, datetime)
 
-def test_user_create_schema_username_too_short():
-    """
-    Test username too short validation in UserCreate schema.
-    """
-    with pytest.raises(ValueError, match='Username must be at least 3 characters long'):
-        UserCreateSchema(username='ab', password='ValidPassword123!')
-
-def test_user_create_schema_username_too_long():
-    """
-    Test username too long validation in UserCreate schema.
-    """
-    with pytest.raises(ValueError, match='Username must not exceed 50 characters'):
-        UserCreateSchema(username='a' * 51, password='ValidPassword123!')
-
-def test_user_create_schema_username_invalid_characters():
-    """
-    Test username with invalid characters validation in UserCreate schema.
-    """
-    with pytest.raises(ValueError, match='Username must contain only alphanumeric characters'):
-        UserCreateSchema(username='invalid_username!', password='ValidPassword123!')
-
-def test_user_create_schema_username_valid():
-    """
-    Test valid username validation in UserCreate schema.
-    """
-    user_data = {
-        "username": "validuser",
-        "password": "ValidPassword123!",
-        "email": "testuser@example.com"
+def test_user_response_update_schema():
+    data = {
+        "is_correct": False,
+        "response_time": 45
     }
-    user_schema = UserCreateSchema(**user_data)
-    assert user_schema.username == "validuser"
+    schema = UserResponseUpdateSchema(**data)
+    assert schema.is_correct is False
+    assert schema.response_time == 45
+
+    # Test partial update
+    partial_data = {"is_correct": True}
+    partial_schema = UserResponseUpdateSchema(**partial_data)
+    assert partial_schema.is_correct is True
+    assert partial_schema.response_time is None
+
+def test_user_response_schema():
+    data = {
+        "id": 1,
+        "user_id": 1,
+        "question_id": 1,
+        "answer_choice_id": 1,
+        "is_correct": True,
+        "response_time": 30,
+        "timestamp": datetime.now(timezone.utc)
+    }
+    schema = UserResponseSchema(**data)
+    assert schema.id == 1
+    assert schema.user_id == 1
+    assert schema.question_id == 1
+    assert schema.answer_choice_id == 1
+    assert schema.is_correct is True
+    assert schema.response_time == 30
+    assert isinstance(schema.timestamp, datetime)
+
+def test_user_response_schema_from_attributes(db_session, test_user, test_questions, test_answer_choices):
+    from app.models.user_responses import UserResponseModel
+    
+    user_response = UserResponseModel(
+        user_id=test_user.id,
+        question_id=test_questions[0].id,
+        answer_choice_id=test_answer_choices[0].id,
+        is_correct=True,
+        response_time=30
+    )
+    db_session.add(user_response)
+    db_session.commit()
+    db_session.refresh(user_response)
+
+    schema = UserResponseSchema.model_validate(user_response)
+    assert schema.id == user_response.id
+    assert schema.user_id == test_user.id
+    assert schema.question_id == test_questions[0].id
+    assert schema.answer_choice_id == test_answer_choices[0].id
+    assert schema.is_correct is True
+    assert schema.response_time == 30
+    assert isinstance(schema.timestamp, datetime)
 
 ```
 
@@ -5274,63 +7326,108 @@ def test_protected_endpoint_expired_token(client, test_user, db_session):
 # filename: tests/test_api_filters.py
 
 import pytest
+from app.models.domains import DomainModel
+from app.models.disciplines import DisciplineModel
 from app.models.subjects import SubjectModel
 from app.models.topics import TopicModel
 from app.models.subtopics import SubtopicModel
+from app.models.concepts import ConceptModel
 from app.models.question_tags import QuestionTagModel
 from app.models.question_sets import QuestionSetModel
 from app.models.questions import QuestionModel
+from app.crud.crud_questions import read_question
 from app.api.endpoints.filters import filter_questions_endpoint
 
 
 def test_setup_filter_questions_data(db_session, setup_filter_questions_data):
     # Check if the required data is created in the database
-    assert db_session.query(SubjectModel).filter(SubjectModel.name == "Math").first() is not None
-    assert db_session.query(SubjectModel).filter(SubjectModel.name == "Science").first() is not None
-    assert db_session.query(TopicModel).filter(TopicModel.name == "Algebra").first() is not None
-    assert db_session.query(TopicModel).filter(TopicModel.name == "Geometry").first() is not None
-    assert db_session.query(TopicModel).filter(TopicModel.name == "Physics").first() is not None
-    assert db_session.query(SubtopicModel).filter(SubtopicModel.name == "Linear Equations").first() is not None
-    assert db_session.query(SubtopicModel).filter(SubtopicModel.name == "Quadratic Equations").first() is not None
-    assert db_session.query(SubtopicModel).filter(SubtopicModel.name == "Triangles").first() is not None
-    assert db_session.query(SubtopicModel).filter(SubtopicModel.name == "Mechanics").first() is not None
-    assert db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "equations").first() is not None
-    assert db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "solving").first() is not None
-    assert db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "geometry").first() is not None
+    assert db_session.query(DomainModel).filter(DomainModel.name == "Science").first() is not None
+    assert db_session.query(DomainModel).filter(DomainModel.name == "Mathematics").first() is not None
+    
+    assert db_session.query(DisciplineModel).filter(DisciplineModel.name == "Physics").first() is not None
+    assert db_session.query(DisciplineModel).filter(DisciplineModel.name == "Pure Mathematics").first() is not None
+    
+    assert db_session.query(SubjectModel).filter(SubjectModel.name == "Classical Mechanics").first() is not None
+    assert db_session.query(SubjectModel).filter(SubjectModel.name == "Algebra").first() is not None
+    
+    assert db_session.query(TopicModel).filter(TopicModel.name == "Newton's Laws").first() is not None
+    assert db_session.query(TopicModel).filter(TopicModel.name == "Linear Algebra").first() is not None
+    
+    assert db_session.query(SubtopicModel).filter(SubtopicModel.name == "First Law of Motion").first() is not None
+    assert db_session.query(SubtopicModel).filter(SubtopicModel.name == "Second Law of Motion").first() is not None
+    assert db_session.query(SubtopicModel).filter(SubtopicModel.name == "Matrices").first() is not None
+    assert db_session.query(SubtopicModel).filter(SubtopicModel.name == "Vector Spaces").first() is not None
+    
+    assert db_session.query(ConceptModel).filter(ConceptModel.name == "Inertia").first() is not None
+    assert db_session.query(ConceptModel).filter(ConceptModel.name == "Force and Acceleration").first() is not None
+    assert db_session.query(ConceptModel).filter(ConceptModel.name == "Matrix Operations").first() is not None
+    assert db_session.query(ConceptModel).filter(ConceptModel.name == "Linear Independence").first() is not None
+    
     assert db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "physics").first() is not None
+    assert db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "mathematics").first() is not None
+    assert db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "mechanics").first() is not None
+    assert db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "linear algebra").first() is not None
+    
+    assert db_session.query(QuestionSetModel).filter(QuestionSetModel.name == "Physics Question Set").first() is not None
     assert db_session.query(QuestionSetModel).filter(QuestionSetModel.name == "Math Question Set").first() is not None
-    assert db_session.query(QuestionSetModel).filter(QuestionSetModel.name == "Science Question Set").first() is not None
+    
     assert db_session.query(QuestionModel).count() == 4
 
     # Check if the topics are correctly associated with their respective subjects
-    algebra_topic = db_session.query(TopicModel).filter(TopicModel.name == "Algebra").first()
-    assert algebra_topic.subject.name == "Math"
+    newtons_laws_topic = db_session.query(TopicModel).filter(TopicModel.name == "Newton's Laws").first()
+    assert newtons_laws_topic.subject.name == "Classical Mechanics"
 
-    geometry_topic = db_session.query(TopicModel).filter(TopicModel.name == "Geometry").first()
-    assert geometry_topic.subject.name == "Math"
-
-    physics_topic = db_session.query(TopicModel).filter(TopicModel.name == "Physics").first()
-    assert physics_topic.subject.name == "Science"
+    linear_algebra_topic = db_session.query(TopicModel).filter(TopicModel.name == "Linear Algebra").first()
+    assert linear_algebra_topic.subject.name == "Algebra"
 
     # Check if the subtopics are correctly associated with their respective topics
-    linear_equations_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Linear Equations").first()
-    assert linear_equations_subtopic.topic.name == "Algebra"
+    first_law_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "First Law of Motion").first()
+    assert first_law_subtopic.topic.name == "Newton's Laws"
 
-    quadratic_equations_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Quadratic Equations").first()
-    assert quadratic_equations_subtopic.topic.name == "Algebra"
+    second_law_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Second Law of Motion").first()
+    assert second_law_subtopic.topic.name == "Newton's Laws"
 
-    triangles_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Triangles").first()
-    assert triangles_subtopic.topic.name == "Geometry"
+    matrices_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Matrices").first()
+    assert matrices_subtopic.topic.name == "Linear Algebra"
 
-    mechanics_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Mechanics").first()
-    assert mechanics_subtopic.topic.name == "Physics"
+    vector_spaces_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Vector Spaces").first()
+    assert vector_spaces_subtopic.topic.name == "Linear Algebra"
 
-    # Check if the questions are correctly associated with their respective subjects, topics, and subtopics
+    # Check if the concepts are correctly associated with their respective subtopics
+    inertia_concept = db_session.query(ConceptModel).filter(ConceptModel.name == "Inertia").first()
+    assert inertia_concept.subtopic.name == "First Law of Motion"
+
+    force_acceleration_concept = db_session.query(ConceptModel).filter(ConceptModel.name == "Force and Acceleration").first()
+    assert force_acceleration_concept.subtopic.name == "Second Law of Motion"
+
+    matrix_operations_concept = db_session.query(ConceptModel).filter(ConceptModel.name == "Matrix Operations").first()
+    assert matrix_operations_concept.subtopic.name == "Matrices"
+
+    linear_independence_concept = db_session.query(ConceptModel).filter(ConceptModel.name == "Linear Independence").first()
+    assert linear_independence_concept.subtopic.name == "Vector Spaces"
+
+    # Check if the questions are correctly associated with their respective subjects, topics, subtopics, and concepts
     questions = db_session.query(QuestionModel).all()
     for question in questions:
         assert question.subject is not None
         assert question.topic is not None
         assert question.subtopic is not None
+        assert question.concept is not None
+
+    # Check specific questions
+    newton_first_law_question = db_session.query(QuestionModel).filter(QuestionModel.text == "What is Newton's First Law of Motion?").first()
+    assert newton_first_law_question.subject.name == "Classical Mechanics"
+    assert newton_first_law_question.topic.name == "Newton's Laws"
+    assert newton_first_law_question.subtopic.name == "First Law of Motion"
+    assert newton_first_law_question.concept.name == "Inertia"
+    assert set([question_tag.tag for question_tag in newton_first_law_question.question_tags]) == {"physics", "mechanics"}
+
+    linear_independence_question = db_session.query(QuestionModel).filter(QuestionModel.text == "What does it mean for a set of vectors to be linearly independent?").first()
+    assert linear_independence_question.subject.name == "Algebra"
+    assert linear_independence_question.topic.name == "Linear Algebra"
+    assert linear_independence_question.subtopic.name == "Vector Spaces"
+    assert linear_independence_question.concept.name == "Linear Independence"
+    assert set([question_tag.tag for question_tag in linear_independence_question.question_tags]) == {"mathematics", "linear algebra"}
 
 def test_filter_questions(logged_in_client, db_session):
     response = logged_in_client.get(
@@ -5340,7 +7437,7 @@ def test_filter_questions(logged_in_client, db_session):
             "topic": "Algebra",
             "subtopic": "Linear Equations",
             "difficulty": "Easy",
-            "tags": ["equations", "solving"]
+            "question_tags": ["equations", "solving"]
         }
     )
     assert response.status_code == 200, f"Failed with response: {response.json()}"
@@ -5355,8 +7452,8 @@ def test_filter_questions(logged_in_client, db_session):
             assert question["topic_id"] == topic.id
             assert question["subtopic_id"] == subtopic.id
             assert question["difficulty"] == "Easy"
-            assert "equations" in [tag["tag"] for tag in question["tags"]]
-            assert "solving" in [tag["tag"] for tag in question["tags"]]
+            assert "equations" in [tag["tag"] for tag in question["question_tags"]]
+            assert "solving" in [tag["tag"] for tag in question["question_tags"]]
 
 def test_filter_questions_by_subject(logged_in_client, db_session):
     response = logged_in_client.get(
@@ -5404,24 +7501,24 @@ def test_filter_questions_by_difficulty(logged_in_client, db_session):
 def test_filter_questions_by_single_tag(logged_in_client, db_session):
     response = logged_in_client.get(
         "/questions/filter",
-        params={"tags": ["equations"]}
+        params={"question_tags": ["equations"]}
     )
     assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
-    tag = db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "equations").first()
-    assert all(tag.id in [t.id for t in question["tags"]] for question in questions)
+    question_tag = db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "equations").first()
+    assert all(question_tag.id in [t.id for t in question["question_tags"]] for question in questions)
 
 def test_filter_questions_by_tags(logged_in_client, db_session):
     response = logged_in_client.get(
         "/questions/filter",
-        params={"tags": ["geometry"]}
+        params={"question_tags": ["geometry"]}
     )
     assert response.status_code == 200, f"Failed with response: {response.json()}"
     questions = response.json()
     assert isinstance(questions, list)
-    tag = db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "geometry").first()
-    assert all(tag.id in [t.id for t in question["tags"]] for question in questions)
+    question_tag = db_session.query(QuestionTagModel).filter(QuestionTagModel.tag == "geometry").first()
+    assert all(question_tag.id in [t.id for t in question["question_tags"]] for question in questions)
 
 def test_filter_questions_by_multiple_criteria(logged_in_client, db_session):
     response = logged_in_client.get(
@@ -5889,13 +7986,15 @@ def test_update_question_set_invalid_question_ids(logged_in_client, db_session, 
 
 import pytest
 from fastapi import HTTPException
+from app.services.logging_service import logger
 
-def test_create_question_endpoint(logged_in_client, test_subject, test_topic, test_subtopic, test_question_set):
+def test_create_question_endpoint(logged_in_client, test_subject, test_topic, test_subtopic, test_question_set, test_concept):
     data = {
         "text": "Test Question",
-        "subject_id": test_subject.id,
-        "topic_id": test_topic.id,
-        "subtopic_id": test_subtopic.id,
+        "subject": test_subject,
+        "topic": test_topic,
+        "subtopic": test_subtopic,
+        "concept": test_concept,
         "difficulty": "Easy",
         "answer_choices": [
             {"text": "Answer 1", "is_correct": True, "explanation": "Answer 1 is correct."},
@@ -5903,60 +8002,70 @@ def test_create_question_endpoint(logged_in_client, test_subject, test_topic, te
         ],
         "question_set_ids": [test_question_set.id]
     }
-    response = logged_in_client.post("/question/", json=data)
+    response = logged_in_client.post("/questions/", json=data)
     assert response.status_code == 201
+    created_question = response.json()
+    assert created_question["text"] == "Test Question"
+    assert created_question["subject"]["id"] == test_subject.id
+    assert created_question["topic"]["id"] == test_topic.id
+    assert created_question["subtopic"]["id"] == test_subtopic.id
+    assert created_question["concept"]["id"] == test_concept.id
+    assert created_question["difficulty"] == "Easy"
+    assert len(created_question["answer_choices"]) == 2
+    assert len(created_question["question_sets"]) == 1
 
-def test_read_questions_without_token(client, db_session, test_question):
+def test_read_questions_without_token(client, db_session, test_questions):
     with pytest.raises(HTTPException) as exc_info:
         response = client.get("/questions/")
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Not authenticated"
 
-def test_read_questions_with_token(logged_in_client, db_session, test_question):
-    response = logged_in_client.get("/questions/")
+def test_read_questions_with_token(
+    logged_in_client,
+    test_questions,
+    test_subject,
+    test_topic,
+    test_subtopic,
+    test_concept
+):
+    question_id = test_questions[0].id
+    response = logged_in_client.get(f"/questions/{question_id}/")
     assert response.status_code == 200
-    questions = response.json()
-    found_test_question = next((q for q in questions if q["id"] == test_question.id), None)
+    logger.error("Response: %s", response.json())
+    question = response.json()
 
     # Now we assert that our test question is indeed found and has the correct data
-    assert found_test_question is not None, "Test question was not found in the response."
-    assert found_test_question["id"] == test_question.id
-    assert found_test_question["text"] == test_question.text
-    assert found_test_question["subject_id"] == test_question.subject_id
-    assert found_test_question["subtopic_id"] == test_question.subtopic_id
-    assert found_test_question["topic_id"] == test_question.topic_id
-    assert found_test_question["difficulty"] == test_question.difficulty
+    assert question is not None, "Test question was not found in the response."
+    assert question["id"] == test_questions[0].id
+    assert question["text"] == test_questions[0].text
+    assert question["subject"] == test_subject.name
+    assert question["subtopic"] == test_subtopic.name
+    assert question["topic"] == test_topic.name
+    assert question["concept"] == test_concept.name
+    assert question["difficulty"] == test_questions[0].difficulty
 
-def test_update_question_not_found(logged_in_client, db_session):
+def test_update_question_not_found(logged_in_client):
     question_id = 999  # Assuming this ID does not exist
     question_update = {"text": "Updated Question"}
-    response = logged_in_client.put(f"/question/{question_id}", json=question_update)
+    response = logged_in_client.put(f"/questions/{question_id}", json=question_update)
     assert response.status_code == 404
     assert response.json()["detail"] == f"Question with ID {question_id} not found"
 
-def test_delete_question_not_found(logged_in_client, db_session):
+def test_delete_question_not_found(logged_in_client):
     question_id = 999  # Assuming this ID does not exist
-    response = logged_in_client.delete(f"/question/{question_id}")
+    response = logged_in_client.delete(f"/questions/{question_id}")
     assert response.status_code == 404
     assert response.json()["detail"] == f"Question with ID {question_id} not found"
 
-def test_update_question_endpoint(logged_in_client, test_question, test_question_set):
+def test_update_question_endpoint(logged_in_client, test_questions):
     data = {
         "text": "Updated Question",
-        "difficulty": "Medium",
-        "answer_choices": [
-            {"text": "Updated Answer 1", "is_correct": True, "explanation": "Updated Answer 1 is correct."},
-            {"text": "Updated Answer 2", "is_correct": False, "explanation": "Updated Answer 2 is incorrect."}
-        ],
-        "question_set_ids": [test_question_set.id]
+        "difficulty": "Medium"
     }
-    response = logged_in_client.put(f"/question/{test_question.id}", json=data)
+    response = logged_in_client.put(f"/questions/{test_questions[0].id}", json=data)
     assert response.status_code == 200
     assert response.json()["text"] == "Updated Question"
     assert response.json()["difficulty"] == "Medium"
-    assert test_question_set.id in response.json()["question_set_ids"]
-    assert any(choice["text"] == "Updated Answer 1" and choice["explanation"] == "Updated Answer 1 is correct." for choice in response.json()["answer_choices"])
-    assert any(choice["text"] == "Updated Answer 2" and choice["explanation"] == "Updated Answer 2 is incorrect." for choice in response.json()["answer_choices"])
 
 ```
 
@@ -6041,39 +8150,41 @@ def test_registration_user_exists(client, test_user):
 # filename: tests/test_api_subjects.py
 
 from app.schemas.subjects import SubjectCreateSchema
+from app.services.logging_service import logger
 
 
-def test_create_subject(logged_in_client, db_session):
-    subject_data = SubjectCreateSchema(name="Test Subject")
-    response = logged_in_client.post("/subjects/", json=subject_data.dict())
+def test_create_subject(logged_in_client, test_discipline):
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    response = logged_in_client.post("/subjects/", json=subject_data.model_dump())
     assert response.status_code == 201
     assert response.json()["name"] == "Test Subject"
 
-def test_read_subject(logged_in_client, db_session):
+def test_read_subject(logged_in_client, test_discipline):
     # Create a test subject
-    subject_data = SubjectCreateSchema(name="Test Subject")
-    created_subject = logged_in_client.post("/subjects/", json=subject_data.dict()).json()
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
 
     # Read the created subject
     response = logged_in_client.get(f"/subjects/{created_subject['id']}")
     assert response.status_code == 200
     assert response.json()["name"] == "Test Subject"
 
-def test_update_subject(logged_in_client, db_session):
+def test_update_subject(logged_in_client, test_discipline):
     # Create a test subject
-    subject_data = SubjectCreateSchema(name="Test Subject")
-    created_subject = logged_in_client.post("/subjects/", json=subject_data.dict()).json()
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
 
     # Update the subject
     updated_data = {"name": "Updated Subject"}
     response = logged_in_client.put(f"/subjects/{created_subject['id']}", json=updated_data)
+    logger.debug(response.json())
     assert response.status_code == 200
     assert response.json()["name"] == "Updated Subject"
 
-def test_delete_subject(logged_in_client, db_session):
+def test_delete_subject(logged_in_client, test_discipline):
     # Create a test subject
-    subject_data = SubjectCreateSchema(name="Test Subject")
-    created_subject = logged_in_client.post("/subjects/", json=subject_data.dict()).json()
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
 
     # Delete the subject
     response = logged_in_client.delete(f"/subjects/{created_subject['id']}")
@@ -6089,25 +8200,30 @@ def test_delete_subject(logged_in_client, db_session):
 # filename: tests/test_api_topics.py
 
 from app.schemas.topics import TopicCreateSchema
+from app.schemas.subjects import SubjectCreateSchema
+from app.services.logging_service import logger
 
 
-def test_create_topic(logged_in_client, db_session):
+def test_create_topic(logged_in_client, test_discipline):
     # Create a test subject
-    subject_data = {"name": "Test Subject"}
-    created_subject = logged_in_client.post("/subjects/", json=subject_data).json()
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
+    logger.debug("Created subject: %s", created_subject)
 
     topic_data = TopicCreateSchema(name="Test Topic", subject_id=created_subject["id"])
-    response = logged_in_client.post("/topics/", json=topic_data.dict())
+    response = logged_in_client.post("/topics/", json=topic_data.model_dump())
+    logger.debug("Response: %s", response.json())
     assert response.status_code == 201
     assert response.json()["name"] == "Test Topic"
     assert response.json()["subject_id"] == created_subject["id"]
 
-def test_read_topic(logged_in_client, db_session):
-    # Create a test subject and topic
-    subject_data = {"name": "Test Subject"}
-    created_subject = logged_in_client.post("/subjects/", json=subject_data).json()
+def test_read_topic(logged_in_client, test_discipline):
+    # Create a test subject
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
+    logger.debug("Created subject: %s", created_subject)
     topic_data = TopicCreateSchema(name="Test Topic", subject_id=created_subject["id"])
-    created_topic = logged_in_client.post("/topics/", json=topic_data.dict()).json()
+    created_topic = logged_in_client.post("/topics/", json=topic_data.model_dump()).json()
 
     # Read the created topic
     response = logged_in_client.get(f"/topics/{created_topic['id']}")
@@ -6115,12 +8231,13 @@ def test_read_topic(logged_in_client, db_session):
     assert response.json()["name"] == "Test Topic"
     assert response.json()["subject_id"] == created_subject["id"]
 
-def test_update_topic(logged_in_client, db_session):
-    # Create a test subject and topic
-    subject_data = {"name": "Test Subject"}
-    created_subject = logged_in_client.post("/subjects/", json=subject_data).json()
+def test_update_topic(logged_in_client, test_discipline):
+    # Create a test subject
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
+    logger.debug("Created subject: %s", created_subject)
     topic_data = TopicCreateSchema(name="Test Topic", subject_id=created_subject["id"])
-    created_topic = logged_in_client.post("/topics/", json=topic_data.dict()).json()
+    created_topic = logged_in_client.post("/topics/", json=topic_data.model_dump()).json()
 
     # Update the topic
     updated_data = {"name": "Updated Topic", "subject_id": created_subject["id"]}
@@ -6129,12 +8246,13 @@ def test_update_topic(logged_in_client, db_session):
     assert response.json()["name"] == "Updated Topic"
     assert response.json()["subject_id"] == created_subject["id"]
 
-def test_delete_topic(logged_in_client, db_session):
-    # Create a test subject and topic
-    subject_data = {"name": "Test Subject"}
-    created_subject = logged_in_client.post("/subjects/", json=subject_data).json()
+def test_delete_topic(logged_in_client, test_discipline):
+    # Create a test subject
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
+    logger.debug("Created subject: %s", created_subject)
     topic_data = TopicCreateSchema(name="Test Topic", subject_id=created_subject["id"])
-    created_topic = logged_in_client.post("/topics/", json=topic_data.dict()).json()
+    created_topic = logged_in_client.post("/topics/", json=topic_data.model_dump()).json()
 
     # Delete the topic
     response = logged_in_client.delete(f"/topics/{created_topic['id']}")
@@ -6453,79 +8571,82 @@ def test_randomize_answer_choices():
 
 ## File: test_scoring_service.py
 ```py
-# filename: tests/test_scoring_service.py
+# filename: tests/test_services/test_scoring_service.py
 
+import pytest
 from app.services.scoring_service import calculate_user_score, calculate_leaderboard_scores
-from app.models.user_responses import UserResponseModel
 from app.models.time_period import TimePeriodModel
-
+from app.crud.crud_user_responses import create_user_response_crud, get_user_responses_crud
+from app.schemas.user_responses import UserResponseCreateSchema
+from app.services.logging_service import logger
 
 def test_calculate_user_score(
     db_session,
     test_user,
-    test_question,
-    test_answer_choice_1,
-    test_answer_choice_2
+    test_questions
 ):
-    # Create user responses
-    db_session.add(
-        UserResponseModel(
+    logger.info(f"Starting test_calculate_user_score with {len(test_questions)} questions")
+    
+    # Create user responses for multiple questions using CRUD function
+    for i, question in enumerate(test_questions):
+        is_correct = i != 1  # Make the second answer incorrect, others correct
+        user_response_data = UserResponseCreateSchema(
             user_id=test_user.id,
-            question_id=test_question.id,
-            answer_choice_id=test_answer_choice_1.id,
-            is_correct=True
+            question_id=question.id,
+            answer_choice_id=question.answer_choices[0].id,
+            is_correct=is_correct
         )
-    )
-    db_session.add(
-        UserResponseModel(
-            user_id=test_user.id,
-            question_id=test_question.id,
-            answer_choice_id=test_answer_choice_2.id,
-            is_correct=False
-        )
-    )
-    db_session.commit()
+        created_response = create_user_response_crud(db=db_session, user_response=user_response_data)
+        logger.info(f"Created user response: {created_response}")
 
+    # Verify the created responses
+    user_responses = get_user_responses_crud(db_session, user_id=test_user.id)
+    logger.info(f"Retrieved user responses: {user_responses}")
+    
+    # Calculate the user's score
     user_score = calculate_user_score(test_user.id, db_session)
-    assert user_score == 1
+    logger.info(f"Calculated user score: {user_score}")
+    
+    # We expect correct answers for all questions except the second one
+    expected_score = len(test_questions) - 1
+    assert user_score == expected_score, f"Expected score of {expected_score}, but got {user_score}"
+    logger.info(f"Test passed: User score {user_score} matches expected score {expected_score}")
 
 def test_calculate_leaderboard_scores(
     db_session,
     test_user,
-    test_question,
-    test_answer_choice_1,
-    test_answer_choice_2
+    test_questions
 ):
-    # Create user responses
-    db_session.add(
-        UserResponseModel(
+    # Create user responses for multiple questions using CRUD function
+    for i, question in enumerate(test_questions[:2]):  # Use the first two questions
+        is_correct = i == 0  # First answer is correct, second is incorrect
+        user_response_data = UserResponseCreateSchema(
             user_id=test_user.id,
-            question_id=test_question.id,
-            answer_choice_id=test_answer_choice_1.id,
-            is_correct=True
+            question_id=question.id,
+            answer_choice_id=question.answer_choices[0].id,
+            is_correct=is_correct
         )
-    )
-    db_session.add(
-        UserResponseModel(
-            user_id=test_user.id,
-            question_id=test_question.id,
-            answer_choice_id=test_answer_choice_2.id,
-            is_correct=False
-        )
-    )
-    db_session.commit()
+        create_user_response_crud(db=db_session, user_response=user_response_data)
 
-    leaderboard_scores = calculate_leaderboard_scores(db_session, TimePeriodModel.DAILY)
-    assert leaderboard_scores == {test_user.id: 1}
+    # Test daily leaderboard
+    daily_scores = calculate_leaderboard_scores(db_session, TimePeriodModel.DAILY)
+    assert daily_scores == {test_user.id: 1}
+    logger.debug(f"Daily leaderboard scores: {daily_scores}")
 
-    leaderboard_scores = calculate_leaderboard_scores(db_session, TimePeriodModel.WEEKLY)
-    assert leaderboard_scores == {test_user.id: 1}
+    # Test weekly leaderboard
+    weekly_scores = calculate_leaderboard_scores(db_session, TimePeriodModel.WEEKLY)
+    assert weekly_scores == {test_user.id: 1}
+    logger.debug(f"Weekly leaderboard scores: {weekly_scores}")
 
-    leaderboard_scores = calculate_leaderboard_scores(db_session, TimePeriodModel.MONTHLY)
-    assert leaderboard_scores == {test_user.id: 1}
+    # Test monthly leaderboard
+    monthly_scores = calculate_leaderboard_scores(db_session, TimePeriodModel.MONTHLY)
+    assert monthly_scores == {test_user.id: 1}
+    logger.debug(f"Monthly leaderboard scores: {monthly_scores}")
 
-    leaderboard_scores = calculate_leaderboard_scores(db_session, TimePeriodModel.YEARLY)
-    assert leaderboard_scores == {test_user.id: 1}
+    # Test yearly leaderboard
+    yearly_scores = calculate_leaderboard_scores(db_session, TimePeriodModel.YEARLY)
+    assert yearly_scores == {test_user.id: 1}
+    logger.debug(f"Yearly leaderboard scores: {yearly_scores}")
 
 ```
 
@@ -6556,22 +8677,22 @@ def test_database_session_lifecycle(db_session):
 ```py
 # filename: tests/test_crud/test_crud_associations.py
 
-from app.crud.crud_question_tag_associations import add_tag_to_question, get_question_tags, get_questions_by_tag
-from app.crud.crud_role_permission_associations import add_permission_to_role, get_role_permissions, get_roles_by_permission
+from app.crud.crud_question_tag_associations import add_tag_to_question, get_question_tags, read_questions_by_tag
+from app.crud.crud_role_to_permission_associations import add_permission_to_role, get_role_permissions, get_roles_by_permission
 
 
-def test_question_tag_association(db_session, test_question, test_tag):
-    add_tag_to_question(db_session, test_question.id, test_tag.id)
+def test_question_tag_association(db_session, test_questions, test_tag):
+    add_tag_to_question(db_session, test_questions[0].id, test_tag.id)
     
-    question_tags = get_question_tags(db_session, test_question.id)
+    question_tags = get_question_tags(db_session, test_questions[0].id)
     assert len(question_tags) == 1
     assert question_tags[0].id == test_tag.id
 
-    questions_with_tag = get_questions_by_tag(db_session, test_tag.id)
+    questions_with_tag = read_questions_by_tag(db_session, test_tag.id)
     assert len(questions_with_tag) == 1
-    assert questions_with_tag[0].id == test_question.id
+    assert questions_with_tag[0].id == test_questions[0].id
 
-def test_role_permission_association(db_session, test_role, test_permission):
+def test_role_to_permission_association(db_session, test_role, test_permission):
     initial_role_permissions = get_role_permissions(db_session, test_role.id)
     initial_count = len(initial_role_permissions)
 
@@ -6615,7 +8736,7 @@ def test_filter_questions_invalid_parameter_type(db_session):
 def test_filter_questions_invalid_tag_type(db_session):
     # Test case: Invalid tag type
     filters = {
-        "tags": "InvalidTag"  # Invalid type, should be a list of strings
+        "question_tags": "InvalidTag"  # Invalid type, should be a list of strings
     }
     with pytest.raises(ValidationError) as exc_info:
         filter_questions_crud(db=db_session, filters=filters)
@@ -6663,29 +8784,29 @@ def test_filter_questions_invalid_difficulty(db_session):
 def test_filter_questions_invalid_tags(db_session):
     # Test case: Invalid tags filter
     filters = {
-        "tags": ["InvalidTag"]
+        "question_tags": ["InvalidTag"]
     }
     result = filter_questions_crud(db=db_session, filters=filters)
     assert result == []
 
-def test_filter_questions_valid_filters(db_session, test_question):
+def test_filter_questions_valid_filters(db_session, test_questions):
     # Test case: Valid filters
-    subject = test_question.subject
-    topic = test_question.topic
-    subtopic = test_question.subtopic
-    difficulty = test_question.difficulty
-    tags = [tag.tag for tag in test_question.tags]
+    subject = test_questions[0].subject
+    topic = test_questions[0].topic
+    subtopic = test_questions[0].subtopic
+    difficulty = test_questions[0].difficulty
+    question_tags = [tag.tag for tag in test_questions[0].question_tags]
 
     filters = {
         "subject": subject.name,
         "topic": topic.name,
         "subtopic": subtopic.name,
         "difficulty": difficulty,
-        "tags": tags
+        "question_tags": question_tags
     }
     result = filter_questions_crud(db=db_session, filters=filters)
     assert len(result) == 1
-    assert result[0].id == test_question.id
+    assert result[0].id == test_questions[0].id
 
 ```
 
@@ -6696,18 +8817,18 @@ def test_filter_questions_valid_filters(db_session, test_question):
 import pytest
 from fastapi import HTTPException
 from app.crud.crud_question_sets import create_question_set_crud, delete_question_set_crud, update_question_set_crud
-from app.crud.crud_subjects import create_subject_crud
+from app.crud.crud_subjects import create_subject
 from app.schemas.subjects import SubjectCreateSchema
 from app.schemas.question_sets import QuestionSetCreateSchema, QuestionSetUpdateSchema
 
 
-def test_create_question_set_crud(db_session, test_user, test_question, test_group):
+def test_create_question_set_crud(db_session, test_user, test_questions, test_group):
     question_set_data = QuestionSetCreateSchema(
         db=db_session,
         name="test_create_question_set_crud Question Set",
         is_public=True,
         creator_id=test_user.id,
-        question_ids=[test_question.id],
+        question_ids=[test_questions[0].id],
         group_ids=[test_group.id]
     )
     question_set = create_question_set_crud(db=db_session, question_set=question_set_data)
@@ -6716,7 +8837,7 @@ def test_create_question_set_crud(db_session, test_user, test_question, test_gro
     assert question_set.is_public == True
     assert question_set.creator_id == test_user.id
     assert len(question_set.questions) == 1
-    assert question_set.questions[0].id == test_question.id
+    assert question_set.questions[0].id == test_questions[0].id
     assert len(question_set.groups) == 1
     assert question_set.groups[0].id == test_group.id
 
@@ -6735,12 +8856,12 @@ def test_create_question_set_duplicate_name(db_session, test_user):
     assert exc_info.value.status_code == 400
     assert "already exists" in str(exc_info.value.detail)
 
-def test_update_question_set_crud(db_session, test_question_set, test_question, test_group):
+def test_update_question_set_crud(db_session, test_question_set, test_questions, test_group):
     update_data = QuestionSetUpdateSchema(
         db = db_session,
         name="Updated Question Set",
         is_public=False,
-        question_ids=[test_question.id],
+        question_ids=[test_questions[0].id],
         group_ids=[test_group.id]
     )
     updated_question_set = update_question_set_crud(db_session, test_question_set.id, update_data)
@@ -6748,7 +8869,7 @@ def test_update_question_set_crud(db_session, test_question_set, test_question, 
     assert updated_question_set.name == "Updated Question Set"
     assert updated_question_set.is_public == False
     assert len(updated_question_set.questions) == 1
-    assert updated_question_set.questions[0].id == test_question.id
+    assert updated_question_set.questions[0].id == test_questions[0].id
     assert len(updated_question_set.groups) == 1
     assert updated_question_set.groups[0].id == test_group.id
 
@@ -6782,46 +8903,60 @@ def test_delete_question_set_not_found(db_session):
 ```py
 # filename: tests/test_crud_questions.py
 
-from app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, AnswerChoiceCreateSchema
-from app.schemas.subjects import SubjectCreateSchema
-from app.schemas.topics import TopicCreateSchema
-from app.crud.crud_questions import create_question_crud, read_question_crud, update_question_crud, delete_question_crud
-from app.crud.crud_topics import create_topic_crud
-from app.crud.crud_subjects import create_subject_crud
+from app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, QuestionWithAnswersCreateSchema
+from app.schemas.answer_choices import AnswerChoiceCreateSchema
+from app.crud.crud_questions import create_question, read_question, update_question, delete_question, create_question_with_answers
 
 
-def test_create_and_retrieve_question(db_session, test_question_set, test_subtopic, test_topic, test_subject):
-    """Test creation and retrieval of a question with answer choices."""
-    answer_choice_1 = AnswerChoiceCreateSchema(text="Test Answer 1", is_correct=True, explanation="Answer 1 is correct.")
-    answer_choice_2 = AnswerChoiceCreateSchema(text="Test Answer 2", is_correct=False, explanation="Answer 2 is incorrect.")
-    question_data = QuestionCreateSchema(
-        db=db_session,
-        text="Sample Question?",
+def test_create_question_with_answers(db_session, test_subject, test_topic, test_subtopic, test_concept):
+    question_data = QuestionWithAnswersCreateSchema(
+        text="Test Question",
         subject_id=test_subject.id,
         topic_id=test_topic.id,
         subtopic_id=test_subtopic.id,
-        difficulty="Easy",
-        answer_choices=[answer_choice_1, answer_choice_2],
-        question_set_ids=[test_question_set.id]
+        concept_id=test_concept.id,
+        difficulty=DifficultyLevel.EASY,
+        answer_choices=[
+            AnswerChoiceCreateSchema(text="Answer 1", is_correct=True, explanation="Explanation 1"),
+            AnswerChoiceCreateSchema(text="Answer 2", is_correct=False, explanation="Explanation 2"),
+        ]
     )
-    created_question = create_question_crud(db=db_session, question=question_data)
-    
-    assert created_question is not None, "Failed to create question."
-    assert created_question.text == "Sample Question?", "Question text does not match."
-    assert created_question.difficulty == "Easy", "Question difficulty level does not match."
-    assert len(created_question.answer_choices) == 2, "Answer choices not created correctly."
-    assert any(choice.text == "Test Answer 1" and choice.explanation == "Answer 1 is correct." for choice in created_question.answer_choices)
-    assert any(choice.text == "Test Answer 2" and choice.explanation == "Answer 2 is incorrect." for choice in created_question.answer_choices)
-    assert test_question_set.id in created_question.question_set_ids, "Question not associated with the question set."
+    question = create_question_with_answers(db_session, question_data)
+    assert question.text == "Test Question"
+    assert question.difficulty == "Easy"
+    assert len(question.answer_choices) == 2
+    assert question.answer_choices[0].text == "Answer 1"
+    assert question.answer_choices[1].text == "Answer 2"
+
+def test_read_question_detailed(db_session, test_questions):
+    question = read_question(db_session, test_questions[0].id)
+    assert question.text == test_questions[0].text
+    assert question.difficulty == test_questions[0].difficulty
+    assert question.subject == test_questions[0].subject.name
+    assert question.topic == test_questions[0].topic.name
+    assert question.subtopic == test_questions[0].subtopic.name
+    assert question.concept == test_questions[0].concept.name
+    assert len(question.answer_choices) == len(test_questions[0].answer_choices)
+
+def test_update_question_with_answer_choices(db_session, test_questions):
+    update_data = QuestionUpdateSchema(
+        text="Updated Question",
+        difficulty=DifficultyLevel.MEDIUM,
+        answer_choice_ids=[test_questions[0].answer_choices[0].id]
+    )
+    updated_question = update_question(db_session, test_questions[0].id, update_data)
+    assert updated_question.text == "Updated Question"
+    assert updated_question.difficulty == "Medium"
+    assert len(updated_question.answer_choices) == 1
 
 def test_get_nonexistent_question(db_session):
     """Test retrieval of a non-existent question."""
-    question = read_question_crud(db_session, question_id=999)
+    question = read_question(db_session, question_id=999)
     assert question is None, "Fetching a non-existent question should return None."
 
 def test_delete_nonexistent_question(db_session):
     """Test deletion of a non-existent question."""
-    result = delete_question_crud(db_session, question_id=999)
+    result = delete_question(db_session, question_id=999)
     assert result is False, "Deleting a non-existent question should return False."
 
 def test_update_question_not_found(db_session):
@@ -6830,7 +8965,7 @@ def test_update_question_not_found(db_session):
     """
     question_id = 999  # Assuming this ID does not exist
     question_update = {"text": "Updated Question"}
-    updated_question = update_question_crud(db_session, question_id, question_update)
+    updated_question = update_question(db_session, question_id, question_update)
     assert updated_question is None
 
 def test_delete_question_not_found(db_session):
@@ -6838,31 +8973,9 @@ def test_delete_question_not_found(db_session):
     Test deleting a question that does not exist.
     """
     question_id = 999  # Assuming this ID does not exist
-    deleted = delete_question_crud(db_session, question_id)
+    deleted = delete_question(db_session, question_id)
     assert deleted is False
 
-def test_update_question_crud(db_session, test_question, test_question_set):
-    """Test updating a question, including its answer choices."""
-    question_update = QuestionUpdateSchema(
-        text="Updated Question",
-        difficulty="Medium",
-        answer_choices=[
-            {"text": "Updated Answer 1", "is_correct": True, "explanation": "Updated Answer 1 is correct."},
-            {"text": "Updated Answer 2", "is_correct": False, "explanation": "Updated Answer 2 is incorrect."},
-            {"text": "New Answer 3", "is_correct": False, "explanation": "New Answer 3 is incorrect."}
-        ],
-        question_set_ids=[test_question_set.id]
-    )
-    updated_question = update_question_crud(db_session, test_question.id, question_update)
-
-    assert updated_question is not None, "Failed to update question."
-    assert updated_question.text == "Updated Question", "Question text not updated correctly."
-    assert updated_question.difficulty == "Medium", "Question difficulty not updated correctly."
-    assert len(updated_question.answer_choices) == 3, "Answer choices not updated correctly."
-    assert any(choice.text == "Updated Answer 1" and choice.explanation == "Updated Answer 1 is correct." for choice in updated_question.answer_choices)
-    assert any(choice.text == "Updated Answer 2" and choice.explanation == "Updated Answer 2 is incorrect." for choice in updated_question.answer_choices)
-    assert any(choice.text == "New Answer 3" and choice.explanation == "New Answer 3 is incorrect." for choice in updated_question.answer_choices)
-    assert test_question_set.id in updated_question.question_set_ids, "Question not associated with the question set after update."
 
 ```
 
@@ -6958,13 +9071,17 @@ def test_delete_role_crud(db_session):
 # filename: tests/test_crud_subjects.py
 
 from app.schemas.subjects import SubjectCreateSchema
-from app.crud.crud_subjects import create_subject_crud
+from app.crud.crud_subjects import create_subject
 
 
-def test_create_subject(db_session):
-    subject_data = SubjectCreateSchema(name="Test Subject")
-    created_subject = create_subject_crud(db=db_session, subject=subject_data)
+def test_create_subject(db_session, test_discipline):
+    subject_data = SubjectCreateSchema(
+        name="Test Subject",
+        discipline_id=test_discipline.id
+    )
+    created_subject = create_subject(db=db_session, subject=subject_data)
     assert created_subject.name == "Test Subject"
+    assert created_subject.discipline_id == test_discipline.id
 
 ```
 
@@ -6972,19 +9089,21 @@ def test_create_subject(db_session):
 ```py
 # filename: tests/test_crud_user.py
 
-from app.crud.crud_user import delete_user_crud, create_user_crud, update_user_crud
+from app.crud.crud_user import delete_user, create_user_crud, update_user_crud
 from app.schemas.user import UserCreateSchema, UserUpdateSchema
 from app.services.authentication_service import authenticate_user
+from app.core.security import get_password_hash
 
 def test_remove_user_not_found(db_session):
     user_id = 999  # Assuming this ID does not exist
-    removed_user = delete_user_crud(db_session, user_id)
+    removed_user = delete_user(db_session, user_id)
     assert removed_user is None
 
 def test_authenticate_user(db_session, random_username, test_role):
+    hashed_password = get_password_hash("AuthPassword123!")
     user_data = UserCreateSchema(
         username=random_username,
-        password="AuthPassword123!",
+        password=hashed_password,
         email=f"{random_username}@example.com",
         role=test_role.name
     )
@@ -7074,20 +9193,866 @@ def test_delete_user_response(db_session, test_user_with_group, test_questions):
 
 # Directory: /code/quiz-app/quiz-app-backend/tests/test_models
 
-## File: test_models.py
+## File: test_answer_choice_model.py
 ```py
-# filename: tests/test_models.py
+# filename: tests/models/test_answer_choice_model.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.answer_choices import AnswerChoiceModel
+from app.models.questions import QuestionModel
+from app.models.user_responses import UserResponseModel
+
+def test_answer_choice_creation(db_session):
+    answer_choice = AnswerChoiceModel(
+        text="Paris",
+        is_correct=True,
+        explanation="Paris is the capital of France"
+    )
+    db_session.add(answer_choice)
+    db_session.commit()
+
+    assert answer_choice.id is not None
+    assert answer_choice.text == "Paris"
+    assert answer_choice.is_correct is True
+    assert answer_choice.explanation == "Paris is the capital of France"
+
+def test_answer_choice_question_relationship(db_session, test_questions):
+    answer_choice = AnswerChoiceModel(
+        text="Paris",
+        is_correct=True,
+        explanation="Paris is the capital of France"
+    )
+    answer_choice.questions.append(test_questions[0])
+    db_session.add(answer_choice)
+    db_session.commit()
+
+    assert test_questions[0] in answer_choice.questions
+    assert answer_choice in test_questions[0].answer_choices
+
+def test_answer_choice_multiple_questions(db_session, test_questions):
+    answer_choice = AnswerChoiceModel(
+        text="Paris",
+        is_correct=True,
+        explanation="Paris is the capital of France"
+    )
+    
+    answer_choice.questions.extend(test_questions[:2])  # Use the first two questions from the fixture
+    db_session.add(answer_choice)
+    db_session.commit()
+
+    assert len(answer_choice.questions) == 2
+    assert test_questions[0] in answer_choice.questions
+    assert test_questions[1] in answer_choice.questions
+
+def test_answer_choice_user_response_relationship(db_session, test_questions, test_user):
+    answer_choice = AnswerChoiceModel(
+        text="Paris",
+        is_correct=True,
+        explanation="Paris is the capital of France"
+    )
+    answer_choice.questions.append(test_questions[0])
+    db_session.add(answer_choice)
+    db_session.commit()
+
+    user_response = UserResponseModel(
+        user_id=test_user.id,
+        question_id=test_questions[0].id,
+        answer_choice_id=answer_choice.id,
+        is_correct=True
+    )
+    db_session.add(user_response)
+    db_session.commit()
+
+    assert user_response in answer_choice.user_responses
+    assert user_response.answer_choice == answer_choice
+
+def test_answer_choice_required_fields(db_session):
+    # Test missing text
+    with pytest.raises(IntegrityError):
+        answer_choice = AnswerChoiceModel(
+            is_correct=True
+        )
+        db_session.add(answer_choice)
+        db_session.commit()
+    db_session.rollback()
+
+    # Test missing is_correct
+    with pytest.raises(IntegrityError):
+        answer_choice = AnswerChoiceModel(
+            text="Paris"
+        )
+        db_session.add(answer_choice)
+        db_session.commit()
+    db_session.rollback()
+
+def test_answer_choice_repr(db_session):
+    answer_choice = AnswerChoiceModel(
+        text="Paris",
+        is_correct=True,
+        explanation="Paris is the capital of France"
+    )
+    db_session.add(answer_choice)
+    db_session.commit()
+
+    expected_repr = f"<AnswerChoiceModel(id={answer_choice.id}, text='Paris...', is_correct=True)>"
+    assert repr(answer_choice) == expected_repr
+
+```
+
+## File: test_associations.py
+```py
+# filename: tests/models/test_associations.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.users import UserModel
+from app.models.groups import GroupModel
+from app.models.questions import QuestionModel, DifficultyLevel
+from app.models.disciplines import DisciplineModel
+from app.models.subjects import SubjectModel
+from app.models.topics import TopicModel
+from app.models.subtopics import SubtopicModel
+from app.models.concepts import ConceptModel
+from app.models.question_tags import QuestionTagModel
+from app.models.question_sets import QuestionSetModel
+from app.models.roles import RoleModel
+from app.models.permissions import PermissionModel
+
+def test_user_to_group_association(db_session, test_user, test_group):
+    test_user.groups.append(test_group)
+    db_session.commit()
+
+    assert test_group in test_user.groups
+    assert test_user in test_group.users
+
+def test_question_to_subject_association(db_session):
+    question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
+    subject = SubjectModel(name="Test Subject")
+    question.subjects.append(subject)
+    db_session.add_all([question, subject])
+    db_session.commit()
+
+    assert subject in question.subjects
+    assert question in subject.questions
+
+def test_question_to_topic_association(db_session):
+    question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
+    topic = TopicModel(name="Test Topic")
+    question.topics.append(topic)
+    db_session.add_all([question, topic])
+    db_session.commit()
+
+    assert topic in question.topics
+    assert question in topic.questions
+
+def test_question_to_subtopic_association(db_session):
+    question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
+    subtopic = SubtopicModel(name="Test Subtopic")
+    question.subtopics.append(subtopic)
+    db_session.add_all([question, subtopic])
+    db_session.commit()
+
+    assert subtopic in question.subtopics
+    assert question in subtopic.questions
+
+def test_question_to_concept_association(db_session):
+    question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
+    concept = ConceptModel(name="Test Concept")
+    question.concepts.append(concept)
+    db_session.add_all([question, concept])
+    db_session.commit()
+
+    assert concept in question.concepts
+    assert question in concept.questions
+
+def test_question_to_tag_association(db_session):
+    question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
+    tag = QuestionTagModel(tag="Test Tag")
+    question.question_tags.append(tag)
+    db_session.add_all([question, tag])
+    db_session.commit()
+
+    assert tag in question.question_tags
+    assert question in tag.questions
+
+def test_question_set_to_question_association(db_session, test_user_with_group):
+    question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
+    question_set = QuestionSetModel(name="Test Set", creator_id=test_user_with_group.id)
+    question_set.questions.append(question)
+    db_session.add_all([question, question_set])
+    db_session.commit()
+
+    assert question in question_set.questions
+    assert question_set in question.question_sets
+
+def test_question_set_to_group_association(db_session, test_question_set, test_group):
+    test_question_set.groups.append(test_group)
+    db_session.commit()
+
+    assert test_group in test_question_set.groups
+    assert test_question_set in test_group.question_sets
+
+def test_role_to_permission_association(db_session, test_role, test_permission):
+    test_role.permissions.append(test_permission)
+    db_session.commit()
+
+    assert test_permission in test_role.permissions
+    assert test_role in test_permission.roles
+
+def test_discipline_subject_association(db_session):
+    discipline = DisciplineModel(name="Science")
+    subject = SubjectModel(name="Physics")
+    discipline.subjects.append(subject)
+    db_session.add_all([discipline, subject])
+    db_session.commit()
+
+    assert subject in discipline.subjects
+    assert discipline in subject.disciplines
+
+def test_subject_topic_association(db_session):
+    subject = SubjectModel(name="Mathematics")
+    topic = TopicModel(name="Algebra")
+    subject.topics.append(topic)
+    db_session.add_all([subject, topic])
+    db_session.commit()
+
+    assert topic in subject.topics
+    assert subject in topic.subjects
+
+def test_topic_subtopic_association(db_session):
+    topic = TopicModel(name="Geometry")
+    subtopic = SubtopicModel(name="Triangles")
+    topic.subtopics.append(subtopic)
+    db_session.add_all([topic, subtopic])
+    db_session.commit()
+
+    assert subtopic in topic.subtopics
+    assert topic in subtopic.topics
+
+def test_subtopic_concept_association(db_session):
+    subtopic = SubtopicModel(name="Calculus")
+    concept = ConceptModel(name="Derivatives")
+    subtopic.concepts.append(concept)
+    db_session.add_all([subtopic, concept])
+    db_session.commit()
+
+    assert concept in subtopic.concepts
+    assert subtopic in concept.subtopics
+
+def test_question_associations(db_session):
+    question = QuestionModel(text="What is 2+2?", difficulty=DifficultyLevel.EASY)
+    subject = SubjectModel(name="Math")
+    topic = TopicModel(name="Arithmetic")
+    subtopic = SubtopicModel(name="Addition")
+    concept = ConceptModel(name="Basic Addition")
+
+    question.subjects.append(subject)
+    question.topics.append(topic)
+    question.subtopics.append(subtopic)
+    question.concepts.append(concept)
+
+    db_session.add_all([question, subject, topic, subtopic, concept])
+    db_session.commit()
+
+    assert subject in question.subjects
+    assert topic in question.topics
+    assert subtopic in question.subtopics
+    assert concept in question.concepts
+
+    assert question in subject.questions
+    assert question in topic.questions
+    assert question in subtopic.questions
+    assert question in concept.questions
+
+def test_multiple_associations(db_session):
+    subject1 = SubjectModel(name="Physics")
+    subject2 = SubjectModel(name="Engineering")
+    topic = TopicModel(name="Mechanics")
+
+    topic.subjects.extend([subject1, subject2])
+    db_session.add_all([subject1, subject2, topic])
+    db_session.commit()
+
+    assert subject1 in topic.subjects
+    assert subject2 in topic.subjects
+    assert topic in subject1.topics
+    assert topic in subject2.topics
+
+def test_association_integrity(db_session, test_user, test_group):
+    test_user.groups.append(test_group)
+    db_session.commit()
+
+    # Try to add the same association again
+    with pytest.raises(IntegrityError):
+        test_user.groups.append(test_group)
+        db_session.commit()
+
+    db_session.rollback()
+
+    # Remove the association
+    test_user.groups.remove(test_group)
+    db_session.commit()
+
+    assert test_group not in test_user.groups
+    assert test_user not in test_group.users
+
+```
+
+## File: test_concept_model.py
+```py
+# filename: tests/models/test_concept_model.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.concepts import ConceptModel
+from app.models.subtopics import SubtopicModel
+
+def test_concept_creation(db_session):
+    concept = ConceptModel(name="Pythagorean Theorem")
+    db_session.add(concept)
+    db_session.commit()
+
+    assert concept.id is not None
+    assert concept.name == "Pythagorean Theorem"
+
+def test_concept_subtopic_relationship(db_session):
+    concept = ConceptModel(name="Binomial Theorem")
+    subtopic = SubtopicModel(name="Algebraic Theorems")
+    concept.subtopics.append(subtopic)
+    db_session.add_all([concept, subtopic])
+    db_session.commit()
+
+    assert subtopic in concept.subtopics
+    assert concept in subtopic.concepts
+
+def test_concept_questions_relationship(db_session, test_questions):
+    concept = ConceptModel(name="Logarithms")
+    concept.questions.extend(test_questions[:2])
+    db_session.add(concept)
+    db_session.commit()
+
+    assert len(concept.questions) == 2
+    assert test_questions[0] in concept.questions
+    assert test_questions[1] in concept.questions
+
+def test_concept_required_fields(db_session):
+    # Test missing name
+    with pytest.raises(IntegrityError):
+        concept = ConceptModel()
+        db_session.add(concept)
+        db_session.commit()
+    db_session.rollback()
+
+def test_concept_repr(db_session):
+    concept = ConceptModel(name="Quadratic Formula")
+    db_session.add(concept)
+    db_session.commit()
+
+    expected_repr = f"<Concept(id={concept.id}, name='Quadratic Formula')>"
+    assert repr(concept) == expected_repr
+
+```
+
+## File: test_group_model.py
+```py
+# filename: tests/models/test_group_model.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.groups import GroupModel
+from app.models.users import UserModel
+from app.models.roles import RoleModel
+from app.models.question_sets import QuestionSetModel
+from app.models.leaderboard import LeaderboardModel
+from app.models.time_period import TimePeriodModel
+
+def test_group_model_creation(db_session, test_user):
+    group = GroupModel(
+        name="Test Group",
+        description="This is a test group",
+        creator_id=test_user.id
+    )
+    db_session.add(group)
+    db_session.commit()
+
+    assert group.id is not None
+    assert group.name == "Test Group"
+    assert group.description == "This is a test group"
+    assert group.creator_id == test_user.id
+
+def test_group_model_unique_constraint(db_session, test_user):
+    group1 = GroupModel(
+        name="Unique Group",
+        description="This is a unique group",
+        creator_id=test_user.id
+    )
+    db_session.add(group1)
+    db_session.commit()
+
+    # Try to create another group with the same name
+    group2 = GroupModel(
+        name="Unique Group",
+        description="This is another group with the same name",
+        creator_id=test_user.id
+    )
+    db_session.add(group2)
+    
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+    
+    db_session.rollback()  # Roll back the failed transaction
+
+    # Assert that only one group with this name exists
+    groups = db_session.query(GroupModel).filter_by(name="Unique Group").all()
+    assert len(groups) == 1
+    assert groups[0].description == "This is a unique group"
+
+def test_group_user_relationship(db_session, test_user):
+    group = GroupModel(
+        name="Test Group",
+        description="This is a test group",
+        creator_id=test_user.id
+    )
+    db_session.add(group)
+    db_session.commit()
+
+    group.users.append(test_user)
+    db_session.commit()
+
+    assert test_user in group.users
+    assert group in test_user.groups
+
+def test_group_creator_relationship(db_session, test_user):
+    group = GroupModel(
+        name="Test Group",
+        description="This is a test group",
+        creator_id=test_user.id
+    )
+    db_session.add(group)
+    db_session.commit()
+
+    assert group.creator == test_user
+    assert group in test_user.created_groups
+
+def test_group_question_set_relationship(db_session, test_user, test_question_set):
+    group = GroupModel(
+        name="test_group_question_set_relationship Test Group",
+        description="This is a group for the test_group_question_set_relationship test",
+        creator_id=test_user.id
+    )
+    db_session.add(group)
+    db_session.commit()
+
+    group.question_sets.append(test_question_set)
+    db_session.commit()
+
+    assert test_question_set in group.question_sets
+    assert group in test_question_set.groups
+
+def test_group_leaderboard_relationship(db_session, test_user):
+    group = GroupModel(
+        name="Test Group",
+        description="This is a test group",
+        creator_id=test_user.id
+    )
+    db_session.add(group)
+    db_session.commit()
+
+    leaderboard = LeaderboardModel(
+        user_id=test_user.id,
+        group_id=group.id,
+        score=100,
+        time_period_id=7
+    )
+    db_session.add(leaderboard)
+    db_session.commit()
+
+    assert leaderboard in group.leaderboards
+    assert group == leaderboard.group
+
+def test_group_model_repr(db_session, test_user):
+    group = GroupModel(
+        name="Test Group",
+        description="This is a test group",
+        creator_id=test_user.id
+    )
+    db_session.add(group)
+    db_session.commit()
+
+    assert repr(group) == f"<GroupModel(id={group.id}, name='Test Group', creator_id={test_user.id}, is_active={test_user.is_active})>"
+```
+
+## File: test_question_model.py
+```py
+# filename: tests/models/test_question_model.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.questions import QuestionModel, DifficultyLevel
+from app.models.subjects import SubjectModel
+from app.models.topics import TopicModel
+from app.models.subtopics import SubtopicModel
+from app.models.concepts import ConceptModel
+from app.models.question_tags import QuestionTagModel
+from app.models.answer_choices import AnswerChoiceModel
+from app.models.question_sets import QuestionSetModel
+from app.models.user_responses import UserResponseModel
+from app.models.associations import QuestionToAnswerAssociation
+from app.services.logging_service import logger, sqlalchemy_obj_to_dict
+from app.services.validation_service import validate_foreign_keys
+
+def test_question_model_creation(db_session):
+    question = QuestionModel(
+        text="What is the capital of France?",
+        difficulty=DifficultyLevel.EASY
+    )
+    db_session.add(question)
+    db_session.commit()
+
+    assert question.id is not None
+    assert question.text == "What is the capital of France?"
+    assert question.difficulty == DifficultyLevel.EASY
+
+def test_question_model_relationships(db_session, test_subject, test_topic, test_subtopic, test_concept):
+    question = QuestionModel(
+        text="What is the capital of France?",
+        difficulty=DifficultyLevel.EASY
+    )
+    question.subjects.append(test_subject)
+    question.topics.append(test_topic)
+    question.subtopics.append(test_subtopic)
+    question.concepts.append(test_concept)
+    db_session.add(question)
+    db_session.commit()
+
+    assert test_subject in question.subjects
+    assert test_topic in question.topics
+    assert test_subtopic in question.subtopics
+    assert test_concept in question.concepts
+
+def test_question_multiple_relationships(db_session, test_subject, test_topic, test_subtopic, test_concept):
+    question = QuestionModel(
+        text="What is the capital of France?",
+        difficulty=DifficultyLevel.EASY
+    )
+    question.subjects.extend([test_subject, SubjectModel(name="Another Subject")])
+    question.topics.extend([test_topic, TopicModel(name="Another Topic")])
+    question.subtopics.extend([test_subtopic, SubtopicModel(name="Another Subtopic")])
+    question.concepts.extend([test_concept, ConceptModel(name="Another Concept")])
+    db_session.add(question)
+    db_session.commit()
+
+    assert len(question.subjects) == 2
+    assert len(question.topics) == 2
+    assert len(question.subtopics) == 2
+    assert len(question.concepts) == 2
+
+def test_question_tag_relationship(db_session, test_tag):
+    question = QuestionModel(
+        text="What is the capital of France?",
+        difficulty=DifficultyLevel.EASY
+    )
+    question.question_tags.append(test_tag)
+    db_session.add(question)
+    db_session.commit()
+
+    assert test_tag in question.question_tags
+    assert question in test_tag.questions
+
+# def test_answer_choice_relationship(db_session):
+#     question = QuestionModel(
+#         text="What is the capital of France?",
+#         difficulty=DifficultyLevel.EASY
+#     )
+#     db_session.add(question)
+#     db_session.commit()
+
+#     answer_choice = AnswerChoiceModel(text="Paris", is_correct=True, question_id=question.id)
+#     db_session.add(answer_choice)
+#     db_session.commit()
+
+#     assert answer_choice in question.answer_choices
+#     assert question == answer_choice.question
+
+def test_question_set_relationship(db_session, test_question_set):
+    question = QuestionModel(
+        text="What is the capital of France?",
+        difficulty=DifficultyLevel.EASY
+    )
+    question.question_sets.append(test_question_set)
+    db_session.add(question)
+    db_session.commit()
+
+    assert test_question_set in question.question_sets
+    assert question in test_question_set.questions
+
+def test_user_response_relationship(db_session, test_user):
+    question = QuestionModel(
+        text="What is the capital of France?",
+        difficulty=DifficultyLevel.EASY
+    )
+    db_session.add(question)
+    db_session.commit()
+
+    user_response = UserResponseModel(
+        user_id=test_user.id,
+        question_id=question.id,
+        answer_choice_id=1,  # Assuming an answer choice with id 1 exists
+        is_correct=True
+    )
+    db_session.add(user_response)
+    db_session.commit()
+
+    assert user_response in question.user_responses
+    assert question == user_response.question
+
+def test_question_model_repr(db_session):
+    question = QuestionModel(
+        text="What is the capital of France?",
+        difficulty=DifficultyLevel.EASY
+    )
+    db_session.add(question)
+    db_session.commit()
+
+    expected_repr = f"<QuestionModel(id={question.id}, text='What is the capital of France?...', difficulty='DifficultyLevel.EASY')>"
+    assert repr(question) == expected_repr
+
+def test_question_model_with_answers(db_session, test_subject, test_topic, test_subtopic):
+    question = QuestionModel(text="What is the capital of France?", difficulty=DifficultyLevel.EASY, 
+                             subjects=[test_subject], topics=[test_topic], subtopics=[test_subtopic])
+    logger.debug("Created question: %s", sqlalchemy_obj_to_dict(question))
+    
+    db_session.add(question)
+    db_session.commit()
+    db_session.refresh(question)
+    logger.debug("Added and refreshed the question: %s", sqlalchemy_obj_to_dict(question))
+    
+    answer = AnswerChoiceModel(text="Paris", is_correct=True, explanation="Paris is the capital and largest city of France.")
+    
+    db_session.add(answer)
+    db_session.commit()
+    db_session.refresh(answer)
+    logger.debug("Added and refreshed answer: %s", sqlalchemy_obj_to_dict(answer))
+    
+    # Associate the answer with the question
+    question.answer_choices.append(answer)
+    db_session.commit()
+    
+    validate_foreign_keys(QuestionModel, db_session.connection(), question)
+    validate_foreign_keys(AnswerChoiceModel, db_session.connection(), answer)
+    logger.debug("Validated foreign keys")
+    
+    assert question.id is not None
+    assert answer.id is not None
+    assert answer in question.answer_choices
+    logger.debug("Assertions passed")
+
+def test_question_deletion_removes_association_to_answers(db_session, test_subject, test_topic, test_subtopic):
+    question = QuestionModel(text="What is the capital of France?", difficulty=DifficultyLevel.EASY, 
+                             subjects=[test_subject], topics=[test_topic], subtopics=[test_subtopic])
+    logger.debug("Created question: %s", sqlalchemy_obj_to_dict(question))
+    
+    db_session.add(question)
+    db_session.commit()
+    db_session.refresh(question)
+    logger.debug("Added and refreshed the question: %s", sqlalchemy_obj_to_dict(question))
+    
+    answer = AnswerChoiceModel(text="Paris", is_correct=True, explanation="Paris is the capital and largest city of France.")
+    
+    db_session.add(answer)
+    db_session.commit()
+    db_session.refresh(answer)
+    logger.debug("Added and refreshed answer: %s", sqlalchemy_obj_to_dict(answer))
+    
+    # Associate the answer with the question
+    question.answer_choices.append(answer)
+    db_session.commit()
+    
+    validate_foreign_keys(QuestionModel, db_session.connection(), question)
+    validate_foreign_keys(AnswerChoiceModel, db_session.connection(), answer)
+    logger.debug("Validated foreign keys")
+    
+    # Store the answer ID for later checking
+    answer_id = answer.id
+    
+    db_session.delete(question)
+    logger.debug("Deleted question: %s", question)
+    
+    db_session.commit()
+    logger.debug("Committed the session after deleting the question")
+    
+    # Check that the answer still exists
+    assert db_session.query(AnswerChoiceModel).filter_by(id=answer_id).first() is not None
+    logger.debug("Assertion passed: Answer choice still exists after question deletion")
+    
+    # Check that the association between the question and answer is removed
+    assert db_session.query(QuestionToAnswerAssociation).filter_by(answer_choice_id=answer_id).first() is None
+    logger.debug("Assertion passed: Association between question and answer is removed")
+
+```
+
+## File: test_question_set_model.py
+```py
+# filename: tests/models/test_question_set_model.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.question_sets import QuestionSetModel
+
+def test_question_set_creation(db_session, test_user):
+    question_set = QuestionSetModel(
+        name="Geography Quiz",
+        is_public=True,
+        creator_id=test_user.id
+    )
+    db_session.add(question_set)
+    db_session.commit()
+
+    assert question_set.id is not None
+    assert question_set.name == "Geography Quiz"
+    assert question_set.is_public is True
+    assert question_set.creator_id == test_user.id
+
+def test_question_set_creator_relationship(db_session, test_user):
+    question_set = QuestionSetModel(
+        name="History Quiz",
+        is_public=False,
+        creator_id=test_user.id
+    )
+    db_session.add(question_set)
+    db_session.commit()
+
+    assert question_set.creator == test_user
+    assert question_set in test_user.created_question_sets
+
+def test_question_set_questions_relationship(db_session, test_user, test_questions):
+    question_set = QuestionSetModel(
+        name="Science Quiz",
+        is_public=True,
+        creator_id=test_user.id
+    )
+    question_set.questions.extend(test_questions[:2])
+    db_session.add(question_set)
+    db_session.commit()
+
+    assert len(question_set.questions) == 2
+    assert test_questions[0] in question_set.questions
+    assert test_questions[1] in question_set.questions
+
+def test_question_set_groups_relationship(db_session, test_user, test_group):
+    question_set = QuestionSetModel(
+        name="Math Quiz",
+        is_public=True,
+        creator_id=test_user.id
+    )
+    question_set.groups.append(test_group)
+    db_session.add(question_set)
+    db_session.commit()
+
+    assert test_group in question_set.groups
+    assert question_set in test_group.question_sets
+
+def test_question_set_required_fields(db_session, test_user):
+    # Test missing name
+    with pytest.raises(IntegrityError):
+        question_set = QuestionSetModel(
+            is_public=True,
+            creator_id=test_user.id
+        )
+        db_session.add(question_set)
+        db_session.commit()
+    db_session.rollback()
+
+def test_question_set_repr(db_session, test_user):
+    question_set = QuestionSetModel(
+        name="Biology Quiz",
+        is_public=True,
+        creator_id=test_user.id
+    )
+    db_session.add(question_set)
+    db_session.commit()
+
+    expected_repr = f"<QuestionSetModel(id={question_set.id}, name='Biology Quiz', is_public=True, creator_id={test_user.id})>"
+    assert repr(question_set) == expected_repr
+
+```
+
+## File: test_question_tag_model.py
+```py
+# filename: tests/models/test_question_tag_model.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.question_tags import QuestionTagModel
+
+def test_question_tag_creation(db_session):
+    tag = QuestionTagModel(tag="geography")
+    db_session.add(tag)
+    db_session.commit()
+
+    assert tag.id is not None
+    assert tag.tag == "geography"
+
+def test_question_tag_unique_constraint(db_session):
+    tag1 = QuestionTagModel(tag="history")
+    db_session.add(tag1)
+    db_session.commit()
+
+    # Try to create another tag with the same name
+    with pytest.raises(IntegrityError):
+        tag2 = QuestionTagModel(tag="history")
+        db_session.add(tag2)
+        db_session.commit()
+    
+    db_session.rollback()
+
+def test_question_tag_question_relationship(db_session, test_questions):
+    tag = QuestionTagModel(tag="science")
+    tag.questions.append(test_questions[0])
+    db_session.add(tag)
+    db_session.commit()
+
+    assert test_questions[0] in tag.questions
+    assert tag in test_questions[0].question_tags
+
+def test_question_tag_multiple_questions(db_session, test_questions):
+    tag = QuestionTagModel(tag="math")
+    tag.questions.extend(test_questions[:2])  # Add the tag to the first two questions
+    db_session.add(tag)
+    db_session.commit()
+
+    assert len(tag.questions) == 2
+    assert test_questions[0] in tag.questions
+    assert test_questions[1] in tag.questions
+
+def test_question_tag_required_fields(db_session):
+    # Test missing tag
+    with pytest.raises(IntegrityError):
+        tag = QuestionTagModel()
+        db_session.add(tag)
+        db_session.commit()
+    db_session.rollback()
+
+def test_question_tag_repr(db_session):
+    tag = QuestionTagModel(tag="biology")
+    db_session.add(tag)
+    db_session.commit()
+
+    expected_repr = f"<QuestionTagModel(id={tag.id}, tag='biology')>"
+    assert repr(tag) == expected_repr
+
+```
+
+## File: test_role_model.py
+```py
+# filename: tests/test_models/test_role_model.py
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
-from app.models.users import UserModel
-from app.models.subjects import SubjectModel
-from app.models.questions import QuestionModel
-from app.models.answer_choices import AnswerChoiceModel
-from app.models.roles import RoleModel
 from app.models.permissions import PermissionModel
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
-from app.services.validation_service import validate_foreign_keys
+from app.models.roles import RoleModel
+from app.services.logging_service import logger
 
 
 def test_role_permission_relationship(db_session):
@@ -7144,92 +10109,440 @@ def test_role_permission_relationship(db_session):
     except Exception as e:
         logger.exception(f"Unexpected error occurred: {str(e)}")
         pytest.fail(f"Unexpected error occurred: {str(e)}")
+```
 
-def test_user_model(db_session, random_username):
-    username = random_username
-    user = UserModel(username=username, hashed_password="hashedpassword")
-    db_session.add(user)
-    db_session.commit()
-    assert user.id > 0
-    assert user.username == username
-    assert user.hashed_password == "hashedpassword"
+## File: test_subject_model.py
+```py
+# filename: tests/test_models/test_subject_model.py
 
-def test_subject_model(db_session):
-    subject = SubjectModel(name="Test Subject")
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.subjects import SubjectModel
+from app.models.disciplines import DisciplineModel
+from app.models.topics import TopicModel
+
+def test_subject_creation(db_session):
+    subject = SubjectModel(name="Mathematics")
     db_session.add(subject)
     db_session.commit()
-    assert subject.id > 0
-    assert subject.name == "Test Subject"
 
-def test_question_model_creation(db_session):
-    question = QuestionModel(text="What is the capital of France?", difficulty="Easy")
-    db_session.add(question)
-    db_session.commit()
-    assert question.id is not None
-    assert question.text == "What is the capital of France?"
-    assert question.difficulty == "Easy"
+    assert subject.id is not None
+    assert subject.name == "Mathematics"
 
-def test_question_model_with_answers(db_session, test_subject, test_topic, test_subtopic):
-    question = QuestionModel(text="What is the capital of France?", difficulty="Easy", 
-                             subject=test_subject, topic=test_topic, subtopic=test_subtopic)
-    logger.debug("Created question: %s", sqlalchemy_obj_to_dict(question))
-    logger.debug("Question subject: %s", sqlalchemy_obj_to_dict(question.subject))
-    logger.debug("Question topic: %s", sqlalchemy_obj_to_dict(question.topic))
-    logger.debug("Question subtopic: %s", sqlalchemy_obj_to_dict(question.subtopic))
-    
-    db_session.add(question)
+def test_subject_unique_name(db_session):
+    subject1 = SubjectModel(name="Physics")
+    db_session.add(subject1)
     db_session.commit()
-    db_session.refresh(question)
-    logger.debug("Added and refreshed the question: %s", sqlalchemy_obj_to_dict(question))
-    
-    answer = AnswerChoiceModel(text="Paris", is_correct=True, explanation="Paris is the capital and largest city of France.", question=question)
-    
-    db_session.add(answer)
-    db_session.commit()
-    db_session.refresh(answer)
-    logger.debug("Added and refreshed answer: %s", sqlalchemy_obj_to_dict(answer))
-    
-    validate_foreign_keys(QuestionModel, db_session.connection(), question)
-    validate_foreign_keys(AnswerChoiceModel, db_session.connection(), answer)
-    logger.debug("Validated foreign keys")
-    
-    assert question.id is not None
-    assert answer.id is not None
-    assert answer.question == question
-    logger.debug("Assertions passed")
 
-def test_question_model_deletion_cascades_to_answers(db_session, test_subject, test_topic, test_subtopic):
-    question = QuestionModel(text="What is the capital of France?", difficulty="Easy", 
-                             subject=test_subject, topic=test_topic, subtopic=test_subtopic)
-    logger.debug("Created question: %s", sqlalchemy_obj_to_dict(question))
-    logger.debug("Question subject: %s", sqlalchemy_obj_to_dict(question.subject))
-    logger.debug("Question topic: %s", sqlalchemy_obj_to_dict(question.topic))
-    logger.debug("Question subtopic: %s", sqlalchemy_obj_to_dict(question.subtopic))
-    
-    db_session.add(question)
+    with pytest.raises(IntegrityError):
+        subject2 = SubjectModel(name="Physics")
+        db_session.add(subject2)
+        db_session.commit()
+    db_session.rollback()
+
+def test_subject_discipline_relationship(db_session):
+    subject = SubjectModel(name="Chemistry")
+    discipline = DisciplineModel(name="Natural Sciences")
+    subject.disciplines.append(discipline)
+    db_session.add_all([subject, discipline])
     db_session.commit()
-    db_session.refresh(question)
-    logger.debug("Added and refreshed the question: %s", sqlalchemy_obj_to_dict(question))
-    
-    answer = AnswerChoiceModel(text="Paris", is_correct=True, explanation="Paris is the capital and largest city of France.", question=question)
-    
-    db_session.add(answer)
+
+    assert discipline in subject.disciplines
+    assert subject in discipline.subjects
+
+def test_subject_topics_relationship(db_session):
+    subject = SubjectModel(name="Biology")
+    topic = TopicModel(name="Genetics")
+    subject.topics.append(topic)
+    db_session.add_all([subject, topic])
     db_session.commit()
-    db_session.refresh(answer)
-    logger.debug("Added and refreshed answer: %s", sqlalchemy_obj_to_dict(answer))
-    
-    validate_foreign_keys(QuestionModel, db_session.connection(), question)
-    validate_foreign_keys(AnswerChoiceModel, db_session.connection(), answer)
-    logger.debug("Validated foreign keys")
-    
-    db_session.delete(question)
-    logger.debug("Deleted question: %s", question)
-    
+
+    assert topic in subject.topics
+    assert subject in topic.subjects
+
+def test_subject_questions_relationship(db_session, test_questions):
+    subject = SubjectModel(name="Geography")
+    subject.questions.extend(test_questions[:2])
+    db_session.add(subject)
     db_session.commit()
-    logger.debug("Committed the session after deleting the question")
-    
-    assert db_session.query(AnswerChoiceModel).filter_by(question_id=question.id).first() is None
-    logger.debug("Assertion passed: Answer choice is deleted along with the question")
+
+    assert len(subject.questions) == 2
+    assert test_questions[0] in subject.questions
+    assert test_questions[1] in subject.questions
+
+def test_subject_required_fields(db_session):
+    # Test missing name
+    with pytest.raises(IntegrityError):
+        subject = SubjectModel()
+        db_session.add(subject)
+        db_session.commit()
+    db_session.rollback()
+
+def test_subject_repr(db_session):
+    subject = SubjectModel(name="History")
+    db_session.add(subject)
+    db_session.commit()
+
+    expected_repr = f"<Subject(id={subject.id}, name='History')>"
+    assert repr(subject) == expected_repr
+
+```
+
+## File: test_subtopic_model.py
+```py
+# filename: tests/test_models/test_subtopic_model.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.subtopics import SubtopicModel
+from app.models.topics import TopicModel
+from app.models.concepts import ConceptModel
+
+def test_subtopic_creation(db_session):
+    subtopic = SubtopicModel(name="Linear Equations")
+    db_session.add(subtopic)
+    db_session.commit()
+
+    assert subtopic.id is not None
+    assert subtopic.name == "Linear Equations"
+
+def test_subtopic_topic_relationship(db_session):
+    subtopic = SubtopicModel(name="Quadratic Equations")
+    topic = TopicModel(name="Algebra")
+    subtopic.topics.append(topic)
+    db_session.add_all([subtopic, topic])
+    db_session.commit()
+
+    assert topic in subtopic.topics
+    assert subtopic in topic.subtopics
+
+def test_subtopic_concepts_relationship(db_session):
+    subtopic = SubtopicModel(name="Trigonometric Functions")
+    concept = ConceptModel(name="Sine Function")
+    subtopic.concepts.append(concept)
+    db_session.add_all([subtopic, concept])
+    db_session.commit()
+
+    assert concept in subtopic.concepts
+    assert subtopic in concept.subtopics
+
+def test_subtopic_questions_relationship(db_session, test_questions):
+    subtopic = SubtopicModel(name="Limits")
+    subtopic.questions.extend(test_questions[:2])
+    db_session.add(subtopic)
+    db_session.commit()
+
+    assert len(subtopic.questions) == 2
+    assert test_questions[0] in subtopic.questions
+    assert test_questions[1] in subtopic.questions
+
+def test_subtopic_required_fields(db_session):
+    # Test missing name
+    with pytest.raises(IntegrityError):
+        subtopic = SubtopicModel()
+        db_session.add(subtopic)
+        db_session.commit()
+    db_session.rollback()
+
+def test_subtopic_repr(db_session):
+    subtopic = SubtopicModel(name="Derivatives")
+    db_session.add(subtopic)
+    db_session.commit()
+
+    expected_repr = f"<Subtopic(id={subtopic.id}, name='Derivatives')>"
+    assert repr(subtopic) == expected_repr
+
+```
+
+## File: test_topic_model.py
+```py
+# filename: tests/test_models/test_topic_model.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.topics import TopicModel
+from app.models.subjects import SubjectModel
+from app.models.subtopics import SubtopicModel
+
+def test_topic_creation(db_session):
+    topic = TopicModel(name="Algebra")
+    db_session.add(topic)
+    db_session.commit()
+
+    assert topic.id is not None
+    assert topic.name == "Algebra"
+
+def test_topic_subject_relationship(db_session):
+    topic = TopicModel(name="Geometry")
+    subject = SubjectModel(name="Mathematics")
+    topic.subjects.append(subject)
+    db_session.add_all([topic, subject])
+    db_session.commit()
+
+    assert subject in topic.subjects
+    assert topic in subject.topics
+
+def test_topic_subtopics_relationship(db_session):
+    topic = TopicModel(name="Calculus")
+    subtopic = SubtopicModel(name="Derivatives")
+    topic.subtopics.append(subtopic)
+    db_session.add_all([topic, subtopic])
+    db_session.commit()
+
+    assert subtopic in topic.subtopics
+    assert topic in subtopic.topics
+
+def test_topic_questions_relationship(db_session, test_questions):
+    topic = TopicModel(name="Statistics")
+    topic.questions.extend(test_questions[:2])
+    db_session.add(topic)
+    db_session.commit()
+
+    assert len(topic.questions) == 2
+    assert test_questions[0] in topic.questions
+    assert test_questions[1] in topic.questions
+
+def test_topic_required_fields(db_session):
+    # Test missing name
+    with pytest.raises(IntegrityError):
+        topic = TopicModel()
+        db_session.add(topic)
+        db_session.commit()
+    db_session.rollback()
+
+def test_topic_repr(db_session):
+    topic = TopicModel(name="Trigonometry")
+    db_session.add(topic)
+    db_session.commit()
+
+    expected_repr = f"<Topic(id={topic.id}, name='Trigonometry')>"
+    assert repr(topic) == expected_repr
+
+```
+
+## File: test_user_model.py
+```py
+# filename: tests/models/test_user_model.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.users import UserModel
+from app.models.roles import RoleModel
+from app.models.groups import GroupModel
+from app.models.question_sets import QuestionSetModel
+
+def test_user_model_creation(db_session, test_permissions):
+    # Create a role first
+    role = RoleModel(name="user", description="Regular user")
+    db_session.add(role)
+    db_session.commit()
+
+    user = UserModel(
+        username="testuser",
+        email="testuser@example.com",
+        hashed_password="hashed_password",
+        role_id=role.id
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    assert user.id is not None
+    assert user.username == "testuser"
+    assert user.email == "testuser@example.com"
+    assert user.hashed_password == "hashed_password"
+    assert user.is_active == True
+    assert user.is_admin == False
+    assert user.role.name == "user"
+
+def test_user_model_unique_constraints(db_session):
+    # Create a role first
+    role = RoleModel(name="user", description="Regular user")
+    db_session.add(role)
+    db_session.commit()
+
+    user1 = UserModel(
+        username="testuser",
+        email="testuser@example.com",
+        hashed_password="hashed_password",
+        role_id=role.id
+    )
+    db_session.add(user1)
+    db_session.commit()
+
+    # Try to create another user with the same username
+    with pytest.raises(IntegrityError):
+        user2 = UserModel(
+            username="testuser",
+            email="testuser2@example.com",
+            hashed_password="hashed_password",
+            role_id=role.id
+        )
+        db_session.add(user2)
+        db_session.commit()
+
+    db_session.rollback()
+
+    # Try to create another user with the same email
+    with pytest.raises(IntegrityError):
+        user3 = UserModel(
+            username="testuser3",
+            email="testuser@example.com",
+            hashed_password="hashed_password",
+            role_id=role.id
+        )
+        db_session.add(user3)
+        db_session.commit()
+
+def test_user_model_relationships(db_session, test_group, test_question_set):
+    # Create a role first
+    role = RoleModel(name="user", description="Regular user")
+    db_session.add(role)
+    db_session.commit()
+
+    user = UserModel(
+        username="testuser",
+        email="testuser@example.com",
+        hashed_password="hashed_password",
+        role_id=role.id
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    # Test group relationship
+    user.groups.append(test_group)
+    db_session.commit()
+    assert test_group in user.groups
+
+    # Test created_groups relationship
+    created_group = GroupModel(name="Created Group", creator=user)
+    db_session.add(created_group)
+    db_session.commit()
+    assert created_group in user.created_groups
+
+    # Test created_question_sets relationship
+    created_question_set = QuestionSetModel(name="Created Question Set", creator=user)
+    db_session.add(created_question_set)
+    db_session.commit()
+    assert created_question_set in user.created_question_sets
+
+def test_user_model_repr(db_session):
+    # Create a role first
+    role = RoleModel(name="user", description="Regular user")
+    db_session.add(role)
+    db_session.commit()
+
+    user = UserModel(
+        username="testuser",
+        email="testuser@example.com",
+        hashed_password="hashed_password",
+        role_id=role.id
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    assert repr(user) == f"<User(id={user.id}, username='testuser', email='testuser@example.com', role_id='1')>"
+
+```
+
+## File: test_user_response_model.py
+```py
+# filename: tests/models/test_user_response_model.py
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+from app.models.user_responses import UserResponseModel
+
+def test_user_response_creation(db_session, test_user, test_questions, test_answer_choices):
+    user_response = UserResponseModel(
+        user_id=test_user.id,
+        question_id=test_questions[0].id,
+        answer_choice_id=test_answer_choices[0].id,
+        is_correct=True
+    )
+    db_session.add(user_response)
+    db_session.commit()
+
+    assert user_response.id is not None
+    assert user_response.user_id == test_user.id
+    assert user_response.question_id == test_questions[0].id
+    assert user_response.answer_choice_id == test_answer_choices[0].id
+    assert user_response.is_correct is True
+    assert user_response.timestamp is not None
+
+def test_user_response_relationships(db_session, test_user, test_questions, test_answer_choices):
+    user_response = UserResponseModel(
+        user_id=test_user.id,
+        question_id=test_questions[0].id,
+        answer_choice_id=test_answer_choices[0].id,
+        is_correct=True
+    )
+    db_session.add(user_response)
+    db_session.commit()
+
+    assert user_response.user == test_user
+    assert user_response.question == test_questions[0]
+    assert user_response.answer_choice == test_answer_choices[0]
+    assert user_response in test_user.responses
+    assert user_response in test_questions[0].user_responses
+    assert user_response in test_answer_choices[0].user_responses
+
+def test_user_response_required_fields(db_session, test_user, test_questions, test_answer_choices):
+    # Test missing user_id
+    with pytest.raises(IntegrityError):
+        user_response = UserResponseModel(
+            question_id=test_questions[0].id,
+            answer_choice_id=test_answer_choices[0].id,
+            is_correct=True
+        )
+        db_session.add(user_response)
+        db_session.commit()
+    db_session.rollback()
+
+    # Test missing question_id
+    with pytest.raises(IntegrityError):
+        user_response = UserResponseModel(
+            user_id=test_user.id,
+            answer_choice_id=test_answer_choices[0].id,
+            is_correct=True
+        )
+        db_session.add(user_response)
+        db_session.commit()
+    db_session.rollback()
+
+    # Test missing answer_choice_id
+    with pytest.raises(IntegrityError):
+        user_response = UserResponseModel(
+            user_id=test_user.id,
+            question_id=test_questions[0].id,
+            is_correct=True
+        )
+        db_session.add(user_response)
+        db_session.commit()
+    db_session.rollback()
+
+    # Test missing is_correct
+    with pytest.raises(IntegrityError):
+        user_response = UserResponseModel(
+            user_id=test_user.id,
+            question_id=test_questions[0].id,
+            answer_choice_id=test_answer_choices[0].id
+        )
+        db_session.add(user_response)
+        db_session.commit()
+    db_session.rollback()
+
+def test_user_response_repr(db_session, test_user, test_questions, test_answer_choices):
+    user_response = UserResponseModel(
+        user_id=test_user.id,
+        question_id=test_questions[0].id,
+        answer_choice_id=test_answer_choices[0].id,
+        is_correct=True
+    )
+    db_session.add(user_response)
+    db_session.commit()
+
+    expected_repr = f"<UserResponseModel(id={user_response.id}, user_id={test_user.id}, question_id={test_questions[0].id}, is_correct=True)>"
+    assert repr(user_response) == expected_repr
 
 ```
 
