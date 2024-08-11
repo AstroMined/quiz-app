@@ -1,10 +1,11 @@
 # filename: app/middleware/blacklist_middleware.py
 
-from fastapi import Request, HTTPException, status
+from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.core.config import settings_core
 from app.db.session import get_db
 from app.models.authentication import RevokedTokenModel
-from app.core.config import settings_core
 from app.services.logging_service import logger
 
 

@@ -1,5 +1,5 @@
 {
-  "root_directory": "/code/quiz-app/quiz-app-backend/app",
+  "root_directory": "/code/quiz-app/quiz-app-backend/",
   "file_extensions": [".py", ".toml"],
   "specific_files": {},
   "ignore_directories": [

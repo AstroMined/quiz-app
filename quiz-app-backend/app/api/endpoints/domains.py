@@ -1,14 +1,17 @@
 # filename: app/api/endpoints/domains.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.crud.crud_domains import (create_domain_in_db, delete_domain_from_db, read_domain_from_db,
+                                   read_domains_from_db, update_domain_in_db)
 from app.db.session import get_db
-from app.schemas.domains import DomainSchema, DomainCreateSchema, DomainUpdateSchema
-from app.crud.crud_domains import create_domain, read_domain, read_domains, update_domain, delete_domain
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.domains import (DomainCreateSchema, DomainSchema,
+                                 DomainUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -18,7 +21,7 @@ def post_domain(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_domain(db=db, domain=domain)
+    return create_domain_in_db(db=db, domain=domain)
 
 @router.get("/domains/", response_model=List[DomainSchema])
 def get_domains(
@@ -27,7 +30,7 @@ def get_domains(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    domains = read_domains(db, skip=skip, limit=limit)
+    domains = read_domains_from_db(db, skip=skip, limit=limit)
     return domains
 
 @router.get("/domains/{domain_id}", response_model=DomainSchema)
@@ -36,7 +39,7 @@ def get_domain(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_domain = read_domain(db, domain_id=domain_id)
+    db_domain = read_domain_from_db(db, domain_id=domain_id)
     if db_domain is None:
         raise HTTPException(status_code=404, detail="Domain not found")
     return db_domain
@@ -48,7 +51,7 @@ def put_domain(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_domain = update_domain(db, domain_id, domain)
+    db_domain = update_domain_in_db(db, domain_id, domain)
     if db_domain is None:
         raise HTTPException(status_code=404, detail="Domain not found")
     return db_domain
@@ -59,7 +62,7 @@ def delete_domain_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_domain(db, domain_id)
+    success = delete_domain_from_db(db, domain_id)
     if not success:
         raise HTTPException(status_code=404, detail="Domain not found")
     return success

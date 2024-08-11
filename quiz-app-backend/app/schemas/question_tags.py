@@ -1,7 +1,9 @@
 # filename: app/schemas/question_tags.py
 
 from typing import Optional
+
 from pydantic import BaseModel, Field, validator
+
 
 class QuestionTagBaseSchema(BaseModel):
     tag: str = Field(..., min_length=1, max_length=50)

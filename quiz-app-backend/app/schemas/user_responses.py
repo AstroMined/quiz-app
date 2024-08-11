@@ -1,8 +1,10 @@
 # filename: app/schemas/user_responses.py
 
+from datetime import datetime, timezone
 from typing import Optional
-from datetime import datetime
+
 from pydantic import BaseModel, Field, validator
+
 
 class UserResponseBaseSchema(BaseModel):
     user_id: int = Field(..., gt=0, description="ID of the user who responded")

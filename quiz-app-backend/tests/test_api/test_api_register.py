@@ -3,12 +3,12 @@
 from app.services.logging_service import logger
 
 
-def test_register_user_success(client, db_session, test_role):
+def test_register_user_success(client, db_session, test_model_role):
     user_data = {
         "username": "new_user",
         "password": "NewPassword123!",
         "email": "new_user@example.com",
-        "role": test_role.name
+        "role": test_model_role.name
     }
     response = client.post("/register", json=user_data)
     assert response.status_code == 201, "User registration failed"
@@ -46,27 +46,27 @@ def test_register_user_missing_lowercase_in_password(client):
     assert response.status_code == 422
     assert "Password must contain at least one lowercase letter" in str(response.content)
 
-def test_register_user_duplicate(client, test_user):
+def test_register_user_duplicate(client, test_model_user):
     """
     Test registration with a username that already exists.
     """
     user_data = {
-        "username": test_user.username,
+        "username": test_model_user.username,
         "password": "DuplicatePass123!",
-        "email": test_user.email,
-        "role": test_user.role
+        "email": test_model_user.email,
+        "role": test_model_user.role
     }
     response = client.post("/register", json=user_data)
     assert response.status_code == 422
     assert "already registered" in str(response.content)
 
-def test_registration_user_exists(client, test_user):
+def test_registration_user_exists(client, test_model_user):
     response = client.post(
         "/register",
         json={
-            "username": test_user.username,
+            "username": test_model_user.username,
             "password": "anotherpassword",
-            "email": test_user.email
+            "email": test_model_user.email
         }
     )
     assert response.status_code == 422, "Registration should fail for existing username."

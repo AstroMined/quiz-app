@@ -1,22 +1,23 @@
 # filename: app/api/endpoints/user_responses.py
 
+from datetime import datetime, timezone, timezone
 from typing import List, Optional
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, status, HTTPException, Response
-from sqlalchemy.orm import Session
-from app.crud.crud_user_responses import (
-    create_user_response_crud,
-    get_user_response_crud,
-    get_user_responses_crud,
-    update_user_response_crud,
-    delete_user_response_crud
-)
-from app.db.session import get_db
-from app.schemas.user_responses import UserResponseSchema, UserResponseCreateSchema, UserResponseUpdateSchema
-from app.models.users import UserModel
-from app.services.user_service import get_current_user
-from app.services.logging_service import logger
 
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy.orm import Session
+
+from app.crud.crud_user_responses import (create_user_response_in_db,
+                                          delete_user_response_from_db,
+                                          read_user_response_from_db,
+                                          read_user_responses_from_db,
+                                          update_user_response_in_db)
+from app.db.session import get_db
+from app.models.users import UserModel
+from app.schemas.user_responses import (UserResponseCreateSchema,
+                                        UserResponseSchema,
+                                        UserResponseUpdateSchema)
+from app.services.logging_service import logger
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -37,7 +38,7 @@ def create_user_response_endpoint(
         user_response = UserResponseCreateSchema(**user_response_data)
         logger.debug("Re-instantiated user response: %s", user_response)
 
-        created_response = create_user_response_crud(db=db, user_response=user_response)
+        created_response = create_user_response_in_db(db=db, user_response=user_response)
         logger.debug("User response created successfully: %s", created_response)
         return created_response
     except ValueError as e:
@@ -53,7 +54,7 @@ def get_user_response_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    user_response = get_user_response_crud(db, user_response_id)
+    user_response = read_user_response_from_db(db, user_response_id)
     if not user_response:
         raise HTTPException(status_code=404, detail="User response not found")
     return user_response
@@ -69,7 +70,7 @@ def get_user_responses_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    user_responses = get_user_responses_crud(
+    user_responses = read_user_responses_from_db(
         db,
         user_id=user_id,
         question_id=question_id,
@@ -88,7 +89,7 @@ def update_user_response_endpoint(
     current_user: UserModel = Depends(get_current_user)
 ):
     user_response = UserResponseUpdateSchema(**user_response_data)
-    updated_user_response = update_user_response_crud(db, user_response_id, user_response)
+    updated_user_response = update_user_response_in_db(db, user_response_id, user_response)
     return updated_user_response
 
 @router.delete("/user-responses/{user_response_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -97,5 +98,5 @@ def delete_user_response_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    delete_user_response_crud(db, user_response_id)
+    delete_user_response_from_db(db, user_response_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -23,15 +23,15 @@ def test_concept_subtopic_relationship(db_session):
     assert subtopic in concept.subtopics
     assert concept in subtopic.concepts
 
-def test_concept_questions_relationship(db_session, test_questions):
+def test_concept_questions_relationship(db_session, test_model_questions):
     concept = ConceptModel(name="Logarithms")
-    concept.questions.extend(test_questions[:2])
+    concept.questions.extend(test_model_questions[:2])
     db_session.add(concept)
     db_session.commit()
 
     assert len(concept.questions) == 2
-    assert test_questions[0] in concept.questions
-    assert test_questions[1] in concept.questions
+    assert test_model_questions[0] in concept.questions
+    assert test_model_questions[1] in concept.questions
 
 def test_concept_required_fields(db_session):
     # Test missing name

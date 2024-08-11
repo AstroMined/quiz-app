@@ -1,14 +1,17 @@
 # filename: app/api/endpoints/leaderboard.py
 
 from typing import List
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+
 from app.db.session import get_db
+from app.models.time_period import TimePeriodModel
 from app.models.users import UserModel
 from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
-from app.services.scoring_service import calculate_leaderboard_scores, time_period_to_schema
+from app.services.scoring_service import (calculate_leaderboard_scores,
+                                          time_period_to_schema)
 from app.services.user_service import get_current_user
-from app.models.time_period import TimePeriodModel
 
 router = APIRouter()
 

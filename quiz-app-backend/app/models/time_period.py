@@ -1,7 +1,9 @@
 # filename: app/models/time_period.py
 
 from sqlalchemy import Column, Integer, String
+
 from app.db.base import Base
+
 
 class TimePeriodModel(Base):
     __tablename__ = "time_periods"

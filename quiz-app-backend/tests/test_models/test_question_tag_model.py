@@ -25,24 +25,24 @@ def test_question_tag_unique_constraint(db_session):
     
     db_session.rollback()
 
-def test_question_tag_question_relationship(db_session, test_questions):
+def test_question_tag_question_relationship(db_session, test_model_questions):
     tag = QuestionTagModel(tag="science")
-    tag.questions.append(test_questions[0])
+    tag.questions.append(test_model_questions[0])
     db_session.add(tag)
     db_session.commit()
 
-    assert test_questions[0] in tag.questions
-    assert tag in test_questions[0].question_tags
+    assert test_model_questions[0] in tag.questions
+    assert tag in test_model_questions[0].question_tags
 
-def test_question_tag_multiple_questions(db_session, test_questions):
+def test_question_tag_multiple_questions(db_session, test_model_questions):
     tag = QuestionTagModel(tag="math")
-    tag.questions.extend(test_questions[:2])  # Add the tag to the first two questions
+    tag.questions.extend(test_model_questions[:2])  # Add the tag to the first two questions
     db_session.add(tag)
     db_session.commit()
 
     assert len(tag.questions) == 2
-    assert test_questions[0] in tag.questions
-    assert test_questions[1] in tag.questions
+    assert test_model_questions[0] in tag.questions
+    assert test_model_questions[1] in tag.questions
 
 def test_question_tag_required_fields(db_session):
     # Test missing tag

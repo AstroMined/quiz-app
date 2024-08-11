@@ -76,10 +76,10 @@ def test_subject_schema():
     assert schema.questions[0]["id"] == 6
     assert schema.questions[1]["id"] == 7
 
-def test_subject_schema_from_attributes(db_session, test_subject):
-    schema = SubjectSchema.model_validate(test_subject)
-    assert schema.id == test_subject.id
-    assert schema.name == test_subject.name
+def test_subject_schema_from_attributes(db_session, test_model_subject):
+    schema = SubjectSchema.model_validate(test_model_subject)
+    assert schema.id == test_model_subject.id
+    assert schema.name == test_model_subject.name
     assert isinstance(schema.disciplines, list)
     assert isinstance(schema.topics, list)
     assert isinstance(schema.questions, list)

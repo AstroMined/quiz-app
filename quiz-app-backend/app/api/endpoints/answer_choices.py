@@ -1,20 +1,21 @@
 # filename: /code/quiz-app/quiz-app-backend/app/api/endpoints/answer_choices.py
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.crud.crud_answer_choices import (create_answer_choice_in_db,
+                                          delete_answer_choice_from_db,
+                                          read_answer_choice_from_db,
+                                          read_answer_choices_from_db,
+                                          update_answer_choice_in_db)
 from app.db.session import get_db
-from app.schemas.answer_choices import AnswerChoiceSchema, AnswerChoiceCreateSchema, AnswerChoiceUpdateSchema
-from app.crud.crud_answer_choices import (
-    create_answer_choice_crud,
-    read_answer_choice_crud,
-    read_answer_choices_crud,
-    update_answer_choice_crud,
-    delete_answer_choice_crud
-)
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.answer_choices import (AnswerChoiceCreateSchema,
+                                        AnswerChoiceSchema,
+                                        AnswerChoiceUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -24,7 +25,7 @@ def create_answer_choice(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_answer_choice_crud(db=db, answer_choice=answer_choice)
+    return create_answer_choice_in_db(db=db, answer_choice=answer_choice)
 
 @router.get("/answer-choices/", response_model=List[AnswerChoiceSchema])
 def get_answer_choices(
@@ -33,7 +34,7 @@ def get_answer_choices(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return read_answer_choices_crud(db, skip=skip, limit=limit)
+    return read_answer_choices_from_db(db, skip=skip, limit=limit)
 
 @router.get("/answer-choices/{answer_choice_id}", response_model=AnswerChoiceSchema)
 def get_answer_choice(
@@ -41,7 +42,7 @@ def get_answer_choice(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_answer_choice = read_answer_choice_crud(db, answer_choice_id=answer_choice_id)
+    db_answer_choice = read_answer_choice_from_db(db, answer_choice_id=answer_choice_id)
     if db_answer_choice is None:
         raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
     return db_answer_choice
@@ -53,7 +54,7 @@ def update_answer_choice(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_answer_choice = update_answer_choice_crud(db, answer_choice_id, answer_choice)
+    db_answer_choice = update_answer_choice_in_db(db, answer_choice_id, answer_choice)
     if db_answer_choice is None:
         raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
     return db_answer_choice
@@ -64,7 +65,7 @@ def delete_answer_choice(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_answer_choice_crud(db, answer_choice_id)
+    success = delete_answer_choice_from_db(db, answer_choice_id)
     if not success:
         raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
     return None

@@ -34,15 +34,15 @@ def test_topic_subtopics_relationship(db_session):
     assert subtopic in topic.subtopics
     assert topic in subtopic.topics
 
-def test_topic_questions_relationship(db_session, test_questions):
+def test_topic_questions_relationship(db_session, test_model_questions):
     topic = TopicModel(name="Statistics")
-    topic.questions.extend(test_questions[:2])
+    topic.questions.extend(test_model_questions[:2])
     db_session.add(topic)
     db_session.commit()
 
     assert len(topic.questions) == 2
-    assert test_questions[0] in topic.questions
-    assert test_questions[1] in topic.questions
+    assert test_model_questions[0] in topic.questions
+    assert test_model_questions[1] in topic.questions
 
 def test_topic_required_fields(db_session):
     # Test missing name

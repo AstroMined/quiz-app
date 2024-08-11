@@ -1,8 +1,11 @@
 # filename: app/schemas/leaderboard.py
 
-from pydantic import BaseModel, Field
 from typing import Optional
+
+from pydantic import BaseModel, Field
+
 from app.schemas.time_period import TimePeriodSchema
+
 
 class LeaderboardBaseSchema(BaseModel):
     user_id: int = Field(..., gt=0)

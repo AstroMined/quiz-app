@@ -1,16 +1,17 @@
 # filename: app/services/user_service.py
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timezone
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session, joinedload
 from jose import JWTError
-from app.services.logging_service import logger
+from sqlalchemy.orm import Session
+
 from app.core.jwt import decode_access_token
 from app.db.session import get_db
 from app.models.authentication import RevokedTokenModel
-from app.models.users import UserModel
-
+from app.crud.crud_user import read_user_by_username_from_db
+from app.services.logging_service import logger
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
@@ -33,7 +34,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         if revoked_token:
             logger.debug("Token is revoked")
             raise credentials_exception
-        user = get_user_by_username(db, username=username)
+        user = read_user_by_username_from_db(db, username=username)
         if user is None:
             logger.debug("User not found for username: %s", username)
             raise credentials_exception
@@ -48,12 +49,3 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     except Exception as e:
         logger.exception("Unexpected error: %s", str(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error") from e
-
-def get_user_by_username(db: Session, username: str) -> UserModel:
-    return db.query(UserModel).filter(UserModel.username == username).first()
-
-def get_user_by_email(db: Session, email: str) -> UserModel:
-    return db.query(UserModel).filter(UserModel.email == email).first()
-
-def get_user_by_id(db: Session, user_id: int):
-    return db.query(UserModel).options(joinedload(UserModel.groups)).filter(UserModel.id == user_id).first()

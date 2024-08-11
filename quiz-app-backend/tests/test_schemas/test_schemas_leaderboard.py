@@ -75,7 +75,7 @@ def test_leaderboard_schema():
     assert schema.time_period == time_period
     assert schema.group_id == 5
 
-def test_leaderboard_schema_from_attributes(db_session, test_user):
+def test_leaderboard_schema_from_attributes(db_session, test_model_user):
     from app.models.leaderboard import LeaderboardModel
     from app.models.time_period import TimePeriodModel
 
@@ -84,7 +84,7 @@ def test_leaderboard_schema_from_attributes(db_session, test_user):
     db_session.commit()
 
     leaderboard_entry = LeaderboardModel(
-        user_id=test_user.id,
+        user_id=test_model_user.id,
         score=100,
         time_period_id=time_period.id,
         group_id=None
@@ -95,7 +95,7 @@ def test_leaderboard_schema_from_attributes(db_session, test_user):
 
     schema = LeaderboardSchema.model_validate(leaderboard_entry)
     assert schema.id == leaderboard_entry.id
-    assert schema.user_id == test_user.id
+    assert schema.user_id == test_model_user.id
     assert schema.score == 100
     assert schema.time_period.id == time_period.id
     assert schema.time_period.name == "daily"

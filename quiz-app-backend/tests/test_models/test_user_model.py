@@ -7,7 +7,7 @@ from app.models.roles import RoleModel
 from app.models.groups import GroupModel
 from app.models.question_sets import QuestionSetModel
 
-def test_user_model_creation(db_session, test_permissions):
+def test_user_model_creation(db_session, test_model_permissions):
     # Create a role first
     role = RoleModel(name="user", description="Regular user")
     db_session.add(role)
@@ -69,7 +69,7 @@ def test_user_model_unique_constraints(db_session):
         db_session.add(user3)
         db_session.commit()
 
-def test_user_model_relationships(db_session, test_group, test_question_set):
+def test_user_model_relationships(db_session, test_model_group, test_model_question_set):
     # Create a role first
     role = RoleModel(name="user", description="Regular user")
     db_session.add(role)
@@ -85,9 +85,9 @@ def test_user_model_relationships(db_session, test_group, test_question_set):
     db_session.commit()
 
     # Test group relationship
-    user.groups.append(test_group)
+    user.groups.append(test_model_group)
     db_session.commit()
-    assert test_group in user.groups
+    assert test_model_group in user.groups
 
     # Test created_groups relationship
     created_group = GroupModel(name="Created Group", creator=user)

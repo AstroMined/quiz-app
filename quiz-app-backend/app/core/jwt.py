@@ -1,9 +1,11 @@
 # filename: app/core/jwt.py
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta, timezone
 from typing import Optional
-from jose import jwt, JWTError
+
 from fastapi import HTTPException, status
+from jose import JWTError, jwt
+
 from app.core.config import settings_core
 from app.services.logging_service import logger
 

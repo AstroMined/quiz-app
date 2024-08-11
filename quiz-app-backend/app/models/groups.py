@@ -1,8 +1,10 @@
 # filename: app/models/groups.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class GroupModel(Base):
     __tablename__ = "groups"

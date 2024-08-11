@@ -1,7 +1,9 @@
 # filename: app/schemas/answer_choices.py
 
 from typing import Optional
+
 from pydantic import BaseModel, Field, validator
+
 
 class AnswerChoiceBaseSchema(BaseModel):
     text: str = Field(..., min_length=1, max_length=10000)

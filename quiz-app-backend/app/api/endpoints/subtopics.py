@@ -1,14 +1,18 @@
 # filename: app/api/endpoints/subtopics.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.crud.crud_subtopics import (create_subtopic_in_db, delete_subtopic_from_db,
+                                     read_subtopic_from_db, read_subtopics_from_db,
+                                     update_subtopic_in_db)
 from app.db.session import get_db
-from app.schemas.subtopics import SubtopicSchema, SubtopicCreateSchema, SubtopicUpdateSchema
-from app.crud.crud_subtopics import create_subtopic, read_subtopic, read_subtopics, update_subtopic, delete_subtopic
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.subtopics import (SubtopicCreateSchema, SubtopicSchema,
+                                   SubtopicUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -18,7 +22,7 @@ def post_subtopic(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_subtopic(db=db, subtopic=subtopic)
+    return create_subtopic_in_db(db=db, subtopic=subtopic)
 
 @router.get("/subtopics/", response_model=List[SubtopicSchema])
 def get_subtopics(
@@ -27,7 +31,7 @@ def get_subtopics(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    subtopics = read_subtopics(db, skip=skip, limit=limit)
+    subtopics = read_subtopics_from_db(db, skip=skip, limit=limit)
     return subtopics
 
 @router.get("/subtopics/{subtopic_id}", response_model=SubtopicSchema)
@@ -36,7 +40,7 @@ def get_subtopic(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_subtopic = read_subtopic(db, subtopic_id=subtopic_id)
+    db_subtopic = read_subtopic_from_db(db, subtopic_id=subtopic_id)
     if db_subtopic is None:
         raise HTTPException(status_code=404, detail="Subtopic not found")
     return db_subtopic
@@ -48,7 +52,7 @@ def put_subtopic(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_subtopic = update_subtopic(db, subtopic_id, subtopic)
+    db_subtopic = update_subtopic_in_db(db, subtopic_id, subtopic)
     if db_subtopic is None:
         raise HTTPException(status_code=404, detail="Subtopic not found")
     return db_subtopic
@@ -59,7 +63,7 @@ def delete_subtopic_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_subtopic(db, subtopic_id)
+    success = delete_subtopic_from_db(db, subtopic_id)
     if not success:
         raise HTTPException(status_code=404, detail="Subtopic not found")
     return success

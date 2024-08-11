@@ -5,9 +5,9 @@ from app.schemas.subjects import SubjectCreateSchema
 from app.services.logging_service import logger
 
 
-def test_create_topic(logged_in_client, test_discipline):
+def test_create_topic(logged_in_client, test_model_discipline):
     # Create a test subject
-    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_model_discipline.id)
     created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
     logger.debug("Created subject: %s", created_subject)
 
@@ -18,9 +18,9 @@ def test_create_topic(logged_in_client, test_discipline):
     assert response.json()["name"] == "Test Topic"
     assert response.json()["subject_id"] == created_subject["id"]
 
-def test_read_topic(logged_in_client, test_discipline):
+def test_read_topic(logged_in_client, test_model_discipline):
     # Create a test subject
-    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_model_discipline.id)
     created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
     logger.debug("Created subject: %s", created_subject)
     topic_data = TopicCreateSchema(name="Test Topic", subject_id=created_subject["id"])
@@ -32,9 +32,9 @@ def test_read_topic(logged_in_client, test_discipline):
     assert response.json()["name"] == "Test Topic"
     assert response.json()["subject_id"] == created_subject["id"]
 
-def test_update_topic(logged_in_client, test_discipline):
+def test_update_topic(logged_in_client, test_model_discipline):
     # Create a test subject
-    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_model_discipline.id)
     created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
     logger.debug("Created subject: %s", created_subject)
     topic_data = TopicCreateSchema(name="Test Topic", subject_id=created_subject["id"])
@@ -47,9 +47,9 @@ def test_update_topic(logged_in_client, test_discipline):
     assert response.json()["name"] == "Updated Topic"
     assert response.json()["subject_id"] == created_subject["id"]
 
-def test_delete_topic(logged_in_client, test_discipline):
+def test_delete_topic(logged_in_client, test_model_discipline):
     # Create a test subject
-    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_model_discipline.id)
     created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
     logger.debug("Created subject: %s", created_subject)
     topic_data = TopicCreateSchema(name="Test Topic", subject_id=created_subject["id"])

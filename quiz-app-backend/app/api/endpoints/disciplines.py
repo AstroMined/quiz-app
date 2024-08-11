@@ -1,14 +1,18 @@
 # filename: app/api/endpoints/disciplines.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.crud.crud_disciplines import (create_discipline_in_db, delete_discipline_from_db,
+                                       read_discipline_from_db, read_disciplines_from_db,
+                                       update_discipline_in_db)
 from app.db.session import get_db
-from app.schemas.disciplines import DisciplineSchema, DisciplineCreateSchema, DisciplineUpdateSchema
-from app.crud.crud_disciplines import create_discipline, read_discipline, read_disciplines, update_discipline, delete_discipline
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.disciplines import (DisciplineCreateSchema, DisciplineSchema,
+                                     DisciplineUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -18,7 +22,7 @@ def post_discipline(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_discipline(db=db, discipline=discipline)
+    return create_discipline_in_db(db=db, discipline=discipline)
 
 @router.get("/disciplines/", response_model=List[DisciplineSchema])
 def get_disciplines(
@@ -27,7 +31,7 @@ def get_disciplines(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    disciplines = read_disciplines(db, skip=skip, limit=limit)
+    disciplines = read_disciplines_from_db(db, skip=skip, limit=limit)
     return disciplines
 
 @router.get("/disciplines/{discipline_id}", response_model=DisciplineSchema)
@@ -36,7 +40,7 @@ def get_discipline(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_discipline = read_discipline(db, discipline_id=discipline_id)
+    db_discipline = read_discipline_from_db(db, discipline_id=discipline_id)
     if db_discipline is None:
         raise HTTPException(status_code=404, detail="Discipline not found")
     return db_discipline
@@ -48,7 +52,7 @@ def put_discipline(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_discipline = update_discipline(db, discipline_id, discipline)
+    db_discipline = update_discipline_in_db(db, discipline_id, discipline)
     if db_discipline is None:
         raise HTTPException(status_code=404, detail="Discipline not found")
     return db_discipline
@@ -59,7 +63,7 @@ def delete_discipline_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_discipline(db, discipline_id)
+    success = delete_discipline_from_db(db, discipline_id)
     if not success:
         raise HTTPException(status_code=404, detail="Discipline not found")
     return success

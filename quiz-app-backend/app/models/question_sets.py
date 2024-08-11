@@ -1,9 +1,11 @@
 # filename: app/models/question_sets.py
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.base import Base
+
 
 class QuestionSetModel(Base):
     __tablename__ = "question_sets"

@@ -1,24 +1,30 @@
 # filename: app/crud/crud_answer_choices.py
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.answer_choices import AnswerChoiceModel
+from app.models.questions import QuestionModel
+from app.models.associations import QuestionToAnswerAssociation
 
-def create_answer_choice(db: Session, answer_choice_data: dict) -> AnswerChoiceModel:
-    db_answer_choice = AnswerChoiceModel(**answer_choice_data)
+def create_answer_choice_in_db(db: Session, answer_choice_data: Dict) -> AnswerChoiceModel:
+    db_answer_choice = AnswerChoiceModel(
+        text=answer_choice_data['text'],
+        is_correct=answer_choice_data['is_correct'],
+        explanation=answer_choice_data.get('explanation')
+    )
     db.add(db_answer_choice)
     db.commit()
     db.refresh(db_answer_choice)
     return db_answer_choice
 
-def get_answer_choice(db: Session, answer_choice_id: int) -> Optional[AnswerChoiceModel]:
+def read_answer_choice_from_db(db: Session, answer_choice_id: int) -> Optional[AnswerChoiceModel]:
     return db.query(AnswerChoiceModel).filter(AnswerChoiceModel.id == answer_choice_id).first()
 
-def get_answer_choices(db: Session, skip: int = 0, limit: int = 100) -> List[AnswerChoiceModel]:
+def read_answer_choices_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[AnswerChoiceModel]:
     return db.query(AnswerChoiceModel).offset(skip).limit(limit).all()
 
-def update_answer_choice(db: Session, answer_choice_id: int, answer_choice_data: dict) -> Optional[AnswerChoiceModel]:
-    db_answer_choice = get_answer_choice(db, answer_choice_id)
+def update_answer_choice_in_db(db: Session, answer_choice_id: int, answer_choice_data: Dict) -> Optional[AnswerChoiceModel]:
+    db_answer_choice = read_answer_choice_from_db(db, answer_choice_id)
     if db_answer_choice:
         for key, value in answer_choice_data.items():
             setattr(db_answer_choice, key, value)
@@ -26,10 +32,40 @@ def update_answer_choice(db: Session, answer_choice_id: int, answer_choice_data:
         db.refresh(db_answer_choice)
     return db_answer_choice
 
-def delete_answer_choice(db: Session, answer_choice_id: int) -> bool:
-    db_answer_choice = get_answer_choice(db, answer_choice_id)
+def delete_answer_choice_from_db(db: Session, answer_choice_id: int) -> bool:
+    db_answer_choice = read_answer_choice_from_db(db, answer_choice_id)
     if db_answer_choice:
         db.delete(db_answer_choice)
         db.commit()
         return True
     return False
+
+def create_question_to_answer_association_in_db(db: Session, question_id: int, answer_choice_id: int) -> bool:
+    association = QuestionToAnswerAssociation(question_id=question_id, answer_choice_id=answer_choice_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_question_to_answer_association_from_db(db: Session, question_id: int, answer_choice_id: int) -> bool:
+    association = db.query(QuestionToAnswerAssociation).filter_by(
+        question_id=question_id, answer_choice_id=answer_choice_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_answer_choices_for_question_from_db(db: Session, question_id: int) -> List[AnswerChoiceModel]:
+    return db.query(AnswerChoiceModel).join(QuestionToAnswerAssociation).filter(
+        QuestionToAnswerAssociation.question_id == question_id
+    ).all()
+
+def read_questions_for_answer_choice_from_db(db: Session, answer_choice_id: int) -> List[QuestionModel]:
+    return db.query(QuestionModel).join(QuestionToAnswerAssociation).filter(
+        QuestionToAnswerAssociation.answer_choice_id == answer_choice_id
+    ).all()

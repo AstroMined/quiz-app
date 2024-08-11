@@ -15,12 +15,12 @@ from app.models.question_sets import QuestionSetModel
 from app.models.roles import RoleModel
 from app.models.permissions import PermissionModel
 
-def test_user_to_group_association(db_session, test_user, test_group):
-    test_user.groups.append(test_group)
+def test_user_to_group_association(db_session, test_model_user, test_model_group):
+    test_model_user.groups.append(test_model_group)
     db_session.commit()
 
-    assert test_group in test_user.groups
-    assert test_user in test_group.users
+    assert test_model_group in test_model_user.groups
+    assert test_model_user in test_model_group.users
 
 def test_question_to_subject_association(db_session):
     question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
@@ -72,9 +72,9 @@ def test_question_to_tag_association(db_session):
     assert tag in question.question_tags
     assert question in tag.questions
 
-def test_question_set_to_question_association(db_session, test_user_with_group):
+def test_model_question_set_to_question_association(db_session, test_model_user_with_group):
     question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
-    question_set = QuestionSetModel(name="Test Set", creator_id=test_user_with_group.id)
+    question_set = QuestionSetModel(name="Test Set", creator_id=test_model_user_with_group.id)
     question_set.questions.append(question)
     db_session.add_all([question, question_set])
     db_session.commit()
@@ -82,19 +82,19 @@ def test_question_set_to_question_association(db_session, test_user_with_group):
     assert question in question_set.questions
     assert question_set in question.question_sets
 
-def test_question_set_to_group_association(db_session, test_question_set, test_group):
-    test_question_set.groups.append(test_group)
+def test_model_question_set_to_group_association(db_session, test_model_question_set, test_model_group):
+    test_model_question_set.groups.append(test_model_group)
     db_session.commit()
 
-    assert test_group in test_question_set.groups
-    assert test_question_set in test_group.question_sets
+    assert test_model_group in test_model_question_set.groups
+    assert test_model_question_set in test_model_group.question_sets
 
-def test_role_to_permission_association(db_session, test_role, test_permission):
-    test_role.permissions.append(test_permission)
+def test_role_to_permission_association(db_session, test_model_role, test_permission):
+    test_model_role.permissions.append(test_permission)
     db_session.commit()
 
-    assert test_permission in test_role.permissions
-    assert test_role in test_permission.roles
+    assert test_permission in test_model_role.permissions
+    assert test_model_role in test_permission.roles
 
 def test_discipline_subject_association(db_session):
     discipline = DisciplineModel(name="Science")
@@ -175,20 +175,20 @@ def test_multiple_associations(db_session):
     assert topic in subject1.topics
     assert topic in subject2.topics
 
-def test_association_integrity(db_session, test_user, test_group):
-    test_user.groups.append(test_group)
+def test_association_integrity(db_session, test_model_user, test_model_group):
+    test_model_user.groups.append(test_model_group)
     db_session.commit()
 
     # Try to add the same association again
     with pytest.raises(IntegrityError):
-        test_user.groups.append(test_group)
+        test_model_user.groups.append(test_model_group)
         db_session.commit()
 
     db_session.rollback()
 
     # Remove the association
-    test_user.groups.remove(test_group)
+    test_model_user.groups.remove(test_model_group)
     db_session.commit()
 
-    assert test_group not in test_user.groups
-    assert test_user not in test_group.users
+    assert test_model_group not in test_model_user.groups
+    assert test_model_user not in test_model_group.users

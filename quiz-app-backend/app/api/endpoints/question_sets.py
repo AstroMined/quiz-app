@@ -2,33 +2,26 @@
 
 import json
 from typing import List
-from fastapi import (
-    APIRouter,
-    Depends,
-    Form,
-    HTTPException,
-    UploadFile,
-    File,
-    Response,
-    status
-)
-from sqlalchemy.orm import Session
+
+from fastapi import (APIRouter, Depends, File, Form, HTTPException, Response,
+                     UploadFile, status)
 from pydantic import ValidationError
-from app.crud.crud_questions import create_question
-from app.crud.crud_question_sets import (
-    read_question_sets_crud,
-    read_question_set_crud,
-    update_question_set_crud,
-    delete_question_set_crud,
-    create_question_set_crud
-)
+from sqlalchemy.orm import Session
+
+from app.crud.crud_question_sets import (create_question_set_in_db,
+                                         delete_question_set_from_db,
+                                         read_question_set_from_db,
+                                         read_question_sets_from_db,
+                                         update_question_set_in_db)
+from app.crud.crud_questions import create_question_in_db
 from app.db.session import get_db
 from app.models.users import UserModel
-from app.schemas.question_sets import QuestionSetSchema, QuestionSetCreateSchema, QuestionSetUpdateSchema
+from app.schemas.question_sets import (QuestionSetCreateSchema,
+                                       QuestionSetSchema,
+                                       QuestionSetUpdateSchema)
 from app.schemas.questions import QuestionCreateSchema
-from app.services.user_service import get_current_user
 from app.services.logging_service import logger, sqlalchemy_obj_to_dict
-
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -56,13 +49,13 @@ async def upload_question_set_endpoint(
 
         # Create question set with the provided name
         question_set = QuestionSetCreateSchema(name=question_set_name, db=db)
-        question_set_created = create_question_set_crud(db, question_set)
+        question_set_created = create_question_set_in_db(db, question_set)
 
         # Create questions and associate with the newly created question set
         for question in question_data:
             question['question_set_id'] = question_set_created.id
             question['db'] = db
-            create_question(db, QuestionCreateSchema(**question))
+            create_question_in_db(db, QuestionCreateSchema(**question))
 
         return {"message": "Question set uploaded successfully"}
 
@@ -86,7 +79,7 @@ def read_questions_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    questions = read_question_sets_crud(db, skip=skip, limit=limit)
+    questions = read_question_sets_from_db(db, skip=skip, limit=limit)
     return questions
 
 @router.post("/question-sets/", response_model=QuestionSetSchema, status_code=201)
@@ -109,7 +102,7 @@ def create_question_set_endpoint(
         question_set = QuestionSetCreateSchema(**question_set_data)
         logger.debug("Re-instantiated question set: %s", question_set)
 
-        created_question_set = create_question_set_crud(db=db, question_set=question_set)
+        created_question_set = create_question_set_in_db(db=db, question_set=question_set)
         logger.debug("Question set created successfully: %s", created_question_set)
         return created_question_set
     except ValueError as e:
@@ -125,7 +118,7 @@ def get_question_set_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    question_set = read_question_set_crud(db, question_set_id=question_set_id)
+    question_set = read_question_set_from_db(db, question_set_id=question_set_id)
     if not question_set:
         raise HTTPException(status_code=404, detail=f"Question set with ID {question_set_id} not found")
     return question_set
@@ -137,7 +130,7 @@ def read_question_sets_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    question_sets = read_question_sets_crud(db, skip=skip, limit=limit)
+    question_sets = read_question_sets_from_db(db, skip=skip, limit=limit)
     return question_sets
 
 @router.put("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
@@ -160,7 +153,7 @@ def update_question_set_endpoint(
         question_set = QuestionSetUpdateSchema(**question_set_data)
         logger.debug("Re-instantiated question set for update: %s", question_set)
 
-        updated_question_set = update_question_set_crud(
+        updated_question_set = update_question_set_in_db(
             db,
             question_set_id=question_set_id,
             question_set=question_set
@@ -195,7 +188,7 @@ def delete_question_set_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    deleted = delete_question_set_crud(db, question_set_id=question_set_id)
+    deleted = delete_question_set_from_db(db, question_set_id=question_set_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Question set not found")
     return Response(status_code=204)

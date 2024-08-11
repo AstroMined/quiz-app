@@ -1,13 +1,15 @@
 # filename: app/services/scoring_service.py
 
+from datetime import datetime, timezone, timedelta, timezone
 from typing import Dict
-from datetime import datetime, timedelta, timezone
+
 from sqlalchemy.orm import Session
-from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
+
+from app.models.associations import UserToGroupAssociation
+from app.models.time_period import TimePeriodModel
 from app.models.user_responses import UserResponseModel
 from app.models.users import UserModel
-from app.models.time_period import TimePeriodModel
-from app.models.associations import UserToGroupAssociation
+from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
 
 
 def calculate_user_score(user_id: int, db: Session) -> int:

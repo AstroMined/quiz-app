@@ -26,16 +26,16 @@ def test_group_base_schema_validation():
         GroupBaseSchema(name="Invalid@Group", description="Invalid group")
     assert "Group name can only contain alphanumeric characters, hyphens, underscores, and spaces" in str(exc_info.value)
 
-def test_group_create_schema(test_user):
+def test_group_create_schema(test_model_user):
     data = {
         "name": "New Group",
         "description": "This is a new group",
-        "creator_id": test_user.id
+        "creator_id": test_model_user.id
     }
     schema = GroupCreateSchema(**data)
     assert schema.name == "New Group"
     assert schema.description == "This is a new group"
-    assert schema.creator_id == test_user.id
+    assert schema.creator_id == test_model_user.id
 
 def test_group_update_schema():
     data = {
@@ -52,31 +52,31 @@ def test_group_update_schema():
     assert partial_schema.name == "Partially Updated Group"
     assert partial_schema.description is None
 
-def test_group_schema(test_user):
+def test_group_schema(test_model_user):
     data = {
         "id": 1,
         "name": "Complete Group",
         "description": "This is a complete group",
-        "creator_id": test_user.id,
-        "users": [{"id": test_user.id, "name": "Test User"}],
+        "creator_id": test_model_user.id,
+        "users": [{"id": test_model_user.id, "name": "Test User"}],
         "question_sets": [{"id": 1, "name": "Question Set 1"}, {"id": 2, "name": "Question Set 2"}, {"id": 3, "name": "Question Set 3"}]
     }
     schema = GroupSchema(**data)
     assert schema.id == 1
     assert schema.name == "Complete Group"
     assert schema.description == "This is a complete group"
-    assert schema.creator_id == test_user.id
+    assert schema.creator_id == test_model_user.id
     assert len(schema.users) == 1
-    assert schema.users[0]["id"] == test_user.id
+    assert schema.users[0]["id"] == test_model_user.id
     assert len(schema.question_sets) == 3
     assert [qs["id"] for qs in schema.question_sets] == [1, 2, 3]
 
-def test_group_schema_from_attributes(test_group):
-    schema = GroupSchema.model_validate(test_group)
-    assert schema.id == test_group.id
-    assert schema.name == test_group.name
-    assert schema.description == test_group.description
-    assert schema.creator_id == test_group.creator_id
+def test_group_schema_from_attributes(test_model_group):
+    schema = GroupSchema.model_validate(test_model_group)
+    assert schema.id == test_model_group.id
+    assert schema.name == test_model_group.name
+    assert schema.description == test_model_group.description
+    assert schema.creator_id == test_model_group.creator_id
     assert isinstance(schema.users, list)
     assert isinstance(schema.question_sets, list)
     for user in schema.users:

@@ -1,7 +1,9 @@
 # filename: app/schemas/topics.py
 
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, field_validator
+
 
 class TopicBaseSchema(BaseModel):
     name: str = Field(..., max_length=100, description="Name of the topic")

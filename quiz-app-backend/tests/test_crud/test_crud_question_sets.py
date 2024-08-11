@@ -1,84 +1,85 @@
-# filename: tests/test_crud_question_sets.py
+# filename: tests/crud/test_crud_question_sets.py
 
 import pytest
-from fastapi import HTTPException
-from app.crud.crud_question_sets import create_question_set_crud, delete_question_set_crud, update_question_set_crud
-from app.crud.crud_subjects import create_subject
-from app.schemas.subjects import SubjectCreateSchema
-from app.schemas.question_sets import QuestionSetCreateSchema, QuestionSetUpdateSchema
+from app.crud.crud_question_sets import (
+    create_question_set_in_db,
+    read_question_set_from_db,
+    read_question_sets_from_db,
+    update_question_set_in_db,
+    delete_question_set_from_db,
+    create_question_set_to_question_association_in_db,
+    delete_question_set_to_question_association_from_db,
+    create_question_set_to_group_association_in_db,
+    delete_question_set_to_group_association_from_db,
+    read_questions_for_question_set_from_db,
+    read_groups_for_question_set_from_db
+)
+from app.crud.crud_questions import create_question_in_db
+from app.crud.crud_groups import create_group_in_db
 
+def test_create_question_set(db_session, test_schema_question_set):
+    question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    assert question_set.name == test_schema_question_set.name
+    assert question_set.description == test_schema_question_set.description
+    assert question_set.is_public == test_schema_question_set.is_public
 
-def test_create_question_set_crud(db_session, test_user, test_questions, test_group):
-    question_set_data = QuestionSetCreateSchema(
-        db=db_session,
-        name="test_create_question_set_crud Question Set",
-        is_public=True,
-        creator_id=test_user.id,
-        question_ids=[test_questions[0].id],
-        group_ids=[test_group.id]
-    )
-    question_set = create_question_set_crud(db=db_session, question_set=question_set_data)
+def test_read_question_set(db_session, test_schema_question_set):
+    question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    read_set = read_question_set_from_db(db_session, question_set.id)
+    assert read_set.id == question_set.id
+    assert read_set.name == question_set.name
 
-    assert question_set.name == "test_create_question_set_crud Question Set"
-    assert question_set.is_public == True
-    assert question_set.creator_id == test_user.id
-    assert len(question_set.questions) == 1
-    assert question_set.questions[0].id == test_questions[0].id
-    assert len(question_set.groups) == 1
-    assert question_set.groups[0].id == test_group.id
+def test_read_question_sets(db_session, test_schema_question_set):
+    create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    question_sets = read_question_sets_from_db(db_session)
+    assert len(question_sets) > 0
 
-def test_create_question_set_duplicate_name(db_session, test_user):
-    question_set_data = QuestionSetCreateSchema(
-        db=db_session,
-        name="Duplicate Test Set",
-        is_public=True,
-        creator_id=test_user.id
-    )
-    create_question_set_crud(db=db_session, question_set=question_set_data)
-    
-    with pytest.raises(HTTPException) as exc_info:
-        create_question_set_crud(db=db_session, question_set=question_set_data)
-    
-    assert exc_info.value.status_code == 400
-    assert "already exists" in str(exc_info.value.detail)
+def test_update_question_set(db_session, test_schema_question_set):
+    question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    updated_data = {"name": "Updated Question Set", "description": "Updated description"}
+    updated_set = update_question_set_in_db(db_session, question_set.id, updated_data)
+    assert updated_set.name == "Updated Question Set"
+    assert updated_set.description == "Updated description"
 
-def test_update_question_set_crud(db_session, test_question_set, test_questions, test_group):
-    update_data = QuestionSetUpdateSchema(
-        db = db_session,
-        name="Updated Question Set",
-        is_public=False,
-        question_ids=[test_questions[0].id],
-        group_ids=[test_group.id]
-    )
-    updated_question_set = update_question_set_crud(db_session, test_question_set.id, update_data)
+def test_delete_question_set(db_session, test_schema_question_set):
+    question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    assert delete_question_set_from_db(db_session, question_set.id) is True
+    assert read_question_set_from_db(db_session, question_set.id) is None
 
-    assert updated_question_set.name == "Updated Question Set"
-    assert updated_question_set.is_public == False
-    assert len(updated_question_set.questions) == 1
-    assert updated_question_set.questions[0].id == test_questions[0].id
-    assert len(updated_question_set.groups) == 1
-    assert updated_question_set.groups[0].id == test_group.id
+def test_create_question_set_to_question_association(db_session, test_schema_question_set, test_schema_question):
+    question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    question = create_question_in_db(db_session, test_schema_question.model_dump())
+    assert create_question_set_to_question_association_in_db(db_session, question_set.id, question.id) is True
 
-def test_update_question_set_not_found(db_session):
-    update_data = QuestionSetUpdateSchema(name="Updated Name")
-    with pytest.raises(HTTPException) as exc_info:
-        update_question_set_crud(db_session, 999, update_data)
-    assert exc_info.value.status_code == 404
-    assert "not found" in str(exc_info.value.detail)
+def test_delete_question_set_to_question_association(db_session, test_schema_question_set, test_schema_question):
+    question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    question = create_question_in_db(db_session, test_schema_question.model_dump())
+    create_question_set_to_question_association_in_db(db_session, question_set.id, question.id)
+    assert delete_question_set_to_question_association_from_db(db_session, question_set.id, question.id) is True
 
-def test_delete_question_set(db_session, test_question_set_data, test_user):
-    test_question_set_data.name = "Unique Question Set for Deletion"
-    question_set_data = QuestionSetCreateSchema(**test_question_set_data.dict())
-    question_set = create_question_set_crud(
-        db=db_session,
-        question_set=question_set_data
-    )
-    assert delete_question_set_crud(db=db_session, question_set_id=question_set.id) is True, "Question set deletion failed."
+def test_create_question_set_to_group_association(db_session, test_schema_question_set, test_schema_group):
+    question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    group = create_group_in_db(db_session, test_schema_group.model_dump())
+    assert create_question_set_to_group_association_in_db(db_session, question_set.id, group.id) is True
 
-def test_delete_question_set_not_found(db_session):
-    question_set_id = 999  # Assuming this ID does not exist
-    with pytest.raises(HTTPException) as exc_info:
-        delete_question_set_crud(db=db_session, question_set_id=question_set_id)
-    assert exc_info.value.status_code == 404
-    assert f"Question set with ID {question_set_id} not found." in str(exc_info.value.detail)
+def test_delete_question_set_to_group_association(db_session, test_schema_question_set, test_schema_group):
+    question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    group = create_group_in_db(db_session, test_schema_group.model_dump())
+    create_question_set_to_group_association_in_db(db_session, question_set.id, group.id)
+    assert delete_question_set_to_group_association_from_db(db_session, question_set.id, group.id) is True
 
+def test_read_questions_for_question_set(db_session, test_schema_question_set, test_schema_question):
+    question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    question = create_question_in_db(db_session, test_schema_question.model_dump())
+    create_question_set_to_question_association_in_db(db_session, question_set.id, question.id)
+    questions = read_questions_for_question_set_from_db(db_session, question_set.id)
+    assert len(questions) == 1
+    assert questions[0].id == question.id
+
+def test_read_groups_for_question_set(db_session, test_schema_question_set, test_schema_group):
+    question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
+    group = create_group_in_db(db_session, test_schema_group.model_dump())
+    create_question_set_to_group_association_in_db(db_session, question_set.id, group.id)
+    groups = read_groups_for_question_set_from_db(db_session, question_set.id)
+    assert len(groups) == 1
+    assert groups[0].id == group.id

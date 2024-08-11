@@ -1,42 +1,95 @@
-# filename: tests/test_crud_user.py
+# filename: tests/crud/test_crud_user.py
 
-from app.crud.crud_user import delete_user, create_user_crud, update_user_crud
-from app.schemas.user import UserCreateSchema, UserUpdateSchema
-from app.services.authentication_service import authenticate_user
-from app.core.security import get_password_hash
+import pytest
+from app.crud.crud_user import (
+    create_user_in_db,
+    read_user_from_db,
+    read_user_by_username_from_db,
+    read_user_by_email_from_db,
+    read_users_from_db,
+    update_user_in_db,
+    delete_user_from_db,
+    create_user_to_group_association_in_db,
+    delete_user_to_group_association_from_db,
+    read_groups_for_user_from_db,
+    read_role_for_user_from_db,
+    read_created_question_sets_for_user_from_db
+)
+from app.crud.crud_groups import create_group_in_db
+from app.crud.crud_roles import create_role_in_db
+from app.crud.crud_question_sets import create_question_set_in_db
 
-def test_remove_user_not_found(db_session):
-    user_id = 999  # Assuming this ID does not exist
-    removed_user = delete_user(db_session, user_id)
-    assert removed_user is None
+def test_create_user(db_session, test_schema_user):
+    user = create_user_in_db(db_session, test_schema_user.model_dump())
+    assert user.username == test_schema_user.username
+    assert user.email == test_schema_user.email
 
-def test_authenticate_user(db_session, random_username, test_role):
-    hashed_password = get_password_hash("AuthPassword123!")
-    user_data = UserCreateSchema(
-        username=random_username,
-        password=hashed_password,
-        email=f"{random_username}@example.com",
-        role=test_role.name
-    )
-    create_user_crud(db_session, user_data)
-    authenticated_user = authenticate_user(db_session, username=random_username, password="AuthPassword123!")
-    assert authenticated_user
-    assert authenticated_user.username == random_username
+def test_read_user(db_session, test_schema_user):
+    user = create_user_in_db(db_session, test_schema_user.model_dump())
+    read_user = read_user_from_db(db_session, user.id)
+    assert read_user.id == user.id
+    assert read_user.username == user.username
 
-def test_create_user(db_session, random_username, test_role):
-    user_data = UserCreateSchema(
-        username=random_username,
-        password="NewPassword123!",
-        email=f"{random_username}@example.com",
-        role=test_role.name
-    )
-    created_user = create_user_crud(db_session, user_data)
-    assert created_user.username == random_username
+def test_read_user_by_username(db_session, test_schema_user):
+    user = create_user_in_db(db_session, test_schema_user.model_dump())
+    read_user = read_user_by_username_from_db(db_session, user.username)
+    assert read_user.id == user.id
+    assert read_user.username == user.username
 
-def test_update_user(db_session, test_user):
-    updated_data = UserUpdateSchema(
-        db = db_session,
-        username="updated_username"
-    )
-    updated_user = update_user_crud(db=db_session, user_id=test_user.id, updated_user=updated_data)
-    assert updated_user.username == "updated_username"
+def test_read_user_by_email(db_session, test_schema_user):
+    user = create_user_in_db(db_session, test_schema_user.model_dump())
+    read_user = read_user_by_email_from_db(db_session, user.email)
+    assert read_user.id == user.id
+    assert read_user.email == user.email
+
+def test_read_users(db_session, test_schema_user):
+    create_user_in_db(db_session, test_schema_user.model_dump())
+    users = read_users_from_db(db_session)
+    assert len(users) > 0
+
+def test_update_user(db_session, test_schema_user):
+    user = create_user_in_db(db_session, test_schema_user.model_dump())
+    updated_data = {"email": "updated@example.com"}
+    updated_user = update_user_in_db(db_session, user.id, updated_data)
+    assert updated_user.email == "updated@example.com"
+
+def test_delete_user(db_session, test_schema_user):
+    user = create_user_in_db(db_session, test_schema_user.model_dump())
+    assert delete_user_from_db(db_session, user.id) is True
+    assert read_user_from_db(db_session, user.id) is None
+
+def test_create_user_to_group_association(db_session, test_schema_user, test_schema_group):
+    user = create_user_in_db(db_session, test_schema_user.model_dump())
+    group = create_group_in_db(db_session, test_schema_group.model_dump())
+    assert create_user_to_group_association_in_db(db_session, user.id, group.id) is True
+
+def test_delete_user_to_group_association(db_session, test_schema_user, test_schema_group):
+    user = create_user_in_db(db_session, test_schema_user.model_dump())
+    group = create_group_in_db(db_session, test_schema_group.model_dump())
+    create_user_to_group_association_in_db(db_session, user.id, group.id)
+    assert delete_user_to_group_association_from_db(db_session, user.id, group.id) is True
+
+def test_read_groups_for_user(db_session, test_schema_user, test_schema_group):
+    user = create_user_in_db(db_session, test_schema_user.model_dump())
+    group = create_group_in_db(db_session, test_schema_group.model_dump())
+    create_user_to_group_association_in_db(db_session, user.id, group.id)
+    groups = read_groups_for_user_from_db(db_session, user.id)
+    assert len(groups) == 1
+    assert groups[0].id == group.id
+
+def test_read_role_for_user(db_session, test_schema_user, test_schema_role):
+    role = create_role_in_db(db_session, test_schema_role.model_dump())
+    user_data = test_schema_user.model_dump()
+    user_data['role_id'] = role.id
+    user = create_user_in_db(db_session, user_data)
+    user_role = read_role_for_user_from_db(db_session, user.id)
+    assert user_role.id == role.id
+
+def test_read_created_question_sets_for_user(db_session, test_schema_user, test_schema_question_set):
+    user = create_user_in_db(db_session, test_schema_user.model_dump())
+    question_set_data = test_schema_question_set.model_dump()
+    question_set_data['creator_id'] = user.id
+    question_set = create_question_set_in_db(db_session, question_set_data)
+    created_sets = read_created_question_sets_for_user_from_db(db_session, user.id)
+    assert len(created_sets) == 1
+    assert created_sets[0].id == question_set.id

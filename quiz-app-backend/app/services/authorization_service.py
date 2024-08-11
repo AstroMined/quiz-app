@@ -1,11 +1,13 @@
 # filename: app/services/authorization_service.py
 
 from typing import List
+
 from sqlalchemy.orm import Session
-from app.services.logging_service import logger
-from app.models.users import UserModel
+
 from app.models.groups import GroupModel
 from app.models.roles import RoleModel
+from app.models.users import UserModel
+from app.services.logging_service import logger
 
 
 def get_user_permissions(db: Session, user: UserModel) -> List[str]:

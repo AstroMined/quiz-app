@@ -1,8 +1,10 @@
 # filename: app/models/answer_choices.py
 
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Boolean, Column, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class AnswerChoiceModel(Base):
     __tablename__ = "answer_choices"

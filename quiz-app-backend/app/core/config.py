@@ -1,12 +1,22 @@
 # filename: app/core/config.py
 
-from pydantic_settings import BaseSettings
-from pydantic import ValidationError
-import toml
 import os
+from enum import Enum as PyEnum
+
 import dotenv
+import toml
+from pydantic import ValidationError
+from pydantic_settings import BaseSettings
+
 from app.services.logging_service import logger
 
+
+class DifficultyLevel(PyEnum):
+    BEGINNER = "Beginner"
+    EASY = "Easy"
+    MEDIUM = "Medium"
+    HARD = "Hard"
+    EXPERT = "Expert"
 
 class SettingsCore(BaseSettings):
     SECRET_KEY: str

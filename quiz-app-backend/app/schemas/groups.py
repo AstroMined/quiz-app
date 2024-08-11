@@ -1,8 +1,10 @@
 # filename: app/schemas/groups.py
 
-from typing import Optional, List
-from pydantic import BaseModel, Field, field_validator
 import re
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, field_validator
+
 
 class GroupBaseSchema(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Name of the group")

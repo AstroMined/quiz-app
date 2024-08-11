@@ -1,9 +1,12 @@
 # filename: app/schemas/user.py
 
-from typing import Optional, List
-from pydantic import BaseModel, EmailStr, Field, field_validator, SecretStr
-from app.core.security import get_password_hash
 import re
+from typing import List, Optional
+
+from pydantic import BaseModel, EmailStr, Field, SecretStr, field_validator
+
+from app.core.security import get_password_hash
+
 
 class UserBaseSchema(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, description="Username of the user")
@@ -18,6 +21,7 @@ class UserBaseSchema(BaseModel):
 
 class UserCreateSchema(UserBaseSchema):
     password: SecretStr = Field(..., min_length=8, max_length=100, description="Password for the user")
+    role_id: int = Field(..., description="ID of the role for the user")
 
     @field_validator('password')
     @classmethod

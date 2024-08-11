@@ -68,14 +68,14 @@ def test_user_update_schema():
     hashed_password = update_schema.create_hashed_password()
     assert verify_password("NewPassword123!", hashed_password)
 
-def test_user_schema(test_user):
-    user_schema = UserSchema.model_validate(test_user)
-    assert user_schema.id == test_user.id
-    assert user_schema.username == test_user.username
-    assert user_schema.email == test_user.email
-    assert user_schema.is_active == test_user.is_active
-    assert user_schema.is_admin == test_user.is_admin
-    assert user_schema.role == test_user.role.name
+def test_user_schema(test_model_user):
+    user_schema = UserSchema.model_validate(test_model_user)
+    assert user_schema.id == test_model_user.id
+    assert user_schema.username == test_model_user.username
+    assert user_schema.email == test_model_user.email
+    assert user_schema.is_active == test_model_user.is_active
+    assert user_schema.is_admin == test_model_user.is_admin
+    assert user_schema.role == test_model_user.role.name
     assert isinstance(user_schema.groups, list)
     assert isinstance(user_schema.created_groups, list)
     assert isinstance(user_schema.created_question_sets, list)

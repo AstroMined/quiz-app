@@ -2,7 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timezone
 from app.schemas.user_responses import UserResponseBaseSchema, UserResponseCreateSchema, UserResponseUpdateSchema, UserResponseSchema
 
 def test_user_response_base_schema_valid():
@@ -80,13 +80,13 @@ def test_user_response_schema():
     assert schema.response_time == 30
     assert isinstance(schema.timestamp, datetime)
 
-def test_user_response_schema_from_attributes(db_session, test_user, test_questions, test_answer_choices):
+def test_user_response_schema_from_attributes(db_session, test_model_user, test_model_questions, test_model_answer_choices):
     from app.models.user_responses import UserResponseModel
     
     user_response = UserResponseModel(
-        user_id=test_user.id,
-        question_id=test_questions[0].id,
-        answer_choice_id=test_answer_choices[0].id,
+        user_id=test_model_user.id,
+        question_id=test_model_questions[0].id,
+        answer_choice_id=test_model_answer_choices[0].id,
         is_correct=True,
         response_time=30
     )
@@ -96,9 +96,9 @@ def test_user_response_schema_from_attributes(db_session, test_user, test_questi
 
     schema = UserResponseSchema.model_validate(user_response)
     assert schema.id == user_response.id
-    assert schema.user_id == test_user.id
-    assert schema.question_id == test_questions[0].id
-    assert schema.answer_choice_id == test_answer_choices[0].id
+    assert schema.user_id == test_model_user.id
+    assert schema.question_id == test_model_questions[0].id
+    assert schema.answer_choice_id == test_model_answer_choices[0].id
     assert schema.is_correct is True
     assert schema.response_time == 30
     assert isinstance(schema.timestamp, datetime)

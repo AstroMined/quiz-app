@@ -20,47 +20,47 @@ def test_answer_choice_creation(db_session):
     assert answer_choice.is_correct is True
     assert answer_choice.explanation == "Paris is the capital of France"
 
-def test_answer_choice_question_relationship(db_session, test_questions):
+def test_answer_choice_question_relationship(db_session, test_model_questions):
     answer_choice = AnswerChoiceModel(
         text="Paris",
         is_correct=True,
         explanation="Paris is the capital of France"
     )
-    answer_choice.questions.append(test_questions[0])
+    answer_choice.questions.append(test_model_questions[0])
     db_session.add(answer_choice)
     db_session.commit()
 
-    assert test_questions[0] in answer_choice.questions
-    assert answer_choice in test_questions[0].answer_choices
+    assert test_model_questions[0] in answer_choice.questions
+    assert answer_choice in test_model_questions[0].answer_choices
 
-def test_answer_choice_multiple_questions(db_session, test_questions):
+def test_answer_choice_multiple_questions(db_session, test_model_questions):
     answer_choice = AnswerChoiceModel(
         text="Paris",
         is_correct=True,
         explanation="Paris is the capital of France"
     )
     
-    answer_choice.questions.extend(test_questions[:2])  # Use the first two questions from the fixture
+    answer_choice.questions.extend(test_model_questions[:2])  # Use the first two questions from the fixture
     db_session.add(answer_choice)
     db_session.commit()
 
     assert len(answer_choice.questions) == 2
-    assert test_questions[0] in answer_choice.questions
-    assert test_questions[1] in answer_choice.questions
+    assert test_model_questions[0] in answer_choice.questions
+    assert test_model_questions[1] in answer_choice.questions
 
-def test_answer_choice_user_response_relationship(db_session, test_questions, test_user):
+def test_answer_choice_user_response_relationship(db_session, test_model_questions, test_model_user):
     answer_choice = AnswerChoiceModel(
         text="Paris",
         is_correct=True,
         explanation="Paris is the capital of France"
     )
-    answer_choice.questions.append(test_questions[0])
+    answer_choice.questions.append(test_model_questions[0])
     db_session.add(answer_choice)
     db_session.commit()
 
     user_response = UserResponseModel(
-        user_id=test_user.id,
-        question_id=test_questions[0].id,
+        user_id=test_model_user.id,
+        question_id=test_model_questions[0].id,
         answer_choice_id=answer_choice.id,
         is_correct=True
     )

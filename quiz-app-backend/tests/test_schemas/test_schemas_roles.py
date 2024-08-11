@@ -75,13 +75,13 @@ def test_role_schema():
     assert schema.default is True
     assert set(schema.permissions) == set(["read_post", "create_post"])  # Use set comparison
 
-def test_role_schema_from_attributes(test_role):
-    schema = RoleSchema.model_validate(test_role)
-    assert schema.id == test_role.id
-    assert schema.name == test_role.name
-    assert schema.description == test_role.description
-    assert schema.default == test_role.default
-    assert set(schema.permissions) == set(permission.name for permission in test_role.permissions)
+def test_role_schema_from_attributes(test_model_role):
+    schema = RoleSchema.model_validate(test_model_role)
+    assert schema.id == test_model_role.id
+    assert schema.name == test_model_role.name
+    assert schema.description == test_model_role.description
+    assert schema.default == test_model_role.default
+    assert set(schema.permissions) == set(permission.name for permission in test_model_role.permissions)
 
 # Add a new test for duplicate permissions
 def test_role_schema_duplicate_permissions():

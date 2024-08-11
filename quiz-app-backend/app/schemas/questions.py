@@ -1,19 +1,14 @@
 # filename: app/schemas/questions.py
 
 from typing import List, Optional
-from enum import Enum
-from pydantic import BaseModel, Field, validator, field_validator
 
-from app.schemas.answer_choices import AnswerChoiceSchema, AnswerChoiceCreateSchema
-from app.schemas.question_tags import QuestionTagSchema, QuestionTagCreateSchema
-from app.schemas.question_sets import QuestionSetSchema, QuestionSetCreateSchema
+from pydantic import BaseModel, Field, field_validator, validator
 
-class DifficultyLevel(str, Enum):
-    BEGINNER = "Beginner"
-    EASY = "Easy"
-    MEDIUM = "Medium"
-    HARD = "Hard"
-    EXPERT = "Expert"
+from app.schemas.answer_choices import AnswerChoiceCreateSchema, AnswerChoiceSchema
+from app.schemas.question_sets import QuestionSetCreateSchema
+from app.schemas.question_tags import QuestionTagCreateSchema
+
+from app.core.config import DifficultyLevel
 
 class QuestionBaseSchema(BaseModel):
     text: str = Field(..., min_length=1, max_length=10000, description="The text of the question")

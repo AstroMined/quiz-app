@@ -1,8 +1,10 @@
 # filename: app/models/users.py
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class UserModel(Base):
     __tablename__ = "users"

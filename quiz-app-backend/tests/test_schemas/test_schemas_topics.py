@@ -76,10 +76,10 @@ def test_topic_schema():
     assert schema.questions[0]["id"] == 6
     assert schema.questions[1]["id"] == 7
 
-def test_topic_schema_from_attributes(db_session, test_topic):
-    schema = TopicSchema.model_validate(test_topic)
-    assert schema.id == test_topic.id
-    assert schema.name == test_topic.name
+def test_topic_schema_from_attributes(db_session, test_model_topic):
+    schema = TopicSchema.model_validate(test_model_topic)
+    assert schema.id == test_model_topic.id
+    assert schema.name == test_model_topic.name
     assert isinstance(schema.subjects, list)
     assert isinstance(schema.subtopics, list)
     assert isinstance(schema.questions, list)

@@ -1,14 +1,16 @@
 # filename: app/api/endpoints/users.py
 
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
+from app.crud.crud_user import create_user_in_db, update_user_in_db
 from app.db.session import get_db
 from app.models.users import UserModel
-from app.crud.crud_user import create_user_crud, update_user_crud
 from app.schemas.user import UserCreateSchema, UserSchema, UserUpdateSchema
-from app.services.user_service import get_current_user
 from app.services.logging_service import logger
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -21,7 +23,7 @@ def create_user(
     user_data['db'] = db
     user = UserCreateSchema(**user_data)
     try:
-        new_user = create_user_crud(db=db, user=user)
+        new_user = create_user_in_db(db=db, user=user)
         return new_user
     except Exception as e:
         raise HTTPException(
@@ -64,7 +66,7 @@ def update_user_me(
         user_update = UserUpdateSchema(**user_data)
         logger.debug("Re-instantiated user update: %s", user_update)
 
-        updated_user = update_user_crud(db=db, user_id=current_user.id, updated_user=user_update)
+        updated_user = update_user_in_db(db=db, user_id=current_user.id, updated_user=user_update)
         logger.debug("User updated successfully: %s", updated_user)
         return updated_user
     except ValueError as e:

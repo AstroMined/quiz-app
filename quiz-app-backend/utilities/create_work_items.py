@@ -2,7 +2,7 @@ import os
 import json
 import requests
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 from pathlib import Path
 

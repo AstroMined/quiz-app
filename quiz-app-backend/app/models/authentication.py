@@ -1,8 +1,10 @@
 # filename: app/models/authentication.py
 
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.sql import func
+
 from app.db.base import Base
+
 
 class RevokedTokenModel(Base):
     __tablename__ = "revoked_tokens"

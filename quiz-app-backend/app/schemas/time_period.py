@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+
 class TimePeriodSchema(BaseModel):
     id: int = Field(..., gt=0, description="ID of the time period")
     name: str = Field(..., min_length=1, max_length=20, description="Name of the time period")

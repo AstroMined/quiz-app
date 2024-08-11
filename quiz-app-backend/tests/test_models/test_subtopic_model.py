@@ -34,15 +34,15 @@ def test_subtopic_concepts_relationship(db_session):
     assert concept in subtopic.concepts
     assert subtopic in concept.subtopics
 
-def test_subtopic_questions_relationship(db_session, test_questions):
+def test_subtopic_questions_relationship(db_session, test_model_questions):
     subtopic = SubtopicModel(name="Limits")
-    subtopic.questions.extend(test_questions[:2])
+    subtopic.questions.extend(test_model_questions[:2])
     db_session.add(subtopic)
     db_session.commit()
 
     assert len(subtopic.questions) == 2
-    assert test_questions[0] in subtopic.questions
-    assert test_questions[1] in subtopic.questions
+    assert test_model_questions[0] in subtopic.questions
+    assert test_model_questions[1] in subtopic.questions
 
 def test_subtopic_required_fields(db_session):
     # Test missing name

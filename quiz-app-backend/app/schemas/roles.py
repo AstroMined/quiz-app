@@ -1,7 +1,9 @@
 # filename: app/schemas/roles.py
 
 from typing import List, Optional
+
 from pydantic import BaseModel, Field, field_validator
+
 
 class RoleBaseSchema(BaseModel):
     name: str = Field(..., min_length=1, max_length=50, description="Name of the role")

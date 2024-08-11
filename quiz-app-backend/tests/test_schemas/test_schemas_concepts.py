@@ -58,10 +58,10 @@ def test_concept_schema():
     assert concept.questions[0]["name"] == "Question 1"
     assert concept.questions[1]["name"] == "Question 2"
 
-def test_concept_schema_from_attributes(test_concept):
-    schema = ConceptSchema.model_validate(test_concept)
-    assert schema.id == test_concept.id
-    assert schema.name == test_concept.name
+def test_concept_schema_from_attributes(test_model_concept):
+    schema = ConceptSchema.model_validate(test_model_concept)
+    assert schema.id == test_model_concept.id
+    assert schema.name == test_model_concept.name
     assert isinstance(schema.subtopics, list)
     assert isinstance(schema.questions, list)
     for subtopic in schema.subtopics:

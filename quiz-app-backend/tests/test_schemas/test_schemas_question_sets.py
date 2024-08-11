@@ -28,12 +28,12 @@ def test_question_set_base_schema_validation():
         QuestionSetBaseSchema(name="Invalid@Set", description="Invalid set", is_public=True)
     assert "Question set name can only contain alphanumeric characters, hyphens, underscores, and spaces" in str(exc_info.value)
 
-def test_question_set_create_schema(test_user):
+def test_question_set_create_schema(test_model_user):
     data = {
         "name": "Science Quiz Set",
         "description": "A set of science questions",
         "is_public": False,
-        "creator_id": test_user.id,
+        "creator_id": test_model_user.id,
         "question_ids": [1, 2, 3],
         "group_ids": [1, 2]
     }
@@ -41,7 +41,7 @@ def test_question_set_create_schema(test_user):
     assert schema.name == "Science Quiz Set"
     assert schema.description == "A set of science questions"
     assert schema.is_public is False
-    assert schema.creator_id == test_user.id
+    assert schema.creator_id == test_model_user.id
     assert schema.question_ids == [1, 2, 3]
     assert schema.group_ids == [1, 2]
 
@@ -90,13 +90,13 @@ def test_question_set_schema():
     assert schema.questions[0]["id"] == 1
     assert schema.groups[0]["id"] == 1
 
-def test_question_set_schema_from_attributes(test_question_set):
-    schema = QuestionSetSchema.model_validate(test_question_set)
-    assert schema.id == test_question_set.id
-    assert schema.name == test_question_set.name
-    assert schema.description == test_question_set.description
-    assert schema.is_public == test_question_set.is_public
-    assert schema.creator_id == test_question_set.creator_id
+def test_question_set_schema_from_attributes(test_model_question_set):
+    schema = QuestionSetSchema.model_validate(test_model_question_set)
+    assert schema.id == test_model_question_set.id
+    assert schema.name == test_model_question_set.name
+    assert schema.description == test_model_question_set.description
+    assert schema.is_public == test_model_question_set.is_public
+    assert schema.creator_id == test_model_question_set.creator_id
     assert isinstance(schema.questions, list)
     assert isinstance(schema.groups, list)
     for question in schema.questions:

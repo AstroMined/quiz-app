@@ -22,10 +22,10 @@ def test_create_private_question_set(logged_in_client):
     assert response.status_code == 201
     assert response.json()["is_public"] == False
 
-def test_read_question_sets(logged_in_client, db_session, test_question_set):
+def test_read_question_sets(logged_in_client, db_session, test_model_question_set):
     response = logged_in_client.get("/question-sets/")
     assert response.status_code == 200
-    assert any(qs["id"] == test_question_set.id and qs["name"] == test_question_set.name for qs in response.json())
+    assert any(qs["id"] == test_model_question_set.id and qs["name"] == test_model_question_set.name for qs in response.json())
 
 def test_update_question_set_not_found(logged_in_client):
     question_set_id = 999
@@ -85,35 +85,35 @@ def test_upload_question_set_invalid_json(logged_in_client, db_session):
     assert response.status_code == 400
     assert "Invalid JSON data" in response.json()["detail"]
 
-def test_create_question_set_with_existing_name(logged_in_client, test_question_set):
-    logger.debug("test_question_set: %s", test_question_set)
+def test_create_question_set_with_existing_name(logged_in_client, test_model_question_set):
+    logger.debug("test_model_question_set: %s", test_model_question_set)
     data = {
-        "name": test_question_set.name,
-        "is_public": test_question_set.is_public,
-        "creator_id": test_question_set.creator_id
+        "name": test_model_question_set.name,
+        "is_public": test_model_question_set.is_public,
+        "creator_id": test_model_question_set.creator_id
     }
     response = logged_in_client.post("/question-sets/", json=data)
     logger.debug("response: %s", response.json())
     assert response.status_code == 400
     assert "already exists" in response.json()["detail"]
 
-def test_retrieve_question_set_with_questions(logged_in_client, test_question_set):
-    response = logged_in_client.get(f"/question-sets/{test_question_set.id}")
+def test_retrieve_question_set_with_questions(logged_in_client, test_model_question_set):
+    response = logged_in_client.get(f"/question-sets/{test_model_question_set.id}")
     assert response.status_code == 200
-    assert response.json()["id"] == test_question_set.id
-    assert response.json()["name"] == test_question_set.name
+    assert response.json()["id"] == test_model_question_set.id
+    assert response.json()["name"] == test_model_question_set.name
 
-def test_update_question_set_endpoint(logged_in_client, test_question_set, test_question):
+def test_update_question_set_endpoint(logged_in_client, test_model_question_set, test_question):
     data = {"name": "Updated Question Set", "question_ids": [test_question.id]}
     logger.debug("data: %s", data)
-    response = logged_in_client.put(f"/question-sets/{test_question_set.id}", json=data)
+    response = logged_in_client.put(f"/question-sets/{test_model_question_set.id}", json=data)
     logger.debug("response: %s", response.json())
     assert response.status_code == 200
     assert response.json()["name"] == "Updated Question Set"
     assert test_question.id in response.json()["question_ids"]
 
-def test_delete_question_set(logged_in_client, test_question_set, db_session):
-    question_set_id = test_question_set.id
+def test_delete_question_set(logged_in_client, test_model_question_set, db_session):
+    question_set_id = test_model_question_set.id
     response = logged_in_client.delete(f"/question-sets/{question_set_id}")
     assert response.status_code == 204
     response = logged_in_client.get("/question-sets/")
@@ -131,25 +131,25 @@ def test_delete_question_set_not_found(logged_in_client):
     assert response.status_code == 404
     assert response.json()["detail"] == f"Question set with ID {question_set_id} not found."
 
-def test_update_question_set_with_multiple_questions(logged_in_client, db_session, test_question_set, test_questions):
-    test_question_1 = test_questions[0]
-    test_question_2 = test_questions[1]
+def test_update_question_set_with_multiple_questions(logged_in_client, db_session, test_model_question_set, test_model_questions):
+    test_question_1 = test_model_questions[0]
+    test_question_2 = test_model_questions[1]
     data = {"name": "Updated Question Set", "question_ids": [test_question_1.id, test_question_2.id]}
-    response = logged_in_client.put(f"/question-sets/{test_question_set.id}", json=data)
+    response = logged_in_client.put(f"/question-sets/{test_model_question_set.id}", json=data)
     assert response.status_code == 200
     assert response.json()["name"] == "Updated Question Set"
     assert test_question_1.id in response.json()["question_ids"]
     assert test_question_2.id in response.json()["question_ids"]
 
-def test_update_question_set_remove_questions(logged_in_client, db_session, test_question_set, test_question):
+def test_update_question_set_remove_questions(logged_in_client, db_session, test_model_question_set, test_question):
     data = {"name": "Updated Question Set", "question_ids": []}
-    response = logged_in_client.put(f"/question-sets/{test_question_set.id}", json=data)
+    response = logged_in_client.put(f"/question-sets/{test_model_question_set.id}", json=data)
     assert response.status_code == 200
     assert response.json()["name"] == "Updated Question Set"
     assert len(response.json()["question_ids"]) == 0
 
-def test_update_question_set_invalid_question_ids(logged_in_client, db_session, test_question_set):
+def test_update_question_set_invalid_question_ids(logged_in_client, db_session, test_model_question_set):
     data = {"name": "Updated Question Set", "question_ids": [999]}  # Assuming question with ID 999 doesn't exist
-    response = logged_in_client.put(f"/question-sets/{test_question_set.id}", json=data)
+    response = logged_in_client.put(f"/question-sets/{test_model_question_set.id}", json=data)
     assert response.status_code == 400
     assert "Invalid question_id" in response.json()["detail"]

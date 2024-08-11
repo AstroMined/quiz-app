@@ -1,15 +1,17 @@
 # filename: app/api/endpoints/groups.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from pydantic import ValidationError
-from app.db.session import get_db
-from app.services.user_service import get_current_user
-from app.services.logging_service import logger
-from app.crud.crud_groups import create_group_crud, read_group_crud, update_group_crud, delete_group_crud
-from app.schemas.groups import GroupCreateSchema, GroupUpdateSchema, GroupSchema
-from app.models.users import UserModel
+from sqlalchemy.orm import Session
 
+from app.crud.crud_groups import (create_group_in_db, delete_group_from_db,
+                                  read_group_from_db, update_group_in_db)
+from app.db.session import get_db
+from app.models.users import UserModel
+from app.schemas.groups import (GroupCreateSchema, GroupSchema,
+                                GroupUpdateSchema)
+from app.services.logging_service import logger
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -21,12 +23,12 @@ def create_group_endpoint(
 ):
     logger.debug("Creating group with data: %s", group_data)
     try:
-        logger.debug("Before calling create_group_crud")
+        logger.debug("Before calling create_group_in_db")
         group_data["db"] = db
         group_data["creator_id"] = current_user.id
         group = GroupCreateSchema(**group_data)
-        created_group = create_group_crud(db=db, group=group, creator_id=current_user.id)
-        logger.debug("After calling create_group_crud")
+        created_group = create_group_in_db(db=db, group=group, creator_id=current_user.id)
+        logger.debug("After calling create_group_in_db")
         logger.debug("Group created successfully: %s", created_group)
         logger.debug("Before returning the response")
         return created_group
@@ -46,7 +48,7 @@ def get_group_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_group = read_group_crud(db, group_id=group_id)
+    db_group = read_group_from_db(db, group_id=group_id)
     if db_group is None:
         raise HTTPException(status_code=404, detail="Group not found")
     return db_group
@@ -58,7 +60,7 @@ def update_group_endpoint(
     db: Session = Depends(get_db), 
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_group = read_group_crud(db, group_id=group_id)
+    db_group = read_group_from_db(db, group_id=group_id)
     logger.debug("db_group: %s", db_group)
     if db_group is None:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -68,7 +70,7 @@ def update_group_endpoint(
         logger.debug("Updating group with data: %s", group_data)
         group = GroupUpdateSchema(**group_data)
         logger.debug("group: %s", group)
-        updated_group = update_group_crud(db=db, group_id=group_id, group=group)
+        updated_group = update_group_in_db(db=db, group_id=group_id, group=group)
         logger.debug("updated_group: %s", updated_group)
         return updated_group
     except ValidationError as e:
@@ -87,10 +89,10 @@ def delete_group_endpoint(
     db: Session = Depends(get_db), 
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_group = read_group_crud(db, group_id=group_id)
+    db_group = read_group_from_db(db, group_id=group_id)
     if db_group is None:
         raise HTTPException(status_code=404, detail="Group not found")
     if db_group.creator_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only the group creator can delete the group")
-    delete_group_crud(db=db, group_id=group_id)
+    delete_group_from_db(db=db, group_id=group_id)
     return {"message": "Group deleted successfully"}

@@ -1,5 +1,5 @@
 
-# Directory: /code/quiz-app/quiz-app-backend/app
+# Directory: /code/quiz-app/quiz-app-backend/app/
 
 ## File: __init__.py
 ```py
@@ -11,30 +11,32 @@
 # filename: main.py
 
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api.endpoints import answer_choices as answer_choices_router
 from app.api.endpoints import authentication as authentication_router
+from app.api.endpoints import concepts as concepts_router
+from app.api.endpoints import disciplines as disciplines_router
+from app.api.endpoints import domains as domains_router
 from app.api.endpoints import filters as filters_router
 from app.api.endpoints import groups as groups_router
 from app.api.endpoints import leaderboard as leaderboard_router
 from app.api.endpoints import question_sets as question_sets_router
 from app.api.endpoints import questions as questions_router
 from app.api.endpoints import register as register_router
-from app.api.endpoints import domains as domains_router
-from app.api.endpoints import disciplines as disciplines_router
-from app.api.endpoints import concepts as concepts_router
 from app.api.endpoints import subjects as subjects_router
-from app.api.endpoints import topics as topics_router
 from app.api.endpoints import subtopics as subtopics_router
+from app.api.endpoints import topics as topics_router
 from app.api.endpoints import user_responses as user_responses_router
 from app.api.endpoints import users as users_router
+from app.db.session import get_db
 from app.middleware.authorization_middleware import AuthorizationMiddleware
 from app.middleware.blacklist_middleware import BlacklistMiddleware
 from app.middleware.cors_middleware import add_cors_middleware
-from app.services.permission_generator_service import generate_permissions, ensure_permissions_in_db
+from app.services.permission_generator_service import (
+    ensure_permissions_in_db, generate_permissions)
 from app.services.validation_service import register_validation_listeners
-from app.db.session import get_db
 
 app = FastAPI()
 
@@ -84,14 +86,17 @@ def read_root():
 ```py
 # filename: /code/quiz-app/quiz-app-backend/app/validate_openapi.py
 
-import sys
 import os
+import sys
 
 # Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi.openapi.utils import get_openapi
-from app.main import app  # Adjust the import based on your actual app file and instance
+
+from app.main import \
+    app  # Adjust the import based on your actual app file and instance
+
 
 def validate_openapi_schema():
     try:
@@ -125,7 +130,9 @@ if __name__ == "__main__":
 # filename: app/schemas/answer_choices.py
 
 from typing import Optional
+
 from pydantic import BaseModel, Field, validator
+
 
 class AnswerChoiceBaseSchema(BaseModel):
     text: str = Field(..., min_length=1, max_length=10000)
@@ -166,6 +173,7 @@ class AnswerChoiceSchema(AnswerChoiceBaseSchema):
 
 from pydantic import BaseModel, Field
 
+
 class LoginFormSchema(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8, max_length=100)
@@ -180,8 +188,10 @@ class TokenSchema(BaseModel):
 ```py
 # filename: app/schemas/concepts.py
 
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, field_validator
+
 
 class ConceptBaseSchema(BaseModel):
     name: str = Field(..., max_length=100, description="Name of the concept")
@@ -244,8 +254,10 @@ class ConceptSchema(ConceptBaseSchema):
 ```py
 # filename: app/schemas/disciplines.py
 
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, field_validator
+
 
 class DisciplineBaseSchema(BaseModel):
     name: str = Field(..., max_length=100, description="Name of the discipline")
@@ -296,8 +308,10 @@ class DisciplineSchema(DisciplineBaseSchema):
 ```py
 # filename: app/schemas/domains.py
 
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, field_validator
+
 
 class DomainBaseSchema(BaseModel):
     name: str = Field(..., max_length=100, description="Name of the domain")
@@ -345,9 +359,12 @@ class DomainSchema(DomainBaseSchema):
 ```py
 # filename: app/schemas/filters.py
 
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, validator
+
 from app.schemas.questions import DifficultyLevel
+
 
 class FilterParamsSchema(BaseModel):
     subject: Optional[str] = Field(None, max_length=100, description="Filter questions by subject")
@@ -380,9 +397,11 @@ class FilterParamsSchema(BaseModel):
 ```py
 # filename: app/schemas/groups.py
 
-from typing import Optional, List
-from pydantic import BaseModel, Field, field_validator
 import re
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, field_validator
+
 
 class GroupBaseSchema(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Name of the group")
@@ -433,9 +452,12 @@ class GroupSchema(GroupBaseSchema):
 ```py
 # filename: app/schemas/leaderboard.py
 
-from pydantic import BaseModel, Field
 from typing import Optional
+
+from pydantic import BaseModel, Field
+
 from app.schemas.time_period import TimePeriodSchema
+
 
 class LeaderboardBaseSchema(BaseModel):
     user_id: int = Field(..., gt=0)
@@ -464,7 +486,9 @@ class LeaderboardSchema(LeaderboardBaseSchema):
 
 import re
 from typing import Optional
+
 from pydantic import BaseModel, Field, validator
+
 
 class PermissionBaseSchema(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Name of the permission")
@@ -501,9 +525,11 @@ class PermissionSchema(PermissionBaseSchema):
 ```py
 # filename: app/schemas/question_sets.py
 
-from typing import Optional, List
-from pydantic import BaseModel, Field, field_validator
 import re
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, field_validator
+
 
 class QuestionSetBaseSchema(BaseModel):
     name: str = Field(..., min_length=1, max_length=200, description="Name of the question set")
@@ -561,7 +587,9 @@ class QuestionSetSchema(QuestionSetBaseSchema):
 # filename: app/schemas/question_tags.py
 
 from typing import Optional
+
 from pydantic import BaseModel, Field, validator
+
 
 class QuestionTagBaseSchema(BaseModel):
     tag: str = Field(..., min_length=1, max_length=50)
@@ -599,19 +627,14 @@ class QuestionTagSchema(QuestionTagBaseSchema):
 # filename: app/schemas/questions.py
 
 from typing import List, Optional
-from enum import Enum
-from pydantic import BaseModel, Field, validator, field_validator
 
-from app.schemas.answer_choices import AnswerChoiceSchema, AnswerChoiceCreateSchema
-from app.schemas.question_tags import QuestionTagSchema, QuestionTagCreateSchema
-from app.schemas.question_sets import QuestionSetSchema, QuestionSetCreateSchema
+from pydantic import BaseModel, Field, field_validator, validator
 
-class DifficultyLevel(str, Enum):
-    BEGINNER = "Beginner"
-    EASY = "Easy"
-    MEDIUM = "Medium"
-    HARD = "Hard"
-    EXPERT = "Expert"
+from app.schemas.answer_choices import AnswerChoiceCreateSchema, AnswerChoiceSchema
+from app.schemas.question_sets import QuestionSetCreateSchema
+from app.schemas.question_tags import QuestionTagCreateSchema
+
+from app.core.config import DifficultyLevel
 
 class QuestionBaseSchema(BaseModel):
     text: str = Field(..., min_length=1, max_length=10000, description="The text of the question")
@@ -701,7 +724,9 @@ class QuestionWithAnswersCreateSchema(QuestionCreateSchema):
 # filename: app/schemas/roles.py
 
 from typing import List, Optional
+
 from pydantic import BaseModel, Field, field_validator
+
 
 class RoleBaseSchema(BaseModel):
     name: str = Field(..., min_length=1, max_length=50, description="Name of the role")
@@ -752,8 +777,10 @@ class RoleSchema(RoleBaseSchema):
 ```py
 # filename: app/schemas/subjects.py
 
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, field_validator
+
 
 class SubjectBaseSchema(BaseModel):
     name: str = Field(..., max_length=100, description="Name of the subject")
@@ -805,8 +832,10 @@ class SubjectSchema(SubjectBaseSchema):
 ```py
 # filename: app/schemas/subtopics.py
 
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, field_validator
+
 
 class SubtopicBaseSchema(BaseModel):
     name: str = Field(..., max_length=100, description="Name of the subtopic")
@@ -860,6 +889,7 @@ class SubtopicSchema(SubtopicBaseSchema):
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+
 class TimePeriodSchema(BaseModel):
     id: int = Field(..., gt=0, description="ID of the time period")
     name: str = Field(..., min_length=1, max_length=20, description="Name of the time period")
@@ -888,8 +918,10 @@ class TimePeriodSchema(BaseModel):
 ```py
 # filename: app/schemas/topics.py
 
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, field_validator
+
 
 class TopicBaseSchema(BaseModel):
     name: str = Field(..., max_length=100, description="Name of the topic")
@@ -941,10 +973,13 @@ class TopicSchema(TopicBaseSchema):
 ```py
 # filename: app/schemas/user.py
 
-from typing import Optional, List
-from pydantic import BaseModel, EmailStr, Field, field_validator, SecretStr
-from app.core.security import get_password_hash
 import re
+from typing import List, Optional
+
+from pydantic import BaseModel, EmailStr, Field, SecretStr, field_validator
+
+from app.core.security import get_password_hash
+
 
 class UserBaseSchema(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, description="Username of the user")
@@ -1037,9 +1072,11 @@ class UserSchema(UserBaseSchema):
 ```py
 # filename: app/schemas/user_responses.py
 
+from datetime import datetime, timezone
 from typing import Optional
-from datetime import datetime
+
 from pydantic import BaseModel, Field, validator
+
 
 class UserResponseBaseSchema(BaseModel):
     user_id: int = Field(..., gt=0, description="ID of the user who responded")
@@ -1082,34 +1119,25 @@ class UserResponseSchema(UserResponseBaseSchema):
 # filename: app/services/authentication_service.py
 
 from sqlalchemy.orm import Session
-from app.services.user_service import get_user_by_username
-from app.core.security import verify_password, get_password_hash
+
+from app.core.security import get_password_hash, verify_password
 from app.models.users import UserModel
-from app.services.logging_service import logger
+from app.crud.crud_user import read_user_by_username_from_db
 
 
 def authenticate_user(db: Session, username: str, password: str) -> UserModel:
-    user = get_user_by_username(db, username)
+    user = read_user_by_username_from_db(db, username)
     if not user:
-        logger.error(f"User {username} not found")
         return False
-    logger.debug(f"Authenticating user: {username}")
-    logger.debug(f"Stored hashed password: {user.hashed_password}")
-    logger.debug(f"Provided password: {password}")
     
     # Add this line to log the result of verify_password
     verification_result = verify_password(password, user.hashed_password)
-    logger.debug(f"Password verification result: {verification_result}")
     
     if not verification_result:
         hashed_attempt = get_password_hash(password)
-        logger.debug(f"Hashed attempt: {hashed_attempt}")
-        logger.error(f"User {username} supplied an invalid password")
         return False
     if not user.is_active:
-        logger.error(f"User {username} is not active")
         return False
-    logger.info(f"User {username} authenticated successfully")
     return user
 
 ```
@@ -1119,11 +1147,13 @@ def authenticate_user(db: Session, username: str, password: str) -> UserModel:
 # filename: app/services/authorization_service.py
 
 from typing import List
+
 from sqlalchemy.orm import Session
-from app.services.logging_service import logger
-from app.models.users import UserModel
+
 from app.models.groups import GroupModel
 from app.models.roles import RoleModel
+from app.models.users import UserModel
+from app.services.logging_service import logger
 
 
 def get_user_permissions(db: Session, user: UserModel) -> List[str]:
@@ -1158,9 +1188,10 @@ def is_group_owner(user: UserModel, group: GroupModel) -> bool:
 # app/services/logging_service.py
 
 import logging
-from logging.handlers import RotatingFileHandler
-from datetime import datetime, timezone
 import os
+from datetime import datetime, timezone, timezone
+from logging.handlers import RotatingFileHandler
+
 from sqlalchemy.inspection import inspect
 
 
@@ -1227,10 +1258,10 @@ logger = setup_logging(disable_logging=False, disable_cli_logging=True)
 # app/services/permission_generator_service.py
 
 from fastapi import FastAPI
-from sqlalchemy.orm import Session
+
 from app.core.config import settings_core
-from app.services.logging_service import logger
 from app.models.permissions import PermissionModel
+
 
 def generate_permissions(app: FastAPI):
     permissions = set()
@@ -1249,7 +1280,6 @@ def generate_permissions(app: FastAPI):
                     if path not in settings_core.UNPROTECTED_ENDPOINTS:
                         permission = f"{method_map[method]}_{path}"
                         permissions.add(permission)
-                        logger.debug("Generated permission: %s", permission)
 
     return permissions
 
@@ -1261,7 +1291,6 @@ def ensure_permissions_in_db(db, permissions):
         db.add(PermissionModel(name=permission))
 
     db.commit()
-    logger.debug(f"Added {len(new_permissions)} new permissions to the database")
 
 ```
 
@@ -1270,6 +1299,7 @@ def ensure_permissions_in_db(db, permissions):
 # filename: app/utils/randomization.py
 
 import random
+
 
 def randomize_questions(questions):
     return random.sample(questions, len(questions))
@@ -1283,14 +1313,16 @@ def randomize_answer_choices(answer_choices):
 ```py
 # filename: app/services/scoring_service.py
 
+from datetime import datetime, timezone, timedelta, timezone
 from typing import Dict
-from datetime import datetime, timedelta, timezone
+
 from sqlalchemy.orm import Session
-from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
+
+from app.models.associations import UserToGroupAssociation
+from app.models.time_period import TimePeriodModel
 from app.models.user_responses import UserResponseModel
 from app.models.users import UserModel
-from app.models.time_period import TimePeriodModel
-from app.models.associations import UserToGroupAssociation
+from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
 
 
 def calculate_user_score(user_id: int, db: Session) -> int:
@@ -1353,17 +1385,18 @@ def leaderboard_to_schema(leaderboard_model):
 ```py
 # filename: app/services/user_service.py
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timezone
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session, joinedload
 from jose import JWTError
-from app.services.logging_service import logger
+from sqlalchemy.orm import Session
+
 from app.core.jwt import decode_access_token
 from app.db.session import get_db
 from app.models.authentication import RevokedTokenModel
-from app.models.users import UserModel
-
+from app.crud.crud_user import read_user_by_username_from_db
+from app.services.logging_service import logger
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
@@ -1386,7 +1419,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         if revoked_token:
             logger.debug("Token is revoked")
             raise credentials_exception
-        user = get_user_by_username(db, username=username)
+        user = read_user_by_username_from_db(db, username=username)
         if user is None:
             logger.debug("User not found for username: %s", username)
             raise credentials_exception
@@ -1402,41 +1435,34 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         logger.exception("Unexpected error: %s", str(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error") from e
 
-def get_user_by_username(db: Session, username: str) -> UserModel:
-    return db.query(UserModel).filter(UserModel.username == username).first()
-
-def get_user_by_email(db: Session, email: str) -> UserModel:
-    return db.query(UserModel).filter(UserModel.email == email).first()
-
-def get_user_by_id(db: Session, user_id: int):
-    return db.query(UserModel).options(joinedload(UserModel.groups)).filter(UserModel.id == user_id).first()
 ```
 
 ## File: validation_service.py
 ```py
 # filename: app/services/validation_service.py
 
+from fastapi import HTTPException
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
-from sqlalchemy.orm.base import instance_state
 from sqlalchemy.orm.attributes import instance_dict
-from fastapi import HTTPException
+from sqlalchemy.orm.base import instance_state
+
 from app.db.base import Base
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
-from app.models.questions import QuestionModel
+from app.models.answer_choices import AnswerChoiceModel
+from app.models.authentication import RevokedTokenModel
 from app.models.groups import GroupModel
-from app.models.users import UserModel
+from app.models.leaderboard import LeaderboardModel
 from app.models.permissions import PermissionModel
+from app.models.question_sets import QuestionSetModel
+from app.models.question_tags import QuestionTagModel
+from app.models.questions import QuestionModel
 from app.models.roles import RoleModel
 from app.models.subjects import SubjectModel
-from app.models.topics import TopicModel
 from app.models.subtopics import SubtopicModel
-from app.models.question_tags import QuestionTagModel
-from app.models.leaderboard import LeaderboardModel
+from app.models.topics import TopicModel
 from app.models.user_responses import UserResponseModel
-from app.models.answer_choices import AnswerChoiceModel
-from app.models.question_sets import QuestionSetModel
-from app.models.authentication import RevokedTokenModel
+from app.models.users import UserModel
+from app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
 
 def validate_foreign_keys(mapper, connection, target):
@@ -1581,45 +1607,77 @@ def register_validation_listeners():
 
 ## File: crud_answer_choices.py
 ```py
-# filename: /code/quiz-app/quiz-app-backend/app/crud/crud_answer_choices.py
+# filename: app/crud/crud_answer_choices.py
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.answer_choices import AnswerChoiceModel
-from app.schemas.answer_choices import AnswerChoiceCreateSchema, AnswerChoiceUpdateSchema
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
+from app.models.questions import QuestionModel
+from app.models.associations import QuestionToAnswerAssociation
 
-def create_answer_choice_crud(db: Session, answer_choice: AnswerChoiceCreateSchema) -> AnswerChoiceModel:
-    db_answer_choice = AnswerChoiceModel(**answer_choice.model_dump())
+def create_answer_choice_in_db(db: Session, answer_choice_data: Dict) -> AnswerChoiceModel:
+    db_answer_choice = AnswerChoiceModel(
+        text=answer_choice_data['text'],
+        is_correct=answer_choice_data['is_correct'],
+        explanation=answer_choice_data.get('explanation')
+    )
     db.add(db_answer_choice)
     db.commit()
     db.refresh(db_answer_choice)
-    logger.debug(f"create_answer_choice_crud: {sqlalchemy_obj_to_dict(db_answer_choice)}")
     return db_answer_choice
 
-def read_answer_choice_crud(db: Session, answer_choice_id: int) -> Optional[AnswerChoiceModel]:
+def read_answer_choice_from_db(db: Session, answer_choice_id: int) -> Optional[AnswerChoiceModel]:
     return db.query(AnswerChoiceModel).filter(AnswerChoiceModel.id == answer_choice_id).first()
 
-def read_answer_choices_crud(db: Session, skip: int = 0, limit: int = 100) -> List[AnswerChoiceModel]:
+def read_answer_choices_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[AnswerChoiceModel]:
     return db.query(AnswerChoiceModel).offset(skip).limit(limit).all()
 
-def update_answer_choice_crud(db: Session, answer_choice_id: int, answer_choice: AnswerChoiceUpdateSchema) -> Optional[AnswerChoiceModel]:
-    db_answer_choice = read_answer_choice_crud(db, answer_choice_id)
+def update_answer_choice_in_db(db: Session, answer_choice_id: int, answer_choice_data: Dict) -> Optional[AnswerChoiceModel]:
+    db_answer_choice = read_answer_choice_from_db(db, answer_choice_id)
     if db_answer_choice:
-        update_data = answer_choice.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
+        for key, value in answer_choice_data.items():
             setattr(db_answer_choice, key, value)
         db.commit()
         db.refresh(db_answer_choice)
     return db_answer_choice
 
-def delete_answer_choice_crud(db: Session, answer_choice_id: int) -> bool:
-    db_answer_choice = read_answer_choice_crud(db, answer_choice_id)
+def delete_answer_choice_from_db(db: Session, answer_choice_id: int) -> bool:
+    db_answer_choice = read_answer_choice_from_db(db, answer_choice_id)
     if db_answer_choice:
         db.delete(db_answer_choice)
         db.commit()
         return True
     return False
+
+def create_question_to_answer_association_in_db(db: Session, question_id: int, answer_choice_id: int) -> bool:
+    association = QuestionToAnswerAssociation(question_id=question_id, answer_choice_id=answer_choice_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_question_to_answer_association_from_db(db: Session, question_id: int, answer_choice_id: int) -> bool:
+    association = db.query(QuestionToAnswerAssociation).filter_by(
+        question_id=question_id, answer_choice_id=answer_choice_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_answer_choices_for_question_from_db(db: Session, question_id: int) -> List[AnswerChoiceModel]:
+    return db.query(AnswerChoiceModel).join(QuestionToAnswerAssociation).filter(
+        QuestionToAnswerAssociation.question_id == question_id
+    ).all()
+
+def read_questions_for_answer_choice_from_db(db: Session, answer_choice_id: int) -> List[QuestionModel]:
+    return db.query(QuestionModel).join(QuestionToAnswerAssociation).filter(
+        QuestionToAnswerAssociation.answer_choice_id == answer_choice_id
+    ).all()
 
 ```
 
@@ -1627,40 +1685,95 @@ def delete_answer_choice_crud(db: Session, answer_choice_id: int) -> bool:
 ```py
 # filename: app/crud/crud_concepts.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.concepts import ConceptModel
-from app.schemas.concepts import ConceptCreateSchema, ConceptUpdateSchema
+from app.models.subtopics import SubtopicModel
+from app.models.questions import QuestionModel
+from app.models.associations import SubtopicToConceptAssociation, QuestionToConceptAssociation
 
-def create_concept(db: Session, concept: ConceptCreateSchema) -> ConceptModel:
-    db_concept = ConceptModel(**concept.model_dump())
+def create_concept_in_db(db: Session, concept_data: Dict) -> ConceptModel:
+    db_concept = ConceptModel(name=concept_data['name'])
     db.add(db_concept)
     db.commit()
     db.refresh(db_concept)
     return db_concept
 
-def read_concept(db: Session, concept_id: int) -> ConceptModel:
+def read_concept_from_db(db: Session, concept_id: int) -> Optional[ConceptModel]:
     return db.query(ConceptModel).filter(ConceptModel.id == concept_id).first()
 
-def read_concepts(db: Session, skip: int = 0, limit: int = 100) -> list[ConceptModel]:
+def read_concept_by_name_from_db(db: Session, name: str) -> Optional[ConceptModel]:
+    return db.query(ConceptModel).filter(ConceptModel.name == name).first()
+
+def read_concepts_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[ConceptModel]:
     return db.query(ConceptModel).offset(skip).limit(limit).all()
 
-def update_concept(db: Session, concept_id: int, concept: ConceptUpdateSchema) -> ConceptModel:
-    db_concept = read_concept(db, concept_id)
+def update_concept_in_db(db: Session, concept_id: int, concept_data: Dict) -> Optional[ConceptModel]:
+    db_concept = read_concept_from_db(db, concept_id)
     if db_concept:
-        update_data = concept.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
+        for key, value in concept_data.items():
             setattr(db_concept, key, value)
         db.commit()
         db.refresh(db_concept)
     return db_concept
 
-def delete_concept(db: Session, concept_id: int) -> bool:
-    db_concept = read_concept(db, concept_id)
+def delete_concept_from_db(db: Session, concept_id: int) -> bool:
+    db_concept = read_concept_from_db(db, concept_id)
     if db_concept:
         db.delete(db_concept)
         db.commit()
         return True
     return False
+
+def create_subtopic_to_concept_association_in_db(db: Session, subtopic_id: int, concept_id: int) -> bool:
+    association = SubtopicToConceptAssociation(subtopic_id=subtopic_id, concept_id=concept_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_subtopic_to_concept_association_from_db(db: Session, subtopic_id: int, concept_id: int) -> bool:
+    association = db.query(SubtopicToConceptAssociation).filter_by(
+        subtopic_id=subtopic_id, concept_id=concept_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def create_question_to_concept_association_in_db(db: Session, question_id: int, concept_id: int) -> bool:
+    association = QuestionToConceptAssociation(question_id=question_id, concept_id=concept_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_question_to_concept_association_from_db(db: Session, question_id: int, concept_id: int) -> bool:
+    association = db.query(QuestionToConceptAssociation).filter_by(
+        question_id=question_id, concept_id=concept_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_subtopics_for_concept_from_db(db: Session, concept_id: int) -> List[SubtopicModel]:
+    return db.query(SubtopicModel).join(SubtopicToConceptAssociation).filter(
+        SubtopicToConceptAssociation.concept_id == concept_id
+    ).all()
+
+def read_questions_for_concept_from_db(db: Session, concept_id: int) -> List[QuestionModel]:
+    return db.query(QuestionModel).join(QuestionToConceptAssociation).filter(
+        QuestionToConceptAssociation.concept_id == concept_id
+    ).all()
 
 ```
 
@@ -1668,80 +1781,165 @@ def delete_concept(db: Session, concept_id: int) -> bool:
 ```py
 # filename: app/crud/crud_disciplines.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.disciplines import DisciplineModel
-from app.schemas.disciplines import DisciplineCreateSchema, DisciplineUpdateSchema
+from app.models.domains import DomainModel
+from app.models.subjects import SubjectModel
+from app.models.associations import DomainToDisciplineAssociation, DisciplineToSubjectAssociation
 
-def create_discipline(db: Session, discipline: DisciplineCreateSchema) -> DisciplineModel:
-    db_discipline = DisciplineModel(**discipline.model_dump())
+def create_discipline_in_db(db: Session, discipline_data: Dict) -> DisciplineModel:
+    db_discipline = DisciplineModel(name=discipline_data['name'])
     db.add(db_discipline)
     db.commit()
     db.refresh(db_discipline)
     return db_discipline
 
-def read_discipline(db: Session, discipline_id: int) -> DisciplineModel:
+def read_discipline_from_db(db: Session, discipline_id: int) -> Optional[DisciplineModel]:
     return db.query(DisciplineModel).filter(DisciplineModel.id == discipline_id).first()
 
-def read_disciplines(db: Session, skip: int = 0, limit: int = 100) -> list[DisciplineModel]:
+def read_discipline_by_name_from_db(db: Session, name: str) -> Optional[DisciplineModel]:
+    return db.query(DisciplineModel).filter(DisciplineModel.name == name).first()
+
+def read_disciplines_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[DisciplineModel]:
     return db.query(DisciplineModel).offset(skip).limit(limit).all()
 
-def update_discipline(db: Session, discipline_id: int, discipline: DisciplineUpdateSchema) -> DisciplineModel:
-    db_discipline = read_discipline(db, discipline_id)
+def update_discipline_in_db(db: Session, discipline_id: int, discipline_data: Dict) -> Optional[DisciplineModel]:
+    db_discipline = read_discipline_from_db(db, discipline_id)
     if db_discipline:
-        update_data = discipline.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
+        for key, value in discipline_data.items():
             setattr(db_discipline, key, value)
         db.commit()
         db.refresh(db_discipline)
     return db_discipline
 
-def delete_discipline(db: Session, discipline_id: int) -> bool:
-    db_discipline = read_discipline(db, discipline_id)
+def delete_discipline_from_db(db: Session, discipline_id: int) -> bool:
+    db_discipline = read_discipline_from_db(db, discipline_id)
     if db_discipline:
         db.delete(db_discipline)
         db.commit()
         return True
     return False
+
+def create_domain_to_discipline_association_in_db(db: Session, domain_id: int, discipline_id: int) -> bool:
+    association = DomainToDisciplineAssociation(domain_id=domain_id, discipline_id=discipline_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_domain_to_discipline_association_from_db(db: Session, domain_id: int, discipline_id: int) -> bool:
+    association = db.query(DomainToDisciplineAssociation).filter_by(
+        domain_id=domain_id, discipline_id=discipline_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def create_discipline_to_subject_association_in_db(db: Session, discipline_id: int, subject_id: int) -> bool:
+    association = DisciplineToSubjectAssociation(discipline_id=discipline_id, subject_id=subject_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_discipline_to_subject_association_from_db(db: Session, discipline_id: int, subject_id: int) -> bool:
+    association = db.query(DisciplineToSubjectAssociation).filter_by(
+        discipline_id=discipline_id, subject_id=subject_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_domains_for_discipline_from_db(db: Session, discipline_id: int) -> List[DomainModel]:
+    return db.query(DomainModel).join(DomainToDisciplineAssociation).filter(
+        DomainToDisciplineAssociation.discipline_id == discipline_id
+    ).all()
+
+def read_subjects_for_discipline_from_db(db: Session, discipline_id: int) -> List[SubjectModel]:
+    return db.query(SubjectModel).join(DisciplineToSubjectAssociation).filter(
+        DisciplineToSubjectAssociation.discipline_id == discipline_id
+    ).all()
+
 ```
 
 ## File: crud_domains.py
 ```py
 # filename: app/crud/crud_domains.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.domains import DomainModel
-from app.schemas.domains import DomainCreateSchema, DomainUpdateSchema
+from app.models.disciplines import DisciplineModel
+from app.models.associations import DomainToDisciplineAssociation
 
-def create_domain(db: Session, domain: DomainCreateSchema) -> DomainModel:
-    db_domain = DomainModel(**domain.model_dump())
+def create_domain_in_db(db: Session, domain_data: Dict) -> DomainModel:
+    db_domain = DomainModel(name=domain_data['name'])
     db.add(db_domain)
     db.commit()
     db.refresh(db_domain)
     return db_domain
 
-def read_domain(db: Session, domain_id: int) -> DomainModel:
+def read_domain_from_db(db: Session, domain_id: int) -> Optional[DomainModel]:
     return db.query(DomainModel).filter(DomainModel.id == domain_id).first()
 
-def read_domains(db: Session, skip: int = 0, limit: int = 100) -> list[DomainModel]:
+def read_domain_by_name_from_db(db: Session, name: str) -> Optional[DomainModel]:
+    return db.query(DomainModel).filter(DomainModel.name == name).first()
+
+def read_domains_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[DomainModel]:
     return db.query(DomainModel).offset(skip).limit(limit).all()
 
-def update_domain(db: Session, domain_id: int, domain: DomainUpdateSchema) -> DomainModel:
-    db_domain = read_domain(db, domain_id)
+def update_domain_in_db(db: Session, domain_id: int, domain_data: Dict) -> Optional[DomainModel]:
+    db_domain = read_domain_from_db(db, domain_id)
     if db_domain:
-        update_data = domain.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
+        for key, value in domain_data.items():
             setattr(db_domain, key, value)
         db.commit()
         db.refresh(db_domain)
     return db_domain
 
-def delete_domain(db: Session, domain_id: int) -> bool:
-    db_domain = read_domain(db, domain_id)
+def delete_domain_from_db(db: Session, domain_id: int) -> bool:
+    db_domain = read_domain_from_db(db, domain_id)
     if db_domain:
         db.delete(db_domain)
         db.commit()
         return True
     return False
+
+def create_domain_to_discipline_association_in_db(db: Session, domain_id: int, discipline_id: int) -> bool:
+    association = DomainToDisciplineAssociation(domain_id=domain_id, discipline_id=discipline_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_domain_to_discipline_association_from_db(db: Session, domain_id: int, discipline_id: int) -> bool:
+    association = db.query(DomainToDisciplineAssociation).filter_by(
+        domain_id=domain_id, discipline_id=discipline_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_disciplines_for_domain_from_db(db: Session, domain_id: int) -> List[DisciplineModel]:
+    return db.query(DisciplineModel).join(DomainToDisciplineAssociation).filter(
+        DomainToDisciplineAssociation.domain_id == domain_id
+    ).all()
 
 ```
 
@@ -1749,55 +1947,35 @@ def delete_domain(db: Session, domain_id: int) -> bool:
 ```py
 # filename: app/crud/crud_filters.py
 
-from typing import List, Optional
-from pydantic import ValidationError
-from sqlalchemy.orm import Session
+from typing import List, Dict
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 from app.models.questions import QuestionModel
 from app.models.subjects import SubjectModel
 from app.models.topics import TopicModel
 from app.models.subtopics import SubtopicModel
 from app.models.question_tags import QuestionTagModel
-from app.schemas.questions import QuestionSchema
-from app.schemas.filters import FilterParamsSchema
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
-def filter_questions_crud(
+def read_filtered_questions_from_db(
     db: Session,
-    filters: dict,  # Change this parameter to expect a dictionary
+    filters: Dict,
     skip: int = 0,
     limit: int = 100
-) -> Optional[List[QuestionSchema]]:
-    logger.debug("Entering filter_questions function")
-    logger.debug(f"Received filters: {filters}")
-    try:
-        # Validate filters dictionary against the Pydantic model
-        validated_filters = FilterParamsSchema(**filters)
-    except ValidationError as e:
-        logger.debug(f"Invalid filters: {str(e)}")
-        raise e
-
-    if not any(value for value in filters.values()):
-        logger.debug("No filters provided")
-        return None
-
+) -> List[QuestionModel]:
     query = db.query(QuestionModel).join(SubjectModel).join(TopicModel).join(SubtopicModel).outerjoin(QuestionModel.question_tags)
 
-    if validated_filters.subject:
-        query = query.filter(func.lower(SubjectModel.name) == func.lower(validated_filters.subject))
-    if validated_filters.topic:
-        query = query.filter(func.lower(TopicModel.name) == func.lower(validated_filters.topic))
-    if validated_filters.subtopic:
-        query = query.filter(func.lower(SubtopicModel.name) == func.lower(validated_filters.subtopic))
-    if validated_filters.difficulty:
-        query = query.filter(func.lower(QuestionModel.difficulty) == func.lower(validated_filters.difficulty))
-    if validated_filters.question_tags:
-        query = query.filter(QuestionTagModel.tag.in_([tag.lower() for tag in validated_filters.question_tags]))
+    if filters.get('subject'):
+        query = query.filter(func.lower(SubjectModel.name) == func.lower(filters['subject']))
+    if filters.get('topic'):
+        query = query.filter(func.lower(TopicModel.name) == func.lower(filters['topic']))
+    if filters.get('subtopic'):
+        query = query.filter(func.lower(SubtopicModel.name) == func.lower(filters['subtopic']))
+    if filters.get('difficulty'):
+        query = query.filter(func.lower(QuestionModel.difficulty) == func.lower(filters['difficulty']))
+    if filters.get('question_tags'):
+        query = query.filter(QuestionTagModel.tag.in_([tag.lower() for tag in filters['question_tags']]))
 
-    questions = query.offset(skip).limit(limit).all()
-
-    logger.debug(f"Filtered questions: {sqlalchemy_obj_to_dict(question) for question in questions}")
-    return [QuestionSchema.model_validate(question) for question in questions]
+    return query.offset(skip).limit(limit).all()
 
 ```
 
@@ -1805,53 +1983,97 @@ def filter_questions_crud(
 ```py
 # filename: app/crud/crud_groups.py
 
-from fastapi import HTTPException
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.groups import GroupModel
-from app.schemas.groups import GroupCreateSchema, GroupUpdateSchema
-from app.services.logging_service import logger
+from app.models.users import UserModel
+from app.models.question_sets import QuestionSetModel
+from app.models.associations import UserToGroupAssociation, QuestionSetToGroupAssociation
 
-def create_group_crud(db: Session, group: GroupCreateSchema, creator_id: int):
-    try:
-        db_group = GroupModel(
-            name=group.name,
-            description=group.description,
-            creator_id=creator_id
-        )
-        db.add(db_group)
-        db.commit()
-        db.refresh(db_group)
-        return db_group
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+def create_group_in_db(db: Session, group_data: Dict) -> GroupModel:
+    db_group = GroupModel(
+        name=group_data['name'],
+        description=group_data.get('description'),
+        creator_id=group_data['creator_id'],
+        is_active=group_data.get('is_active', True)
+    )
+    db.add(db_group)
+    db.commit()
+    db.refresh(db_group)
+    return db_group
 
-def read_group_crud(db: Session, group_id: int):
+def read_group_from_db(db: Session, group_id: int) -> Optional[GroupModel]:
     return db.query(GroupModel).filter(GroupModel.id == group_id).first()
 
-def update_group_crud(db: Session, group_id: int, group: GroupUpdateSchema):
-    db_group = read_group_crud(db, group_id)
-    if db_group:
-        try:
-            update_data = group.dict(exclude_unset=True)
-            for key, value in update_data.items():
-                setattr(db_group, key, value)
-            db.commit()
-            db.refresh(db_group)
-            return db_group
-        except ValueError as e:
-            raise HTTPException(status_code=422, detail=str(e)) from e
-    return None
+def read_groups_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[GroupModel]:
+    return db.query(GroupModel).offset(skip).limit(limit).all()
 
-def delete_group_crud(db: Session, group_id: int):
-    db_group = read_group_crud(db, group_id)
+def update_group_in_db(db: Session, group_id: int, group_data: Dict) -> Optional[GroupModel]:
+    db_group = read_group_from_db(db, group_id)
     if db_group:
-        group_dict = db_group.__dict__.copy()
-        group_dict.pop('_sa_instance_state', None)
-        print(f"Group: {group_dict}")
+        for key, value in group_data.items():
+            setattr(db_group, key, value)
+        db.commit()
+        db.refresh(db_group)
+    return db_group
+
+def delete_group_from_db(db: Session, group_id: int) -> bool:
+    db_group = read_group_from_db(db, group_id)
+    if db_group:
         db.delete(db_group)
         db.commit()
         return True
     return False
+
+def create_user_to_group_association_in_db(db: Session, user_id: int, group_id: int) -> bool:
+    association = UserToGroupAssociation(user_id=user_id, group_id=group_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_user_to_group_association_from_db(db: Session, user_id: int, group_id: int) -> bool:
+    association = db.query(UserToGroupAssociation).filter_by(
+        user_id=user_id, group_id=group_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def create_question_set_to_group_association_in_db(db: Session, question_set_id: int, group_id: int) -> bool:
+    association = QuestionSetToGroupAssociation(question_set_id=question_set_id, group_id=group_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_question_set_to_group_association_from_db(db: Session, question_set_id: int, group_id: int) -> bool:
+    association = db.query(QuestionSetToGroupAssociation).filter_by(
+        question_set_id=question_set_id, group_id=group_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_users_for_group_from_db(db: Session, group_id: int) -> List[UserModel]:
+    return db.query(UserModel).join(UserToGroupAssociation).filter(
+        UserToGroupAssociation.group_id == group_id
+    ).all()
+
+def read_question_sets_for_group_from_db(db: Session, group_id: int) -> List[QuestionSetModel]:
+    return db.query(QuestionSetModel).join(QuestionSetToGroupAssociation).filter(
+        QuestionSetToGroupAssociation.group_id == group_id
+    ).all()
 
 ```
 
@@ -1859,38 +2081,69 @@ def delete_group_crud(db: Session, group_id: int):
 ```py
 # filename: app/crud/crud_leaderboard.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.leaderboard import LeaderboardModel
 from app.models.time_period import TimePeriodModel
 
-
-def create_leaderboard_entry_crud(db: Session, user_id: int, score: int, time_period: TimePeriodModel, group_id: int = None):
-    db_leaderboard_entry = LeaderboardModel(user_id=user_id, score=score, time_period=time_period, group_id=group_id)
+def create_leaderboard_entry_in_db(db: Session, leaderboard_data: Dict) -> LeaderboardModel:
+    db_leaderboard_entry = LeaderboardModel(
+        user_id=leaderboard_data['user_id'],
+        score=leaderboard_data['score'],
+        time_period_id=leaderboard_data['time_period_id'],
+        group_id=leaderboard_data.get('group_id')
+    )
     db.add(db_leaderboard_entry)
     db.commit()
     db.refresh(db_leaderboard_entry)
     return db_leaderboard_entry
 
-def read_leaderboard_crud(db: Session, time_period: TimePeriodModel, group_id: int = None, skip: int = 0, limit: int = 100):
-    query = db.query(LeaderboardModel).filter(LeaderboardModel.time_period == time_period)
+def read_leaderboard_entry_from_db(db: Session, leaderboard_id: int) -> Optional[LeaderboardModel]:
+    return db.query(LeaderboardModel).filter(LeaderboardModel.id == leaderboard_id).first()
+
+def read_leaderboard_entries_from_db(
+    db: Session,
+    time_period_id: int,
+    group_id: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 100
+) -> List[LeaderboardModel]:
+    query = db.query(LeaderboardModel).filter(LeaderboardModel.time_period_id == time_period_id)
     if group_id:
         query = query.filter(LeaderboardModel.group_id == group_id)
     return query.order_by(LeaderboardModel.score.desc()).offset(skip).limit(limit).all()
 
-def update_leaderboard_entry_crud(db: Session, leaderboard_entry_id: int, score: int):
-    db_leaderboard_entry = db.query(LeaderboardModel).filter(LeaderboardModel.id == leaderboard_entry_id).first()
+def update_leaderboard_entry_in_db(db: Session, leaderboard_id: int, leaderboard_data: Dict) -> Optional[LeaderboardModel]:
+    db_leaderboard_entry = read_leaderboard_entry_from_db(db, leaderboard_id)
     if db_leaderboard_entry:
-        db_leaderboard_entry.score = score
+        for key, value in leaderboard_data.items():
+            setattr(db_leaderboard_entry, key, value)
         db.commit()
         db.refresh(db_leaderboard_entry)
     return db_leaderboard_entry
 
-def delete_leaderboard_entry_crud(db: Session, leaderboard_entry_id: int):
-    db_leaderboard_entry = db.query(LeaderboardModel).filter(LeaderboardModel.id == leaderboard_entry_id).first()
+def delete_leaderboard_entry_from_db(db: Session, leaderboard_id: int) -> bool:
+    db_leaderboard_entry = read_leaderboard_entry_from_db(db, leaderboard_id)
     if db_leaderboard_entry:
         db.delete(db_leaderboard_entry)
         db.commit()
-    return db_leaderboard_entry
+        return True
+    return False
+
+def read_or_create_time_period_in_db(db: Session, time_period_data: Dict) -> TimePeriodModel:
+    db_time_period = db.query(TimePeriodModel).filter(TimePeriodModel.id == time_period_data['id']).first()
+    if not db_time_period:
+        db_time_period = TimePeriodModel(**time_period_data)
+        db.add(db_time_period)
+        db.commit()
+        db.refresh(db_time_period)
+    return db_time_period
+
+def read_leaderboard_entries_for_user_from_db(db: Session, user_id: int) -> List[LeaderboardModel]:
+    return db.query(LeaderboardModel).filter(LeaderboardModel.user_id == user_id).all()
+
+def read_leaderboard_entries_for_group_from_db(db: Session, group_id: int) -> List[LeaderboardModel]:
+    return db.query(LeaderboardModel).filter(LeaderboardModel.group_id == group_id).all()
 
 ```
 
@@ -1898,72 +2151,72 @@ def delete_leaderboard_entry_crud(db: Session, leaderboard_entry_id: int):
 ```py
 # filename: app/crud/crud_permissions.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.permissions import PermissionModel
-from app.schemas.permissions import PermissionCreateSchema, PermissionUpdateSchema
+from app.models.roles import RoleModel
+from app.models.associations import RoleToPermissionAssociation
 
-
-def create_permission_crud(db: Session, permission: PermissionCreateSchema) -> PermissionModel:
-    db_permission = PermissionModel(**permission.model_dump())
+def create_permission_in_db(db: Session, permission_data: Dict) -> PermissionModel:
+    db_permission = PermissionModel(
+        name=permission_data['name'],
+        description=permission_data.get('description')
+    )
     db.add(db_permission)
     db.commit()
     db.refresh(db_permission)
     return db_permission
 
-def read_permission_crud(db: Session, permission_id: int) -> PermissionModel:
+def read_permission_from_db(db: Session, permission_id: int) -> Optional[PermissionModel]:
     return db.query(PermissionModel).filter(PermissionModel.id == permission_id).first()
 
-def read_permissions_crud(db: Session, skip: int = 0, limit: int = 100) -> list[PermissionModel]:
+def read_permission_by_name_from_db(db: Session, name: str) -> Optional[PermissionModel]:
+    return db.query(PermissionModel).filter(PermissionModel.name == name).first()
+
+def read_permissions_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[PermissionModel]:
     return db.query(PermissionModel).offset(skip).limit(limit).all()
 
-def update_permission_crud(db: Session, permission_id: int, permission: PermissionUpdateSchema) -> PermissionModel:
-    db_permission = read_permission_crud(db, permission_id)
+def update_permission_in_db(db: Session, permission_id: int, permission_data: Dict) -> Optional[PermissionModel]:
+    db_permission = read_permission_from_db(db, permission_id)
     if db_permission:
-        update_data = permission.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
+        for key, value in permission_data.items():
             setattr(db_permission, key, value)
         db.commit()
         db.refresh(db_permission)
     return db_permission
 
-def delete_permission_crud(db: Session, permission_id: int) -> bool:
-    db_permission = read_permission_crud(db, permission_id)
+def delete_permission_from_db(db: Session, permission_id: int) -> bool:
+    db_permission = read_permission_from_db(db, permission_id)
     if db_permission:
         db.delete(db_permission)
         db.commit()
         return True
     return False
 
-```
+def create_role_to_permission_association_in_db(db: Session, role_id: int, permission_id: int) -> bool:
+    association = RoleToPermissionAssociation(role_id=role_id, permission_id=permission_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
 
-## File: crud_question_set_associations.py
-```py
-# filename: app/crud/crud_question_set_associations.py
+def delete_role_to_permission_association_from_db(db: Session, role_id: int, permission_id: int) -> bool:
+    association = db.query(RoleToPermissionAssociation).filter_by(
+        role_id=role_id, permission_id=permission_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
 
-from typing import List
-from sqlalchemy.orm import Session
-from app.models.associations import QuestionSetToQuestionAssociation, QuestionSetToGroupAssociation
-from app.models.question_sets import QuestionSetModel
-
-
-def create_question_set_question_associations(db: Session, question_set_id: int, question_ids: List[int]):
-    associations = [
-        QuestionSetToQuestionAssociation(question_set_id=question_set_id, question_id=q_id)
-        for q_id in question_ids
-    ]
-    db.add_all(associations)
-    db.commit()
-
-def create_question_set_group_associations(db: Session, question_set_id: int, group_ids: List[int]):
-    associations = [
-        QuestionSetToGroupAssociation(question_set_id=question_set_id, group_id=g_id)
-        for g_id in group_ids
-    ]
-    db.add_all(associations)
-    db.commit()
-
-def get_question_set_with_associations(db: Session, question_set_id: int) -> QuestionSetModel:
-    return db.query(QuestionSetModel).filter(QuestionSetModel.id == question_set_id).first()
+def read_roles_for_permission_from_db(db: Session, permission_id: int) -> List[RoleModel]:
+    return db.query(RoleModel).join(RoleToPermissionAssociation).filter(
+        RoleToPermissionAssociation.permission_id == permission_id
+    ).all()
 
 ```
 
@@ -1971,145 +2224,98 @@ def get_question_set_with_associations(db: Session, question_set_id: int) -> Que
 ```py
 # filename: app/crud/crud_question_sets.py
 
-from typing import List
-from sqlalchemy.orm import Session, joinedload
-from fastapi import HTTPException, status
+from typing import List, Optional, Dict
+from sqlalchemy.orm import Session
 from app.models.question_sets import QuestionSetModel
-from app.models.groups import GroupModel
 from app.models.questions import QuestionModel
-from app.schemas.question_sets import QuestionSetCreateSchema, QuestionSetUpdateSchema
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
-from app.crud.crud_question_set_associations import (
-    create_question_set_question_associations,
-    create_question_set_group_associations,
-    get_question_set_with_associations
-)
+from app.models.groups import GroupModel
+from app.models.associations import QuestionSetToQuestionAssociation, QuestionSetToGroupAssociation
 
-
-def create_question_set_crud(
-    db: Session,
-    question_set: QuestionSetCreateSchema,
-) -> QuestionSetModel:
-    existing_question_set = db.query(QuestionSetModel).filter(QuestionSetModel.name == question_set.name).first()
-    if existing_question_set:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Question set with name '{question_set.name}' already exists."
-        )
-
+def create_question_set_in_db(db: Session, question_set_data: Dict) -> QuestionSetModel:
     db_question_set = QuestionSetModel(
-        name=question_set.name,
-        is_public=question_set.is_public,
-        creator_id=question_set.creator_id
+        name=question_set_data['name'],
+        description=question_set_data.get('description'),
+        is_public=question_set_data.get('is_public', True),
+        creator_id=question_set_data['creator_id']
     )
     db.add(db_question_set)
     db.commit()
     db.refresh(db_question_set)
+    return db_question_set
 
-    if question_set.question_ids:
-        create_question_set_question_associations(db, db_question_set.id, question_set.question_ids)
+def read_question_set_from_db(db: Session, question_set_id: int) -> Optional[QuestionSetModel]:
+    return db.query(QuestionSetModel).filter(QuestionSetModel.id == question_set_id).first()
 
-    if question_set.group_ids:
-        create_question_set_group_associations(db, db_question_set.id, question_set.group_ids)
+def read_question_sets_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionSetModel]:
+    return db.query(QuestionSetModel).offset(skip).limit(limit).all()
 
-    return get_question_set_with_associations(db, db_question_set.id)
+def update_question_set_in_db(db: Session, question_set_id: int, question_set_data: Dict) -> Optional[QuestionSetModel]:
+    db_question_set = read_question_set_from_db(db, question_set_id)
+    if db_question_set:
+        for key, value in question_set_data.items():
+            if key not in ['question_ids', 'group_ids']:
+                setattr(db_question_set, key, value)
+        db.commit()
+        db.refresh(db_question_set)
+    return db_question_set
 
-def read_question_set_crud(db: Session, question_set_id: int) -> QuestionSetModel:
-    question_set = db.query(QuestionSetModel).filter(QuestionSetModel.id == question_set_id).first()
-    if not question_set:
-        raise HTTPException(status_code=404, detail=f"Question set with ID {question_set_id} not found.")
-    
-    return question_set
+def delete_question_set_from_db(db: Session, question_set_id: int) -> bool:
+    db_question_set = read_question_set_from_db(db, question_set_id)
+    if db_question_set:
+        db.delete(db_question_set)
+        db.commit()
+        return True
+    return False
 
-
-def read_question_sets_crud(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionSetModel]:
-    question_sets = db.query(QuestionSetModel).offset(skip).limit(limit).all()
-    if not question_sets:
-        raise HTTPException(status_code=404, detail="No question sets found.")
-    
-    return question_sets
-
-def update_question_set_crud(
-    db: Session,
-    question_set_id: int,
-    question_set: QuestionSetUpdateSchema
-) -> QuestionSetModel:
-    logger.debug("Starting update for question set ID: %d", question_set_id)
-    
-    db_question_set = db.query(QuestionSetModel).filter(QuestionSetModel.id == question_set_id).first()
-    if not db_question_set:
-        logger.error("Question set with ID %d not found", question_set_id)
-        raise HTTPException(
-            status_code=404,
-            detail=f"Question set with ID {question_set_id} not found."
-        )
-
-    update_data = question_set.model_dump(exclude_unset=True)
-    logger.debug("Update data after model_dump: %s", update_data)
-    
-    # Update basic fields
-    for field, value in update_data.items():
-        if field not in ['question_ids', 'group_ids']:
-            setattr(db_question_set, field, value)
-            logger.debug("Set attribute %s to %s", field, value)
-
-    # Update question associations
-    if 'question_ids' in update_data:
-        logger.debug("Updating question associations with IDs: %s", update_data['question_ids'])
-        db_question_set.questions.clear()
-        db.flush()
-        create_question_set_question_associations(db, db_question_set.id, update_data['question_ids'])
-
-    # Update group associations
-    if 'group_ids' in update_data:
-        logger.debug("Updating group associations with IDs: %s", update_data['group_ids'])
-        db_question_set.groups.clear()
-        db.flush()
-        create_question_set_group_associations(db, db_question_set.id, update_data['group_ids'])
-
-    db.commit()
-    db.refresh(db_question_set)
-
-    updated_question_set_dict = sqlalchemy_obj_to_dict(db_question_set)
-    logger.debug("Updated question set: %s", updated_question_set_dict)
-
-    return get_question_set_with_associations(db, db_question_set.id)
-
-def delete_question_set_crud(db: Session, question_set_id: int) -> bool:
-    db_question_set = db.query(QuestionSetModel).filter(QuestionSetModel.id == question_set_id).first()
-    if not db_question_set:
-        raise HTTPException(status_code=404, detail=f"Question set with ID {question_set_id} not found.")
-    
-    db.delete(db_question_set)
-    db.commit()
-    return True
-
-```
-
-## File: crud_question_tag_associations.py
-```py
-# filename: app/crud/crud_question_tag_associations.py
-
-from sqlalchemy.orm import Session
-from app.models.associations import QuestionToTagAssociation
-from app.models.questions import QuestionModel
-from app.models.question_tags import QuestionTagModel
-
-
-def add_tag_to_question(db: Session, question_id: int, question_tag_id: int):
-    association = QuestionToTagAssociation(question_id=question_id, question_tag_id=question_tag_id)
+def create_question_set_to_question_association_in_db(db: Session, question_set_id: int, question_id: int) -> bool:
+    association = QuestionSetToQuestionAssociation(question_set_id=question_set_id, question_id=question_id)
     db.add(association)
-    db.commit()
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
 
-def remove_tag_from_question(db: Session, question_id: int, question_tag_id: int):
-    db.query(QuestionToTagAssociation).filter_by(question_id=question_id, question_tag_id=question_tag_id).delete()
-    db.commit()
+def delete_question_set_to_question_association_from_db(db: Session, question_set_id: int, question_id: int) -> bool:
+    association = db.query(QuestionSetToQuestionAssociation).filter_by(
+        question_set_id=question_set_id, question_id=question_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
 
-def get_question_tags(db: Session, question_id: int):
-    return db.query(QuestionTagModel).join(QuestionToTagAssociation).filter(QuestionToTagAssociation.question_id == question_id).all()
+def create_question_set_to_group_association_in_db(db: Session, question_set_id: int, group_id: int) -> bool:
+    association = QuestionSetToGroupAssociation(question_set_id=question_set_id, group_id=group_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
 
-def read_questions_by_tag(db: Session, question_tag_id: int):
-    return db.query(QuestionModel).join(QuestionToTagAssociation).filter(QuestionToTagAssociation.question_tag_id == question_tag_id).all()
+def delete_question_set_to_group_association_from_db(db: Session, question_set_id: int, group_id: int) -> bool:
+    association = db.query(QuestionSetToGroupAssociation).filter_by(
+        question_set_id=question_set_id, group_id=group_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_questions_for_question_set_from_db(db: Session, question_set_id: int) -> List[QuestionModel]:
+    return db.query(QuestionModel).join(QuestionSetToQuestionAssociation).filter(
+        QuestionSetToQuestionAssociation.question_set_id == question_set_id
+    ).all()
+
+def read_groups_for_question_set_from_db(db: Session, question_set_id: int) -> List[GroupModel]:
+    return db.query(GroupModel).join(QuestionSetToGroupAssociation).filter(
+        QuestionSetToGroupAssociation.question_set_id == question_set_id
+    ).all()
 
 ```
 
@@ -2117,204 +2323,218 @@ def read_questions_by_tag(db: Session, question_tag_id: int):
 ```py
 # filename: app/crud/crud_question_tags.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.question_tags import QuestionTagModel
-from app.schemas.question_tags import QuestionTagCreateSchema
+from app.models.questions import QuestionModel
+from app.models.associations import QuestionToTagAssociation
 
-
-def create_question_tag_crud(db: Session, question_tag: QuestionTagCreateSchema) -> QuestionTagModel:
-    db_question_tag = QuestionTagModel(**question_tag.model_dump())
+def create_question_tag_in_db(db: Session, question_tag_data: Dict) -> QuestionTagModel:
+    db_question_tag = QuestionTagModel(
+        tag=question_tag_data['tag'],
+        description=question_tag_data.get('description')
+    )
     db.add(db_question_tag)
     db.commit()
     db.refresh(db_question_tag)
     return db_question_tag
 
-def get_question_tag_by_id_crud(db: Session, question_tag_id: int) -> QuestionTagModel:
+def read_question_tag_from_db(db: Session, question_tag_id: int) -> Optional[QuestionTagModel]:
     return db.query(QuestionTagModel).filter(QuestionTagModel.id == question_tag_id).first()
 
-def get_question_tag_by_tag_crud(db: Session, tag: str) -> QuestionTagModel:
+def read_question_tag_by_tag_from_db(db: Session, tag: str) -> Optional[QuestionTagModel]:
     return db.query(QuestionTagModel).filter(QuestionTagModel.tag == tag).first()
 
-def update_question_tag_crud(db: Session, question_tag_id: int, updated_tag: str) -> QuestionTagModel:
-    db_question_tag = get_question_tag_by_id_crud(db, question_tag_id)
+def read_question_tags_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionTagModel]:
+    return db.query(QuestionTagModel).offset(skip).limit(limit).all()
+
+def update_question_tag_in_db(db: Session, question_tag_id: int, question_tag_data: Dict) -> Optional[QuestionTagModel]:
+    db_question_tag = read_question_tag_from_db(db, question_tag_id)
     if db_question_tag:
-        db_question_tag.tag = updated_tag
+        for key, value in question_tag_data.items():
+            setattr(db_question_tag, key, value)
         db.commit()
         db.refresh(db_question_tag)
     return db_question_tag
 
-def delete_question_tag_crud(db: Session, question_tag_id: int) -> None:
-    db_question_tag = get_question_tag_by_id_crud(db, question_tag_id)
+def delete_question_tag_from_db(db: Session, question_tag_id: int) -> bool:
+    db_question_tag = read_question_tag_from_db(db, question_tag_id)
     if db_question_tag:
         db.delete(db_question_tag)
         db.commit()
+        return True
+    return False
+
+def create_question_to_tag_association_in_db(db: Session, question_id: int, tag_id: int) -> bool:
+    association = QuestionToTagAssociation(question_id=question_id, question_tag_id=tag_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_question_to_tag_association_from_db(db: Session, question_id: int, tag_id: int) -> bool:
+    association = db.query(QuestionToTagAssociation).filter_by(
+        question_id=question_id, question_tag_id=tag_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_tags_for_question_from_db(db: Session, question_id: int) -> List[QuestionTagModel]:
+    return db.query(QuestionTagModel).join(QuestionToTagAssociation).filter(
+        QuestionToTagAssociation.question_id == question_id
+    ).all()
+
+def read_questions_for_tag_from_db(db: Session, tag_id: int) -> List[QuestionModel]:
+    return db.query(QuestionModel).join(QuestionToTagAssociation).filter(
+        QuestionToTagAssociation.question_tag_id == tag_id
+    ).all()
+
 ```
 
 ## File: crud_questions.py
 ```py
-# filename: /code/quiz-app/quiz-app-backend/app/crud/crud_questions.py
+# filename: app/crud/crud_questions.py
 
-from typing import List, Optional
-from sqlalchemy.orm import Session, joinedload
-from app.models.questions import QuestionModel
+from typing import List, Optional, Dict
+from sqlalchemy.orm import Session
+from app.models.questions import QuestionModel, DifficultyLevel
 from app.models.answer_choices import AnswerChoiceModel
 from app.models.question_tags import QuestionTagModel
 from app.models.question_sets import QuestionSetModel
-from app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, QuestionWithAnswersCreateSchema, DetailedQuestionSchema
-from app.crud.crud_answer_choices import create_answer_choice_crud
-from app.services.randomization_service import randomize_questions, randomize_answer_choices
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
+from app.models.subjects import SubjectModel
+from app.models.topics import TopicModel
+from app.models.subtopics import SubtopicModel
+from app.models.concepts import ConceptModel
 
-def create_question(db: Session, question: QuestionCreateSchema) -> QuestionModel:
+def create_question_in_db(db: Session, question_data: Dict) -> QuestionModel:
     db_question = QuestionModel(
-        text=question.text,
-        subject=question.subject,
-        topic=question.topic,
-        subtopic=question.subtopic,
-        concept=question.concept,
-        difficulty=question.difficulty
+        text=question_data['text'],
+        difficulty=question_data['difficulty']
     )
     db.add(db_question)
     db.flush()
 
-    if question.answer_choices:
-        for question_answer_choice in question.answer_choices:
-            if not question_answer_choice.id:
-                db_answer_choice = create_answer_choice_crud(db, question_answer_choice)
-                db_question.answer_choices.append(db_answer_choice)
-            else:
-                db_answer_choice = db.query(AnswerChoiceModel).filter(AnswerChoiceModel.id == question_answer_choice.id).first()
-                db_question.answer_choices.append(db_answer_choice)
+    if 'answer_choices' in question_data:
+        for answer_choice_data in question_data['answer_choices']:
+            db_answer_choice = AnswerChoiceModel(**answer_choice_data)
+            db.add(db_answer_choice)
+            db_question.answer_choices.append(db_answer_choice)
 
-    if question.question_tag_ids:
-        tags = db.query(QuestionTagModel).filter(QuestionTagModel.id.in_(question.question_tag_ids)).all()
-        db_question.question_tag_ids = tags
+    if 'question_tag_ids' in question_data and question_data['question_tag_ids']:
+        tags = db.query(QuestionTagModel).filter(QuestionTagModel.id.in_(question_data['question_tag_ids'])).all()
+        db_question.question_tags = tags
 
-    if question.question_set_ids:
-        question_sets = db.query(QuestionSetModel).filter(QuestionSetModel.id.in_(question.question_set_ids)).all()
-        db_question.question_set_ids = question_sets
-
-    db.commit()
-    db.refresh(db_question)
-    return db_question
-
-def create_question_with_answers(db: Session, question: QuestionWithAnswersCreateSchema) -> QuestionModel:
-    # First, create the question
-    db_question = QuestionModel(
-        text=question.text,
-        subject_id=question.subject_id,
-        topic_id=question.topic_id,
-        subtopic_id=question.subtopic_id,
-        concept_id=question.concept_id,
-        difficulty=question.difficulty,
-        answer_choices=[]
-    )
-    db.add(db_question)
-    db.flush()  # This assigns an ID to db_question
-    
-    logger.debug(f"Created question: {sqlalchemy_obj_to_dict(db_question)}")
-
-    # Now create the answer choices and associate them with the question
-    for answer_choice in question.answer_choices:
-        db_answer_choice = create_answer_choice_crud(db, answer_choice)
-        db_question.answer_choices.append(db_answer_choice)
-        logger.debug(f"Question with answer choices: {sqlalchemy_obj_to_dict(db_question)}")
-
-    if question.question_tags:
-        question_tags = db.query(QuestionTagModel).filter(QuestionTagModel.id.in_(question.question_tags)).all()
-        db_question.question_tags = question_tags
-
-    if question.question_sets:
-        question_sets = db.query(QuestionSetModel).filter(QuestionSetModel.id.in_(question.question_sets)).all()
+    if 'question_set_ids' in question_data and question_data['question_set_ids']:
+        question_sets = db.query(QuestionSetModel).filter(QuestionSetModel.id.in_(question_data['question_set_ids'])).all()
         db_question.question_sets = question_sets
 
     db.commit()
     db.refresh(db_question)
-    
     return db_question
 
-def read_question(db: Session, question_id: int) -> Optional[DetailedQuestionSchema]:
-    db_question = db.query(QuestionModel).options(
-        joinedload(QuestionModel.subject),
-        joinedload(QuestionModel.topic),
-        joinedload(QuestionModel.subtopic),
-        joinedload(QuestionModel.concept),
-        joinedload(QuestionModel.answer_choices),
-        joinedload(QuestionModel.question_tags),
-        joinedload(QuestionModel.question_sets)
-    ).filter(QuestionModel.id == question_id).first()
+def create_question_with_answers_in_db(db: Session, question_data: Dict) -> QuestionModel:
+    # Create the question
+    db_question = QuestionModel(
+        text=question_data['text'],
+        difficulty=DifficultyLevel(question_data['difficulty'])
+    )
+    db.add(db_question)
+    db.flush()
 
+    # Create and associate answer choices
+    for answer_choice_data in question_data['answer_choices']:
+        db_answer_choice = AnswerChoiceModel(**answer_choice_data)
+        db.add(db_answer_choice)
+        db_question.answer_choices.append(db_answer_choice)
+
+    # Associate subjects
+    if 'subject_ids' in question_data:
+        subjects = db.query(SubjectModel).filter(SubjectModel.id.in_(question_data['subject_ids'])).all()
+        db_question.subjects = subjects
+
+    # Associate topics
+    if 'topic_ids' in question_data:
+        topics = db.query(TopicModel).filter(TopicModel.id.in_(question_data['topic_ids'])).all()
+        db_question.topics = topics
+
+    # Associate subtopics
+    if 'subtopic_ids' in question_data:
+        subtopics = db.query(SubtopicModel).filter(SubtopicModel.id.in_(question_data['subtopic_ids'])).all()
+        db_question.subtopics = subtopics
+
+    # Associate concepts
+    if 'concept_ids' in question_data:
+        concepts = db.query(ConceptModel).filter(ConceptModel.id.in_(question_data['concept_ids'])).all()
+        db_question.concepts = concepts
+
+    # Associate question tags
+    if 'question_tags' in question_data:
+        for tag_data in question_data['question_tags']:
+            db_tag = db.query(QuestionTagModel).filter(QuestionTagModel.tag == tag_data['tag']).first()
+            if not db_tag:
+                db_tag = QuestionTagModel(**tag_data)
+                db.add(db_tag)
+            db_question.question_tags.append(db_tag)
+
+    # Associate question sets
+    if 'question_set_ids' in question_data:
+        question_sets = db.query(QuestionSetModel).filter(QuestionSetModel.id.in_(question_data['question_set_ids'])).all()
+        db_question.question_sets = question_sets
+
+    db.commit()
+    db.refresh(db_question)
+    return db_question
+
+def read_question_from_db(db: Session, question_id: int) -> Optional[QuestionModel]:
+    return db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
+
+def read_questions_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionModel]:
+    return db.query(QuestionModel).offset(skip).limit(limit).all()
+
+def update_question_in_db(db: Session, question_id: int, question_data: Dict) -> Optional[QuestionModel]:
+    db_question = read_question_from_db(db, question_id)
     if db_question:
-        return DetailedQuestionSchema(
-            id=db_question.id,
-            text=db_question.text,
-            difficulty=db_question.difficulty,
-            subject=db_question.subject.name,
-            topic=db_question.topic.name,
-            subtopic=db_question.subtopic.name,
-            concept=db_question.concept.name,
-            answer_choices=[ac for ac in db_question.answer_choices],
-            question_tags=[tag.tag for tag in db_question.question_tags],
-            question_sets=[qs.name for qs in db_question.question_sets]
-        )
-    return None
-
-def read_questions(db: Session, skip: int = 0, limit: int = 100) -> List[DetailedQuestionSchema]:
-    db_questions = db.query(QuestionModel).options(
-        joinedload(QuestionModel.subject),
-        joinedload(QuestionModel.topic),
-        joinedload(QuestionModel.subtopic),
-        joinedload(QuestionModel.concept),
-        joinedload(QuestionModel.answer_choices),
-        joinedload(QuestionModel.question_tag_ids),
-        joinedload(QuestionModel.question_set_ids)
-    ).offset(skip).limit(limit).all()
-
-    questions = [
-        DetailedQuestionSchema(
-            id=q.id,
-            text=q.text,
-            difficulty=q.difficulty,
-            subject=q.subject.name,
-            topic=q.topic.name,
-            subtopic=q.subtopic.name,
-            concept=q.concept.name,
-            answer_choices=randomize_answer_choices(q.answer_choices),
-            question_tags=[tag.tag for tag in q.question_tags],
-            question_sets=[qs.name for qs in q.question_sets]
-        ) for q in randomize_questions(db_questions)
-    ]
-    return questions
-
-def update_question(db: Session, question_id: int, question: QuestionUpdateSchema) -> Optional[QuestionModel]:
-    db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
-    if db_question:
-        update_data = question.model_dump(exclude_unset=True)
-        
-        if 'answer_choice_ids' in update_data:
-            answer_choice_ids = update_data.pop('answer_choice_ids')
-            answer_choices = db.query(AnswerChoiceModel).filter(AnswerChoiceModel.id.in_(answer_choice_ids)).all()
-            db_question.answer_choices = answer_choices
-
-        if 'question_tag_ids' in update_data:
-            tag_ids = update_data.pop('question_tag_ids')
-            tags = db.query(QuestionTagModel).filter(QuestionTagModel.id.in_(tag_ids)).all()
-            db_question.question_tag_ids = tags
-
-        if 'question_set_ids' in update_data:
-            set_ids = update_data.pop('question_set_ids')
-            question_sets = db.query(QuestionSetModel).filter(QuestionSetModel.id.in_(set_ids)).all()
-            db_question.question_set_ids = question_sets
-
-        for key, value in update_data.items():
-            setattr(db_question, key, value)
-
+        for key, value in question_data.items():
+            if key == 'difficulty':
+                setattr(db_question, key, DifficultyLevel(value))
+            elif key == 'answer_choices':
+                db_question.answer_choices = []
+                for answer_choice_data in value:
+                    db_answer_choice = AnswerChoiceModel(**answer_choice_data)
+                    db.add(db_answer_choice)
+                    db_question.answer_choices.append(db_answer_choice)
+            elif key == 'question_tag_ids':
+                tags = db.query(QuestionTagModel).filter(QuestionTagModel.id.in_(value)).all()
+                db_question.question_tags = tags
+            elif key == 'question_set_ids':
+                question_sets = db.query(QuestionSetModel).filter(QuestionSetModel.id.in_(value)).all()
+                db_question.question_sets = question_sets
+            elif key == 'subject_ids':
+                subjects = db.query(SubjectModel).filter(SubjectModel.id.in_(value)).all()
+                db_question.subjects = subjects
+            elif key == 'topic_ids':
+                topics = db.query(TopicModel).filter(TopicModel.id.in_(value)).all()
+                db_question.topics = topics
+            elif key == 'subtopic_ids':
+                subtopics = db.query(SubtopicModel).filter(SubtopicModel.id.in_(value)).all()
+                db_question.subtopics = subtopics
+            elif key == 'concept_ids':
+                concepts = db.query(ConceptModel).filter(ConceptModel.id.in_(value)).all()
+                db_question.concepts = concepts
+            else:
+                setattr(db_question, key, value)
         db.commit()
         db.refresh(db_question)
     return db_question
 
-def delete_question(db: Session, question_id: int) -> bool:
-    db_question = db.query(QuestionModel).filter(QuestionModel.id == question_id).first()
+def delete_question_from_db(db: Session, question_id: int) -> bool:
+    db_question = read_question_from_db(db, question_id)
     if db_question:
         db.delete(db_question)
         db.commit()
@@ -2323,111 +2543,81 @@ def delete_question(db: Session, question_id: int) -> bool:
 
 ```
 
-## File: crud_role_to_permission_associations.py
-```py
-# filename: app/crud/crud_role_to_permission_associations.py
-
-from sqlalchemy.orm import Session
-from app.models.associations import RoleToPermissionAssociation
-from app.models.roles import RoleModel
-from app.models.permissions import PermissionModel
-from app.services.logging_service import logger
-
-def add_permission_to_role(db: Session, role_id: int, permission_id: int | str):
-    if isinstance(permission_id, str):
-        # If permission_id is a string, query the PermissionModel to get the actual permission ID
-        permission = db.query(PermissionModel).filter(PermissionModel.name == permission_id).first()
-        if not permission:
-            raise ValueError(f"Permission with name '{permission_id}' not found")
-        permission_id = permission.id
-
-    association = RoleToPermissionAssociation(role_id=role_id, permission_id=permission_id)
-    db.add(association)
-    db.commit()
-
-def remove_permission_from_role(db: Session, role_id: int, permission_id: int):
-    db.query(RoleToPermissionAssociation).filter_by(role_id=role_id, permission_id=permission_id).delete()
-    db.commit()
-
-def get_role_permissions(db: Session, role_id: int):
-    return db.query(PermissionModel).join(RoleToPermissionAssociation).filter(RoleToPermissionAssociation.role_id == role_id).all()
-
-def get_roles_by_permission(db: Session, permission_id: int):
-    return db.query(RoleModel).join(RoleToPermissionAssociation).filter(RoleToPermissionAssociation.permission_id == permission_id).all()
-
-```
-
 ## File: crud_roles.py
 ```py
 # filename: app/crud/crud_roles.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
 from app.models.roles import RoleModel
 from app.models.permissions import PermissionModel
-from app.schemas.roles import RoleCreateSchema, RoleUpdateSchema
-from app.crud.crud_role_to_permission_associations import add_permission_to_role, remove_permission_from_role, get_role_permissions
-from app.services.logging_service import logger
+from app.models.users import UserModel
+from app.models.associations import RoleToPermissionAssociation
 
-def create_role_crud(db: Session, role: RoleCreateSchema) -> RoleModel:
-    db_role = RoleModel(name=role.name, description=role.description)
-    logger.debug("Creating role: %s", db_role)
+def create_role_in_db(db: Session, role_data: Dict) -> RoleModel:
+    db_role = RoleModel(
+        name=role_data['name'],
+        description=role_data.get('description'),
+        default=role_data.get('default', False)
+    )
     db.add(db_role)
     db.commit()
     db.refresh(db_role)
-
-    # Add permissions to the role
-    for permission_id in role.permissions:
-        logger.debug("Adding permission %s to role %s", permission_id, db_role.id)
-        add_permission_to_role(db, db_role.id, permission_id)
-
-    logger.debug("Role created with id %s, name %s, and permissions %s", db_role.id, db_role.name, db_role.permissions)
     return db_role
 
-def read_role_crud(db: Session, role_id: int) -> RoleModel:
-    role = db.query(RoleModel).filter(RoleModel.id == role_id).first()
-    if not role:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Role with id {role_id} not found")
-    return role
+def read_role_from_db(db: Session, role_id: int) -> Optional[RoleModel]:
+    return db.query(RoleModel).filter(RoleModel.id == role_id).first()
 
-def read_roles_crud(db: Session, skip: int = 0, limit: int = 100) -> list[RoleModel]:
+def read_role_by_name_from_db(db: Session, name: str) -> Optional[RoleModel]:
+    return db.query(RoleModel).filter(RoleModel.name == name).first()
+
+def read_roles_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[RoleModel]:
     return db.query(RoleModel).offset(skip).limit(limit).all()
 
-def update_role_crud(db: Session, role_id: int, role: RoleUpdateSchema) -> RoleModel:
-    db_role = read_role_crud(db, role_id)
-    
-    # Update basic fields
-    for field, value in role.model_dump(exclude_unset=True).items():
-        if field != "permissions":
-            setattr(db_role, field, value)
-    
-    # Update permissions
-    if role.permissions is not None:
-        current_permissions = get_role_permissions(db, role_id)
-        current_permission_names = {p.name for p in current_permissions}
-        new_permission_names = set(role.permissions)
-
-        # Remove permissions that are no longer associated
-        for permission in current_permissions:
-            if permission.name not in new_permission_names:
-                remove_permission_from_role(db, role_id, permission.id)
-
-        # Add new permissions
-        for permission_name in new_permission_names:
-            if permission_name not in current_permission_names:
-                permission = db.query(PermissionModel).filter(PermissionModel.name == permission_name).first()
-                if permission:
-                    add_permission_to_role(db, role_id, permission.id)
-
-    db.commit()
-    db.refresh(db_role)
+def update_role_in_db(db: Session, role_id: int, role_data: Dict) -> Optional[RoleModel]:
+    db_role = read_role_from_db(db, role_id)
+    if db_role:
+        for key, value in role_data.items():
+            setattr(db_role, key, value)
+        db.commit()
+        db.refresh(db_role)
     return db_role
 
-def delete_role_crud(db: Session, role_id: int) -> bool:
-    db_role = read_role_crud(db, role_id)
-    db.delete(db_role)
-    db.commit()
-    return True
+def delete_role_from_db(db: Session, role_id: int) -> bool:
+    db_role = read_role_from_db(db, role_id)
+    if db_role:
+        db.delete(db_role)
+        db.commit()
+        return True
+    return False
+
+def create_role_to_permission_association_in_db(db: Session, role_id: int, permission_id: int) -> bool:
+    association = RoleToPermissionAssociation(role_id=role_id, permission_id=permission_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_role_to_permission_association_from_db(db: Session, role_id: int, permission_id: int) -> bool:
+    association = db.query(RoleToPermissionAssociation).filter_by(
+        role_id=role_id, permission_id=permission_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_permissions_for_role_from_db(db: Session, role_id: int) -> List[PermissionModel]:
+    return db.query(PermissionModel).join(RoleToPermissionAssociation).filter(
+        RoleToPermissionAssociation.role_id == role_id
+    ).all()
+
+def read_users_for_role_from_db(db: Session, role_id: int) -> List[UserModel]:
+    return db.query(UserModel).filter(UserModel.role_id == role_id).all()
 
 ```
 
@@ -2435,40 +2625,121 @@ def delete_role_crud(db: Session, role_id: int) -> bool:
 ```py
 # filename: app/crud/crud_subjects.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.subjects import SubjectModel
-from app.schemas.subjects import SubjectCreateSchema, SubjectUpdateSchema
+from app.models.disciplines import DisciplineModel
+from app.models.topics import TopicModel
+from app.models.questions import QuestionModel
+from app.models.associations import DisciplineToSubjectAssociation, SubjectToTopicAssociation, QuestionToSubjectAssociation
 
-def create_subject(db: Session, subject: SubjectCreateSchema) -> SubjectModel:
-    db_subject = SubjectModel(**subject.model_dump())
+def create_subject_in_db(db: Session, subject_data: Dict) -> SubjectModel:
+    db_subject = SubjectModel(name=subject_data['name'])
     db.add(db_subject)
     db.commit()
     db.refresh(db_subject)
     return db_subject
 
-def read_subject(db: Session, subject_id: int) -> SubjectModel:
+def read_subject_from_db(db: Session, subject_id: int) -> Optional[SubjectModel]:
     return db.query(SubjectModel).filter(SubjectModel.id == subject_id).first()
 
-def read_subjects(db: Session, skip: int = 0, limit: int = 100) -> list[SubjectModel]:
+def read_subject_by_name_from_db(db: Session, name: str) -> Optional[SubjectModel]:
+    return db.query(SubjectModel).filter(SubjectModel.name == name).first()
+
+def read_subjects_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[SubjectModel]:
     return db.query(SubjectModel).offset(skip).limit(limit).all()
 
-def update_subject(db: Session, subject_id: int, subject: SubjectUpdateSchema) -> SubjectModel:
-    db_subject = read_subject(db, subject_id)
+def update_subject_in_db(db: Session, subject_id: int, subject_data: Dict) -> Optional[SubjectModel]:
+    db_subject = read_subject_from_db(db, subject_id)
     if db_subject:
-        update_data = subject.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
+        for key, value in subject_data.items():
             setattr(db_subject, key, value)
         db.commit()
         db.refresh(db_subject)
     return db_subject
 
-def delete_subject(db: Session, subject_id: int) -> bool:
-    db_subject = read_subject(db, subject_id)
+def delete_subject_from_db(db: Session, subject_id: int) -> bool:
+    db_subject = read_subject_from_db(db, subject_id)
     if db_subject:
         db.delete(db_subject)
         db.commit()
         return True
     return False
+
+def create_discipline_to_subject_association_in_db(db: Session, discipline_id: int, subject_id: int) -> bool:
+    association = DisciplineToSubjectAssociation(discipline_id=discipline_id, subject_id=subject_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_discipline_to_subject_association_from_db(db: Session, discipline_id: int, subject_id: int) -> bool:
+    association = db.query(DisciplineToSubjectAssociation).filter_by(
+        discipline_id=discipline_id, subject_id=subject_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def create_subject_to_topic_association_in_db(db: Session, subject_id: int, topic_id: int) -> bool:
+    association = SubjectToTopicAssociation(subject_id=subject_id, topic_id=topic_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_subject_to_topic_association_from_db(db: Session, subject_id: int, topic_id: int) -> bool:
+    association = db.query(SubjectToTopicAssociation).filter_by(
+        subject_id=subject_id, topic_id=topic_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def create_question_to_subject_association_in_db(db: Session, question_id: int, subject_id: int) -> bool:
+    association = QuestionToSubjectAssociation(question_id=question_id, subject_id=subject_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_question_to_subject_association_from_db(db: Session, question_id: int, subject_id: int) -> bool:
+    association = db.query(QuestionToSubjectAssociation).filter_by(
+        question_id=question_id, subject_id=subject_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_disciplines_for_subject_from_db(db: Session, subject_id: int) -> List[DisciplineModel]:
+    return db.query(DisciplineModel).join(DisciplineToSubjectAssociation).filter(
+        DisciplineToSubjectAssociation.subject_id == subject_id
+    ).all()
+
+def read_topics_for_subject_from_db(db: Session, subject_id: int) -> List[TopicModel]:
+    return db.query(TopicModel).join(SubjectToTopicAssociation).filter(
+        SubjectToTopicAssociation.subject_id == subject_id
+    ).all()
+
+def read_questions_for_subject_from_db(db: Session, subject_id: int) -> List[QuestionModel]:
+    return db.query(QuestionModel).join(QuestionToSubjectAssociation).filter(
+        QuestionToSubjectAssociation.subject_id == subject_id
+    ).all()
 
 ```
 
@@ -2476,40 +2747,121 @@ def delete_subject(db: Session, subject_id: int) -> bool:
 ```py
 # filename: app/crud/crud_subtopics.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.subtopics import SubtopicModel
-from app.schemas.subtopics import SubtopicCreateSchema, SubtopicUpdateSchema
+from app.models.topics import TopicModel
+from app.models.concepts import ConceptModel
+from app.models.questions import QuestionModel
+from app.models.associations import TopicToSubtopicAssociation, SubtopicToConceptAssociation, QuestionToSubtopicAssociation
 
-def create_subtopic(db: Session, subtopic: SubtopicCreateSchema) -> SubtopicModel:
-    db_subtopic = SubtopicModel(**subtopic.model_dump())
+def create_subtopic_in_db(db: Session, subtopic_data: Dict) -> SubtopicModel:
+    db_subtopic = SubtopicModel(name=subtopic_data['name'])
     db.add(db_subtopic)
     db.commit()
     db.refresh(db_subtopic)
     return db_subtopic
 
-def read_subtopic(db: Session, subtopic_id: int) -> SubtopicModel:
+def read_subtopic_from_db(db: Session, subtopic_id: int) -> Optional[SubtopicModel]:
     return db.query(SubtopicModel).filter(SubtopicModel.id == subtopic_id).first()
 
-def read_subtopics(db: Session, skip: int = 0, limit: int = 100) -> list[SubtopicModel]:
+def read_subtopic_by_name_from_db(db: Session, name: str) -> Optional[SubtopicModel]:
+    return db.query(SubtopicModel).filter(SubtopicModel.name == name).first()
+
+def read_subtopics_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[SubtopicModel]:
     return db.query(SubtopicModel).offset(skip).limit(limit).all()
 
-def update_subtopic(db: Session, subtopic_id: int, subtopic: SubtopicUpdateSchema) -> SubtopicModel:
-    db_subtopic = read_subtopic(db, subtopic_id)
+def update_subtopic_in_db(db: Session, subtopic_id: int, subtopic_data: Dict) -> Optional[SubtopicModel]:
+    db_subtopic = read_subtopic_from_db(db, subtopic_id)
     if db_subtopic:
-        update_data = subtopic.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
+        for key, value in subtopic_data.items():
             setattr(db_subtopic, key, value)
         db.commit()
         db.refresh(db_subtopic)
     return db_subtopic
 
-def delete_subtopic(db: Session, subtopic_id: int) -> bool:
-    db_subtopic = read_subtopic(db, subtopic_id)
+def delete_subtopic_from_db(db: Session, subtopic_id: int) -> bool:
+    db_subtopic = read_subtopic_from_db(db, subtopic_id)
     if db_subtopic:
         db.delete(db_subtopic)
         db.commit()
         return True
     return False
+
+def create_topic_to_subtopic_association_in_db(db: Session, topic_id: int, subtopic_id: int) -> bool:
+    association = TopicToSubtopicAssociation(topic_id=topic_id, subtopic_id=subtopic_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_topic_to_subtopic_association_from_db(db: Session, topic_id: int, subtopic_id: int) -> bool:
+    association = db.query(TopicToSubtopicAssociation).filter_by(
+        topic_id=topic_id, subtopic_id=subtopic_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def create_subtopic_to_concept_association_in_db(db: Session, subtopic_id: int, concept_id: int) -> bool:
+    association = SubtopicToConceptAssociation(subtopic_id=subtopic_id, concept_id=concept_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_subtopic_to_concept_association_from_db(db: Session, subtopic_id: int, concept_id: int) -> bool:
+    association = db.query(SubtopicToConceptAssociation).filter_by(
+        subtopic_id=subtopic_id, concept_id=concept_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def create_question_to_subtopic_association_in_db(db: Session, question_id: int, subtopic_id: int) -> bool:
+    association = QuestionToSubtopicAssociation(question_id=question_id, subtopic_id=subtopic_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_question_to_subtopic_association_from_db(db: Session, question_id: int, subtopic_id: int) -> bool:
+    association = db.query(QuestionToSubtopicAssociation).filter_by(
+        question_id=question_id, subtopic_id=subtopic_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_topics_for_subtopic_from_db(db: Session, subtopic_id: int) -> List[TopicModel]:
+    return db.query(TopicModel).join(TopicToSubtopicAssociation).filter(
+        TopicToSubtopicAssociation.subtopic_id == subtopic_id
+    ).all()
+
+def read_concepts_for_subtopic_from_db(db: Session, subtopic_id: int) -> List[ConceptModel]:
+    return db.query(ConceptModel).join(SubtopicToConceptAssociation).filter(
+        SubtopicToConceptAssociation.subtopic_id == subtopic_id
+    ).all()
+
+def read_questions_for_subtopic_from_db(db: Session, subtopic_id: int) -> List[QuestionModel]:
+    return db.query(QuestionModel).join(QuestionToSubtopicAssociation).filter(
+        QuestionToSubtopicAssociation.subtopic_id == subtopic_id
+    ).all()
 
 ```
 
@@ -2517,141 +2869,215 @@ def delete_subtopic(db: Session, subtopic_id: int) -> bool:
 ```py
 # filename: app/crud/crud_topics.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.topics import TopicModel
-from app.schemas.topics import TopicCreateSchema, TopicUpdateSchema
+from app.models.subjects import SubjectModel
+from app.models.subtopics import SubtopicModel
+from app.models.questions import QuestionModel
+from app.models.associations import SubjectToTopicAssociation, TopicToSubtopicAssociation, QuestionToTopicAssociation
 
-def create_topic(db: Session, topic: TopicCreateSchema) -> TopicModel:
-    db_topic = TopicModel(**topic.model_dump())
+def create_topic_in_db(db: Session, topic_data: Dict) -> TopicModel:
+    db_topic = TopicModel(name=topic_data['name'])
     db.add(db_topic)
     db.commit()
     db.refresh(db_topic)
     return db_topic
 
-def read_topic(db: Session, topic_id: int) -> TopicModel:
+def read_topic_from_db(db: Session, topic_id: int) -> Optional[TopicModel]:
     return db.query(TopicModel).filter(TopicModel.id == topic_id).first()
 
-def read_topics(db: Session, skip: int = 0, limit: int = 100) -> list[TopicModel]:
+def read_topic_by_name_from_db(db: Session, name: str) -> Optional[TopicModel]:
+    return db.query(TopicModel).filter(TopicModel.name == name).first()
+
+def read_topics_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[TopicModel]:
     return db.query(TopicModel).offset(skip).limit(limit).all()
 
-def update_topic(db: Session, topic_id: int, topic: TopicUpdateSchema) -> TopicModel:
-    db_topic = read_topic(db, topic_id)
+def update_topic_in_db(db: Session, topic_id: int, topic_data: Dict) -> Optional[TopicModel]:
+    db_topic = read_topic_from_db(db, topic_id)
     if db_topic:
-        update_data = topic.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
+        for key, value in topic_data.items():
             setattr(db_topic, key, value)
         db.commit()
         db.refresh(db_topic)
     return db_topic
 
-def delete_topic(db: Session, topic_id: int) -> bool:
-    db_topic = read_topic(db, topic_id)
+def delete_topic_from_db(db: Session, topic_id: int) -> bool:
+    db_topic = read_topic_from_db(db, topic_id)
     if db_topic:
         db.delete(db_topic)
         db.commit()
         return True
     return False
 
+def create_subject_to_topic_association_in_db(db: Session, subject_id: int, topic_id: int) -> bool:
+    association = SubjectToTopicAssociation(subject_id=subject_id, topic_id=topic_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_subject_to_topic_association_from_db(db: Session, subject_id: int, topic_id: int) -> bool:
+    association = db.query(SubjectToTopicAssociation).filter_by(
+        subject_id=subject_id, topic_id=topic_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def create_topic_to_subtopic_association_in_db(db: Session, topic_id: int, subtopic_id: int) -> bool:
+    association = TopicToSubtopicAssociation(topic_id=topic_id, subtopic_id=subtopic_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_topic_to_subtopic_association_from_db(db: Session, topic_id: int, subtopic_id: int) -> bool:
+    association = db.query(TopicToSubtopicAssociation).filter_by(
+        topic_id=topic_id, subtopic_id=subtopic_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def create_question_to_topic_association_in_db(db: Session, question_id: int, topic_id: int) -> bool:
+    association = QuestionToTopicAssociation(question_id=question_id, topic_id=topic_id)
+    db.add(association)
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
+
+def delete_question_to_topic_association_from_db(db: Session, question_id: int, topic_id: int) -> bool:
+    association = db.query(QuestionToTopicAssociation).filter_by(
+        question_id=question_id, topic_id=topic_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
+
+def read_subjects_for_topic_from_db(db: Session, topic_id: int) -> List[SubjectModel]:
+    return db.query(SubjectModel).join(SubjectToTopicAssociation).filter(
+        SubjectToTopicAssociation.topic_id == topic_id
+    ).all()
+
+def read_subtopics_for_topic_from_db(db: Session, topic_id: int) -> List[SubtopicModel]:
+    return db.query(SubtopicModel).join(TopicToSubtopicAssociation).filter(
+        TopicToSubtopicAssociation.topic_id == topic_id
+    ).all()
+
+def read_questions_for_topic_from_db(db: Session, topic_id: int) -> List[QuestionModel]:
+    return db.query(QuestionModel).join(QuestionToTopicAssociation).filter(
+        QuestionToTopicAssociation.topic_id == topic_id
+    ).all()
+
 ```
 
 ## File: crud_user.py
 ```py
-# filename: app/crud/crud_user.py
+# filename: app/crud/crud_users.py
 
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from app.models.users import UserModel
 from app.models.groups import GroupModel
 from app.models.roles import RoleModel
 from app.models.question_sets import QuestionSetModel
-from app.schemas.user import UserCreateSchema, UserUpdateSchema
+from app.models.associations import UserToGroupAssociation
 from app.core.security import get_password_hash
-from app.services.logging_service import logger
 
-def create_user_crud(db: Session, user: UserCreateSchema) -> UserModel:
-    default_role = db.query(RoleModel).filter(RoleModel.default == True).first()
-    logger.debug("Default role: %s", default_role)
-    user_role = user.role if user.role else default_role.name
-    logger.debug("User role: %s", user_role)
+def create_user_in_db(db: Session, user_data: Dict) -> UserModel:
+    hashed_password = get_password_hash(user_data['password'])
     db_user = UserModel(
-        username=user.username,
-        hashed_password=user.password,  # This is already hashed, don't hash it again
-        email=user.email,
-        role=user_role
+        username=user_data['username'],
+        email=user_data['email'],
+        hashed_password=hashed_password,
+        is_active=user_data.get('is_active', True),
+        is_admin=user_data.get('is_admin', False),
+        role_id=user_data['role_id']
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
-def update_user_crud(db: Session, user_id: int, updated_user: UserUpdateSchema) -> UserModel:
-    user = db.query(UserModel).filter(UserModel.id == user_id).first()
-    if not user:
-        return None
-    update_data = updated_user.model_dump(exclude_unset=True)
-    if "password" in update_data:
-        hashed_password = get_password_hash(update_data["password"])
-        del update_data["password"]
-        update_data["hashed_password"] = hashed_password
-    if "role" in update_data:
-        setattr(user, "role", update_data["role"])
-    for key, value in update_data.items():
-        setattr(user, key, value)
-    if updated_user.group_ids is not None:
-        user.groups = db.query(GroupModel).filter(GroupModel.id.in_(updated_user.group_ids)).all()
-    db.commit()
-    db.refresh(user)
-    return user
+def read_user_from_db(db: Session, user_id: int) -> Optional[UserModel]:
+    return db.query(UserModel).filter(UserModel.id == user_id).first()
 
-def delete_user(db: Session, user_id: int):
-    user = db.query(UserModel).filter(UserModel.id == user_id).first()
-    if not user:
-        return None
-    
-    # Check for public question sets
-    public_sets = db.query(QuestionSetModel).filter(
-        QuestionSetModel.creator_id == user_id,
-        QuestionSetModel.is_public == True
-    ).first()
-    if public_sets:
-        raise ValueError("Cannot delete user with public question sets")
-    
-    # Check for groups with active members
-    active_groups = db.query(GroupModel).filter(
-        GroupModel.creator_id == user_id,
-        GroupModel.users.any()
-    ).first()
-    if active_groups:
-        raise ValueError("Cannot delete user who created groups with active members")
-    
-    db.delete(user)
-    db.commit()
-    return user
+def read_user_by_username_from_db(db: Session, username: str) -> Optional[UserModel]:
+    return db.query(UserModel).filter(UserModel.username == username).first()
 
-```
+def read_user_by_email_from_db(db: Session, email: str) -> Optional[UserModel]:
+    return db.query(UserModel).filter(UserModel.email == email).first()
 
-## File: crud_user_group_associations.py
-```py
-# filename: app/crud/crud_user_group_associations.py
+def read_users_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[UserModel]:
+    return db.query(UserModel).offset(skip).limit(limit).all()
 
-from sqlalchemy.orm import Session
-from app.models.associations import UserToGroupAssociation
-from app.models.users import UserModel
-from app.models.groups import GroupModel
+def update_user_in_db(db: Session, user_id: int, user_data: Dict) -> Optional[UserModel]:
+    db_user = read_user_from_db(db, user_id)
+    if db_user:
+        for key, value in user_data.items():
+            if key == 'password':
+                db_user.hashed_password = get_password_hash(value)
+            else:
+                setattr(db_user, key, value)
+        db.commit()
+        db.refresh(db_user)
+    return db_user
 
-def add_user_to_group(db: Session, user_id: int, group_id: int):
+def delete_user_from_db(db: Session, user_id: int) -> bool:
+    db_user = read_user_from_db(db, user_id)
+    if db_user:
+        db.delete(db_user)
+        db.commit()
+        return True
+    return False
+
+def create_user_to_group_association_in_db(db: Session, user_id: int, group_id: int) -> bool:
     association = UserToGroupAssociation(user_id=user_id, group_id=group_id)
     db.add(association)
-    db.commit()
+    try:
+        db.commit()
+        return True
+    except:
+        db.rollback()
+        return False
 
-def remove_user_from_group(db: Session, user_id: int, group_id: int):
-    db.query(UserToGroupAssociation).filter_by(user_id=user_id, group_id=group_id).delete()
-    db.commit()
+def delete_user_to_group_association_from_db(db: Session, user_id: int, group_id: int) -> bool:
+    association = db.query(UserToGroupAssociation).filter_by(
+        user_id=user_id, group_id=group_id
+    ).first()
+    if association:
+        db.delete(association)
+        db.commit()
+        return True
+    return False
 
-def get_user_groups(db: Session, user_id: int):
-    return db.query(GroupModel).join(UserToGroupAssociation).filter(UserToGroupAssociation.user_id == user_id).all()
+def read_groups_for_user_from_db(db: Session, user_id: int) -> List[GroupModel]:
+    return db.query(GroupModel).join(UserToGroupAssociation).filter(
+        UserToGroupAssociation.user_id == user_id
+    ).all()
 
-def get_group_users(db: Session, group_id: int):
-    return db.query(UserModel).join(UserToGroupAssociation).filter(UserToGroupAssociation.group_id == group_id).all()
+def read_role_for_user_from_db(db: Session, user_id: int) -> Optional[RoleModel]:
+    user = read_user_from_db(db, user_id)
+    return user.role if user else None
+
+def read_created_question_sets_for_user_from_db(db: Session, user_id: int) -> List[QuestionSetModel]:
+    return db.query(QuestionSetModel).filter(QuestionSetModel.creator_id == user_id).all()
 
 ```
 
@@ -2659,28 +3085,29 @@ def get_group_users(db: Session, group_id: int):
 ```py
 # filename: app/crud/crud_user_responses.py
 
-from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
 from app.models.user_responses import UserResponseModel
-from app.schemas.user_responses import UserResponseCreateSchema, UserResponseUpdateSchema
 
-
-def create_user_response_crud(
-    db: Session,
-    user_response: UserResponseCreateSchema
-) -> UserResponseModel:
-    db_user_response = UserResponseModel(**user_response.model_dump())
+def create_user_response_in_db(db: Session, user_response_data: Dict) -> UserResponseModel:
+    db_user_response = UserResponseModel(
+        user_id=user_response_data['user_id'],
+        question_id=user_response_data['question_id'],
+        answer_choice_id=user_response_data['answer_choice_id'],
+        is_correct=user_response_data['is_correct'],
+        response_time=user_response_data.get('response_time'),
+        timestamp=user_response_data.get('timestamp', datetime.now(timezone.utc))
+    )
     db.add(db_user_response)
     db.commit()
     db.refresh(db_user_response)
     return db_user_response
 
-def get_user_response_crud(db: Session, user_response_id: int) -> Optional[UserResponseModel]:
+def read_user_response_from_db(db: Session, user_response_id: int) -> Optional[UserResponseModel]:
     return db.query(UserResponseModel).filter(UserResponseModel.id == user_response_id).first()
 
-def get_user_responses_crud(
+def read_user_responses_from_db(
     db: Session,
     user_id: Optional[int] = None,
     question_id: Optional[int] = None,
@@ -2690,7 +3117,6 @@ def get_user_responses_crud(
     limit: int = 100
 ) -> List[UserResponseModel]:
     query = db.query(UserResponseModel)
-
     if user_id:
         query = query.filter(UserResponseModel.user_id == user_id)
     if question_id:
@@ -2699,33 +3125,30 @@ def get_user_responses_crud(
         query = query.filter(UserResponseModel.timestamp >= start_time)
     if end_time:
         query = query.filter(UserResponseModel.timestamp <= end_time)
+    return query.offset(skip).limit(limit).all()
 
-    user_responses = query.offset(skip).limit(limit).all()
-    return user_responses
-
-def update_user_response_crud(
-    db: Session,
-    user_response_id: int,
-    user_response: UserResponseUpdateSchema
-) -> UserResponseModel:
-    db_user_response = db.query(UserResponseModel).filter(
-        UserResponseModel.id == user_response_id).first()
-    if not db_user_response:
-        raise HTTPException(status_code=404, detail="User response not found")
-    update_data = user_response.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_user_response, key, value)
-    db.commit()
-    db.refresh(db_user_response)
+def update_user_response_in_db(db: Session, user_response_id: int, user_response_data: Dict) -> Optional[UserResponseModel]:
+    db_user_response = read_user_response_from_db(db, user_response_id)
+    if db_user_response:
+        for key, value in user_response_data.items():
+            setattr(db_user_response, key, value)
+        db.commit()
+        db.refresh(db_user_response)
     return db_user_response
 
-def delete_user_response_crud(db: Session, user_response_id: int) -> None:
-    db_user_response = db.query(UserResponseModel).filter(
-        UserResponseModel.id == user_response_id).first()
-    if not db_user_response:
-        raise HTTPException(status_code=404, detail="User response not found")
-    db.delete(db_user_response)
-    db.commit()
+def delete_user_response_from_db(db: Session, user_response_id: int) -> bool:
+    db_user_response = read_user_response_from_db(db, user_response_id)
+    if db_user_response:
+        db.delete(db_user_response)
+        db.commit()
+        return True
+    return False
+
+def read_user_responses_for_user_from_db(db: Session, user_id: int) -> List[UserResponseModel]:
+    return db.query(UserResponseModel).filter(UserResponseModel.user_id == user_id).all()
+
+def read_user_responses_for_question_from_db(db: Session, question_id: int) -> List[UserResponseModel]:
+    return db.query(UserResponseModel).filter(UserResponseModel.question_id == question_id).all()
 
 ```
 
@@ -2742,7 +3165,6 @@ def delete_user_response_crud(db: Session, user_response_id: int) -> None:
 
 from sqlalchemy.orm import declarative_base
 
-
 Base = declarative_base()
 
 ```
@@ -2753,8 +3175,9 @@ Base = declarative_base()
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.db.base import Base
+
 from app.core.config import settings_core
+from app.db.base import Base
 from app.models.permissions import PermissionModel
 from app.models.roles import RoleModel
 from app.services.logging_service import logger
@@ -2814,21 +3237,22 @@ def get_db():
 ```py
 # filename: /code/quiz-app/quiz-app-backend/app/api/endpoints/answer_choices.py
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.crud.crud_answer_choices import (create_answer_choice_in_db,
+                                          delete_answer_choice_from_db,
+                                          read_answer_choice_from_db,
+                                          read_answer_choices_from_db,
+                                          update_answer_choice_in_db)
 from app.db.session import get_db
-from app.schemas.answer_choices import AnswerChoiceSchema, AnswerChoiceCreateSchema, AnswerChoiceUpdateSchema
-from app.crud.crud_answer_choices import (
-    create_answer_choice_crud,
-    read_answer_choice_crud,
-    read_answer_choices_crud,
-    update_answer_choice_crud,
-    delete_answer_choice_crud
-)
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.answer_choices import (AnswerChoiceCreateSchema,
+                                        AnswerChoiceSchema,
+                                        AnswerChoiceUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -2838,7 +3262,7 @@ def create_answer_choice(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_answer_choice_crud(db=db, answer_choice=answer_choice)
+    return create_answer_choice_in_db(db=db, answer_choice=answer_choice)
 
 @router.get("/answer-choices/", response_model=List[AnswerChoiceSchema])
 def get_answer_choices(
@@ -2847,7 +3271,7 @@ def get_answer_choices(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return read_answer_choices_crud(db, skip=skip, limit=limit)
+    return read_answer_choices_from_db(db, skip=skip, limit=limit)
 
 @router.get("/answer-choices/{answer_choice_id}", response_model=AnswerChoiceSchema)
 def get_answer_choice(
@@ -2855,7 +3279,7 @@ def get_answer_choice(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_answer_choice = read_answer_choice_crud(db, answer_choice_id=answer_choice_id)
+    db_answer_choice = read_answer_choice_from_db(db, answer_choice_id=answer_choice_id)
     if db_answer_choice is None:
         raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
     return db_answer_choice
@@ -2867,7 +3291,7 @@ def update_answer_choice(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_answer_choice = update_answer_choice_crud(db, answer_choice_id, answer_choice)
+    db_answer_choice = update_answer_choice_in_db(db, answer_choice_id, answer_choice)
     if db_answer_choice is None:
         raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
     return db_answer_choice
@@ -2878,7 +3302,7 @@ def delete_answer_choice(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_answer_choice_crud(db, answer_choice_id)
+    success = delete_answer_choice_from_db(db, answer_choice_id)
     if not success:
         raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
     return None
@@ -2890,11 +3314,13 @@ def delete_answer_choice(
 # filename: app/api/endpoints/authentication.py
 
 from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.core.jwt import create_access_token
+
 from app.core.config import settings_core
+from app.core.jwt import create_access_token
 from app.db.session import get_db
 from app.models.authentication import RevokedTokenModel
 from app.schemas.authentication import TokenSchema
@@ -2967,15 +3393,19 @@ async def logout_endpoint(token: str = Depends(oauth2_scheme), db: Session = Dep
 ```py
 # filename: app/api/endpoints/concepts.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.crud.crud_concepts import (create_concept_in_db, delete_concept_from_db,
+                                    read_concept_from_db, read_concepts_from_db,
+                                    update_concept_in_db)
 from app.db.session import get_db
-from app.schemas.concepts import ConceptSchema, ConceptCreateSchema, ConceptUpdateSchema
-from app.crud.crud_concepts import create_concept, read_concept, read_concepts, update_concept, delete_concept
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.concepts import (ConceptCreateSchema, ConceptSchema,
+                                  ConceptUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -2985,7 +3415,7 @@ def post_concept(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_concept(db=db, concept=concept)
+    return create_concept_in_db(db=db, concept=concept)
 
 @router.get("/concepts/", response_model=List[ConceptSchema])
 def get_concepts(
@@ -2994,7 +3424,7 @@ def get_concepts(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    concepts = read_concepts(db, skip=skip, limit=limit)
+    concepts = read_concepts_from_db(db, skip=skip, limit=limit)
     return concepts
 
 @router.get("/concepts/{concept_id}", response_model=ConceptSchema)
@@ -3003,7 +3433,7 @@ def get_concept(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_concept = read_concept(db, concept_id=concept_id)
+    db_concept = read_concept_from_db(db, concept_id=concept_id)
     if db_concept is None:
         raise HTTPException(status_code=404, detail="Concept not found")
     return db_concept
@@ -3015,7 +3445,7 @@ def put_concept(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_concept = update_concept(db, concept_id, concept)
+    db_concept = update_concept_in_db(db, concept_id, concept)
     if db_concept is None:
         raise HTTPException(status_code=404, detail="Concept not found")
     return db_concept
@@ -3026,7 +3456,7 @@ def delete_concept_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_concept(db, concept_id)
+    success = delete_concept_from_db(db, concept_id)
     if not success:
         raise HTTPException(status_code=404, detail="Concept not found")
     return success
@@ -3037,15 +3467,19 @@ def delete_concept_endpoint(
 ```py
 # filename: app/api/endpoints/disciplines.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.crud.crud_disciplines import (create_discipline_in_db, delete_discipline_from_db,
+                                       read_discipline_from_db, read_disciplines_from_db,
+                                       update_discipline_in_db)
 from app.db.session import get_db
-from app.schemas.disciplines import DisciplineSchema, DisciplineCreateSchema, DisciplineUpdateSchema
-from app.crud.crud_disciplines import create_discipline, read_discipline, read_disciplines, update_discipline, delete_discipline
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.disciplines import (DisciplineCreateSchema, DisciplineSchema,
+                                     DisciplineUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3055,7 +3489,7 @@ def post_discipline(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_discipline(db=db, discipline=discipline)
+    return create_discipline_in_db(db=db, discipline=discipline)
 
 @router.get("/disciplines/", response_model=List[DisciplineSchema])
 def get_disciplines(
@@ -3064,7 +3498,7 @@ def get_disciplines(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    disciplines = read_disciplines(db, skip=skip, limit=limit)
+    disciplines = read_disciplines_from_db(db, skip=skip, limit=limit)
     return disciplines
 
 @router.get("/disciplines/{discipline_id}", response_model=DisciplineSchema)
@@ -3073,7 +3507,7 @@ def get_discipline(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_discipline = read_discipline(db, discipline_id=discipline_id)
+    db_discipline = read_discipline_from_db(db, discipline_id=discipline_id)
     if db_discipline is None:
         raise HTTPException(status_code=404, detail="Discipline not found")
     return db_discipline
@@ -3085,7 +3519,7 @@ def put_discipline(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_discipline = update_discipline(db, discipline_id, discipline)
+    db_discipline = update_discipline_in_db(db, discipline_id, discipline)
     if db_discipline is None:
         raise HTTPException(status_code=404, detail="Discipline not found")
     return db_discipline
@@ -3096,7 +3530,7 @@ def delete_discipline_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_discipline(db, discipline_id)
+    success = delete_discipline_from_db(db, discipline_id)
     if not success:
         raise HTTPException(status_code=404, detail="Discipline not found")
     return success
@@ -3107,15 +3541,18 @@ def delete_discipline_endpoint(
 ```py
 # filename: app/api/endpoints/domains.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.crud.crud_domains import (create_domain_in_db, delete_domain_from_db, read_domain_from_db,
+                                   read_domains_from_db, update_domain_in_db)
 from app.db.session import get_db
-from app.schemas.domains import DomainSchema, DomainCreateSchema, DomainUpdateSchema
-from app.crud.crud_domains import create_domain, read_domain, read_domains, update_domain, delete_domain
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.domains import (DomainCreateSchema, DomainSchema,
+                                 DomainUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3125,7 +3562,7 @@ def post_domain(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_domain(db=db, domain=domain)
+    return create_domain_in_db(db=db, domain=domain)
 
 @router.get("/domains/", response_model=List[DomainSchema])
 def get_domains(
@@ -3134,7 +3571,7 @@ def get_domains(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    domains = read_domains(db, skip=skip, limit=limit)
+    domains = read_domains_from_db(db, skip=skip, limit=limit)
     return domains
 
 @router.get("/domains/{domain_id}", response_model=DomainSchema)
@@ -3143,7 +3580,7 @@ def get_domain(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_domain = read_domain(db, domain_id=domain_id)
+    db_domain = read_domain_from_db(db, domain_id=domain_id)
     if db_domain is None:
         raise HTTPException(status_code=404, detail="Domain not found")
     return db_domain
@@ -3155,7 +3592,7 @@ def put_domain(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_domain = update_domain(db, domain_id, domain)
+    db_domain = update_domain_in_db(db, domain_id, domain)
     if db_domain is None:
         raise HTTPException(status_code=404, detail="Domain not found")
     return db_domain
@@ -3166,7 +3603,7 @@ def delete_domain_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_domain(db, domain_id)
+    success = delete_domain_from_db(db, domain_id)
     if not success:
         raise HTTPException(status_code=404, detail="Domain not found")
     return success
@@ -3204,15 +3641,17 @@ filter_questions_endpoint(
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query, Depends, Request
-from sqlalchemy.orm import Session
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import ValidationError
+from sqlalchemy.orm import Session
+
+from app.crud.crud_filters import read_filtered_questions_from_db
+from app.db.session import get_db
+from app.models.users import UserModel
 from app.schemas.filters import FilterParamsSchema
 from app.schemas.questions import QuestionSchema
-from app.crud.crud_filters import filter_questions_crud
-from app.db.session import get_db
 from app.services.user_service import get_current_user
-from app.models.users import UserModel
 
 router = APIRouter()
 
@@ -3295,7 +3734,7 @@ async def filter_questions_endpoint(
             difficulty=difficulty,
             question_tags=question_tags
         )
-        questions = filter_questions_crud(
+        questions = read_filtered_questions_from_db(
             db=db,
             filters=filters.model_dump(),
             skip=skip,
@@ -3312,15 +3751,17 @@ async def filter_questions_endpoint(
 # filename: app/api/endpoints/groups.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from pydantic import ValidationError
-from app.db.session import get_db
-from app.services.user_service import get_current_user
-from app.services.logging_service import logger
-from app.crud.crud_groups import create_group_crud, read_group_crud, update_group_crud, delete_group_crud
-from app.schemas.groups import GroupCreateSchema, GroupUpdateSchema, GroupSchema
-from app.models.users import UserModel
+from sqlalchemy.orm import Session
 
+from app.crud.crud_groups import (create_group_in_db, delete_group_from_db,
+                                  read_group_from_db, update_group_in_db)
+from app.db.session import get_db
+from app.models.users import UserModel
+from app.schemas.groups import (GroupCreateSchema, GroupSchema,
+                                GroupUpdateSchema)
+from app.services.logging_service import logger
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3332,12 +3773,12 @@ def create_group_endpoint(
 ):
     logger.debug("Creating group with data: %s", group_data)
     try:
-        logger.debug("Before calling create_group_crud")
+        logger.debug("Before calling create_group_in_db")
         group_data["db"] = db
         group_data["creator_id"] = current_user.id
         group = GroupCreateSchema(**group_data)
-        created_group = create_group_crud(db=db, group=group, creator_id=current_user.id)
-        logger.debug("After calling create_group_crud")
+        created_group = create_group_in_db(db=db, group=group, creator_id=current_user.id)
+        logger.debug("After calling create_group_in_db")
         logger.debug("Group created successfully: %s", created_group)
         logger.debug("Before returning the response")
         return created_group
@@ -3357,7 +3798,7 @@ def get_group_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_group = read_group_crud(db, group_id=group_id)
+    db_group = read_group_from_db(db, group_id=group_id)
     if db_group is None:
         raise HTTPException(status_code=404, detail="Group not found")
     return db_group
@@ -3369,7 +3810,7 @@ def update_group_endpoint(
     db: Session = Depends(get_db), 
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_group = read_group_crud(db, group_id=group_id)
+    db_group = read_group_from_db(db, group_id=group_id)
     logger.debug("db_group: %s", db_group)
     if db_group is None:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -3379,7 +3820,7 @@ def update_group_endpoint(
         logger.debug("Updating group with data: %s", group_data)
         group = GroupUpdateSchema(**group_data)
         logger.debug("group: %s", group)
-        updated_group = update_group_crud(db=db, group_id=group_id, group=group)
+        updated_group = update_group_in_db(db=db, group_id=group_id, group=group)
         logger.debug("updated_group: %s", updated_group)
         return updated_group
     except ValidationError as e:
@@ -3398,12 +3839,12 @@ def delete_group_endpoint(
     db: Session = Depends(get_db), 
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_group = read_group_crud(db, group_id=group_id)
+    db_group = read_group_from_db(db, group_id=group_id)
     if db_group is None:
         raise HTTPException(status_code=404, detail="Group not found")
     if db_group.creator_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only the group creator can delete the group")
-    delete_group_crud(db=db, group_id=group_id)
+    delete_group_from_db(db=db, group_id=group_id)
     return {"message": "Group deleted successfully"}
 
 ```
@@ -3413,14 +3854,17 @@ def delete_group_endpoint(
 # filename: app/api/endpoints/leaderboard.py
 
 from typing import List
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+
 from app.db.session import get_db
+from app.models.time_period import TimePeriodModel
 from app.models.users import UserModel
 from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
-from app.services.scoring_service import calculate_leaderboard_scores, time_period_to_schema
+from app.services.scoring_service import (calculate_leaderboard_scores,
+                                          time_period_to_schema)
 from app.services.user_service import get_current_user
-from app.models.time_period import TimePeriodModel
 
 router = APIRouter()
 
@@ -3458,33 +3902,26 @@ def get_leaderboard(
 
 import json
 from typing import List
-from fastapi import (
-    APIRouter,
-    Depends,
-    Form,
-    HTTPException,
-    UploadFile,
-    File,
-    Response,
-    status
-)
-from sqlalchemy.orm import Session
+
+from fastapi import (APIRouter, Depends, File, Form, HTTPException, Response,
+                     UploadFile, status)
 from pydantic import ValidationError
-from app.crud.crud_questions import create_question
-from app.crud.crud_question_sets import (
-    read_question_sets_crud,
-    read_question_set_crud,
-    update_question_set_crud,
-    delete_question_set_crud,
-    create_question_set_crud
-)
+from sqlalchemy.orm import Session
+
+from app.crud.crud_question_sets import (create_question_set_in_db,
+                                         delete_question_set_from_db,
+                                         read_question_set_from_db,
+                                         read_question_sets_from_db,
+                                         update_question_set_in_db)
+from app.crud.crud_questions import create_question_in_db
 from app.db.session import get_db
 from app.models.users import UserModel
-from app.schemas.question_sets import QuestionSetSchema, QuestionSetCreateSchema, QuestionSetUpdateSchema
+from app.schemas.question_sets import (QuestionSetCreateSchema,
+                                       QuestionSetSchema,
+                                       QuestionSetUpdateSchema)
 from app.schemas.questions import QuestionCreateSchema
-from app.services.user_service import get_current_user
 from app.services.logging_service import logger, sqlalchemy_obj_to_dict
-
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3512,13 +3949,13 @@ async def upload_question_set_endpoint(
 
         # Create question set with the provided name
         question_set = QuestionSetCreateSchema(name=question_set_name, db=db)
-        question_set_created = create_question_set_crud(db, question_set)
+        question_set_created = create_question_set_in_db(db, question_set)
 
         # Create questions and associate with the newly created question set
         for question in question_data:
             question['question_set_id'] = question_set_created.id
             question['db'] = db
-            create_question(db, QuestionCreateSchema(**question))
+            create_question_in_db(db, QuestionCreateSchema(**question))
 
         return {"message": "Question set uploaded successfully"}
 
@@ -3542,7 +3979,7 @@ def read_questions_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    questions = read_question_sets_crud(db, skip=skip, limit=limit)
+    questions = read_question_sets_from_db(db, skip=skip, limit=limit)
     return questions
 
 @router.post("/question-sets/", response_model=QuestionSetSchema, status_code=201)
@@ -3565,7 +4002,7 @@ def create_question_set_endpoint(
         question_set = QuestionSetCreateSchema(**question_set_data)
         logger.debug("Re-instantiated question set: %s", question_set)
 
-        created_question_set = create_question_set_crud(db=db, question_set=question_set)
+        created_question_set = create_question_set_in_db(db=db, question_set=question_set)
         logger.debug("Question set created successfully: %s", created_question_set)
         return created_question_set
     except ValueError as e:
@@ -3581,7 +4018,7 @@ def get_question_set_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    question_set = read_question_set_crud(db, question_set_id=question_set_id)
+    question_set = read_question_set_from_db(db, question_set_id=question_set_id)
     if not question_set:
         raise HTTPException(status_code=404, detail=f"Question set with ID {question_set_id} not found")
     return question_set
@@ -3593,7 +4030,7 @@ def read_question_sets_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    question_sets = read_question_sets_crud(db, skip=skip, limit=limit)
+    question_sets = read_question_sets_from_db(db, skip=skip, limit=limit)
     return question_sets
 
 @router.put("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
@@ -3616,7 +4053,7 @@ def update_question_set_endpoint(
         question_set = QuestionSetUpdateSchema(**question_set_data)
         logger.debug("Re-instantiated question set for update: %s", question_set)
 
-        updated_question_set = update_question_set_crud(
+        updated_question_set = update_question_set_in_db(
             db,
             question_set_id=question_set_id,
             question_set=question_set
@@ -3651,7 +4088,7 @@ def delete_question_set_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    deleted = delete_question_set_crud(db, question_set_id=question_set_id)
+    deleted = delete_question_set_from_db(db, question_set_id=question_set_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Question set not found")
     return Response(status_code=204)
@@ -3662,16 +4099,22 @@ def delete_question_set_endpoint(
 ```py
 # filename: /code/quiz-app/quiz-app-backend/app/api/endpoints/questions.py
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.crud.crud_questions import (create_question_in_db, create_question_with_answers_in_db,
+                                     delete_question_from_db, read_question_from_db,
+                                     read_questions_from_db, update_question_in_db)
 from app.db.session import get_db
-from app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, QuestionWithAnswersCreateSchema, QuestionSchema, DetailedQuestionSchema
-from app.crud.crud_questions import create_question, read_question, read_questions, update_question, delete_question, create_question_with_answers
-from app.services.user_service import get_current_user
-from app.services.logging_service import logger
 from app.models.users import UserModel
+from app.schemas.questions import (DetailedQuestionSchema,
+                                   QuestionCreateSchema, QuestionSchema,
+                                   QuestionUpdateSchema,
+                                   QuestionWithAnswersCreateSchema)
+from app.services.logging_service import logger
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3681,7 +4124,7 @@ def create_question_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    created_question = create_question(db=db, question=question)
+    created_question = create_question_in_db(db=db, question=question)
     return QuestionSchema.model_validate(created_question)
 
 @router.post("/questions/with-answers/", response_model=DetailedQuestionSchema, status_code=status.HTTP_201_CREATED)
@@ -3690,7 +4133,7 @@ def create_question_with_answers_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_question_with_answers(db=db, question=question)
+    return create_question_with_answers_in_db(db=db, question=question)
 
 @router.get("/questions/", response_model=List[DetailedQuestionSchema])
 def get_questions(
@@ -3699,7 +4142,7 @@ def get_questions(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    questions = read_questions(db, skip=skip, limit=limit)
+    questions = read_questions_from_db(db, skip=skip, limit=limit)
     return questions
 
 @router.get("/questions/{question_id}", response_model=DetailedQuestionSchema)
@@ -3709,7 +4152,7 @@ def get_question(
     current_user: UserModel = Depends(get_current_user)
 ):
     logger.debug("Reading question with ID: %s", question_id)
-    db_question = read_question(db, question_id=question_id)
+    db_question = read_question_from_db(db, question_id=question_id)
     if db_question is None:
         raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
     return db_question
@@ -3721,7 +4164,7 @@ def update_question_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_question = update_question(db, question_id, question)
+    db_question = update_question_in_db(db, question_id, question)
     if db_question is None:
         raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
     return db_question
@@ -3732,7 +4175,7 @@ def delete_question_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_question(db, question_id)
+    success = delete_question_from_db(db, question_id)
     if not success:
         raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
     return None
@@ -3751,41 +4194,34 @@ the provided data and creating a new user in the database.
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.core.security import get_password_hash
-from app.services.user_service import get_user_by_username, get_user_by_email
-from app.crud.crud_user import create_user_crud
+from app.crud.crud_user import create_user_in_db, read_user_by_email_from_db, read_user_by_username_from_db
 from app.db.session import get_db
-from app.schemas.user import UserCreateSchema
 from app.models.roles import RoleModel
-from app.services.logging_service import logger
+from app.schemas.user import UserCreateSchema
 
 router = APIRouter()
 
 @router.post("/register", status_code=201)
 def register_user(user: UserCreateSchema, db: Session = Depends(get_db)):
-    logger.info(f"Registering user: {user.username}")
-    db_user = get_user_by_username(db, username=user.username)
+    db_user = read_user_by_username_from_db(db, username=user.username)
     if db_user:
-        logger.error(f"Username already registered: {user.username}")
         raise HTTPException(status_code=422, detail="Username already registered")
-    db_email = get_user_by_email(db, email=user.email)
+    db_email = read_user_by_email_from_db(db, email=user.email)
     if db_email:
-        logger.error(f"Email already registered: {user.email}")
         raise HTTPException(status_code=422, detail="Email already registered")
     hashed_password = get_password_hash(user.password)
-    logger.debug(f"Hashed password for user {user.username}: {hashed_password}")
     if not user.role:
         default_role = db.query(RoleModel).filter(RoleModel.default == True).first()
         user.role = default_role.name
-        logger.debug(f"Default role assigned: {user.role}")
     user_create = UserCreateSchema(
         username=user.username,
         password=hashed_password,  # Pass the hashed password here
         email=user.email,
         role=user.role
     )
-    created_user = create_user_crud(db=db, user=user_create)
-    logger.debug(f"User registered: {user.username}")
+    created_user = create_user_in_db(db=db, user=user_create)
     return created_user
 
 ```
@@ -3794,15 +4230,19 @@ def register_user(user: UserCreateSchema, db: Session = Depends(get_db)):
 ```py
 # filename: app/api/endpoints/subjects.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.crud.crud_subjects import (create_subject_in_db, delete_subject_from_db,
+                                    read_subject_from_db, read_subjects_from_db,
+                                    update_subject_in_db)
 from app.db.session import get_db
-from app.schemas.subjects import SubjectSchema, SubjectCreateSchema, SubjectUpdateSchema
-from app.crud.crud_subjects import create_subject, read_subject, read_subjects, update_subject, delete_subject
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.subjects import (SubjectCreateSchema, SubjectSchema,
+                                  SubjectUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3812,7 +4252,7 @@ def post_subject(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_subject(db=db, subject=subject)
+    return create_subject_in_db(db=db, subject=subject)
 
 @router.get("/subjects/", response_model=List[SubjectSchema])
 def get_subjects(
@@ -3821,7 +4261,7 @@ def get_subjects(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    subjects = read_subjects(db, skip=skip, limit=limit)
+    subjects = read_subjects_from_db(db, skip=skip, limit=limit)
     return subjects
 
 @router.get("/subjects/{subject_id}", response_model=SubjectSchema)
@@ -3830,7 +4270,7 @@ def get_subject(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_subject = read_subject(db, subject_id=subject_id)
+    db_subject = read_subject_from_db(db, subject_id=subject_id)
     if db_subject is None:
         raise HTTPException(status_code=404, detail="Subject not found")
     return db_subject
@@ -3842,7 +4282,7 @@ def put_subject(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_subject = update_subject(db, subject_id, subject)
+    db_subject = update_subject_in_db(db, subject_id, subject)
     if db_subject is None:
         raise HTTPException(status_code=404, detail="Subject not found")
     return db_subject
@@ -3853,7 +4293,7 @@ def delete_subject_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_subject(db, subject_id)
+    success = delete_subject_from_db(db, subject_id)
     if not success:
         raise HTTPException(status_code=404, detail="Subject not found")
     return success
@@ -3864,15 +4304,19 @@ def delete_subject_endpoint(
 ```py
 # filename: app/api/endpoints/subtopics.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.crud.crud_subtopics import (create_subtopic_in_db, delete_subtopic_from_db,
+                                     read_subtopic_from_db, read_subtopics_from_db,
+                                     update_subtopic_in_db)
 from app.db.session import get_db
-from app.schemas.subtopics import SubtopicSchema, SubtopicCreateSchema, SubtopicUpdateSchema
-from app.crud.crud_subtopics import create_subtopic, read_subtopic, read_subtopics, update_subtopic, delete_subtopic
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.subtopics import (SubtopicCreateSchema, SubtopicSchema,
+                                   SubtopicUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3882,7 +4326,7 @@ def post_subtopic(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_subtopic(db=db, subtopic=subtopic)
+    return create_subtopic_in_db(db=db, subtopic=subtopic)
 
 @router.get("/subtopics/", response_model=List[SubtopicSchema])
 def get_subtopics(
@@ -3891,7 +4335,7 @@ def get_subtopics(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    subtopics = read_subtopics(db, skip=skip, limit=limit)
+    subtopics = read_subtopics_from_db(db, skip=skip, limit=limit)
     return subtopics
 
 @router.get("/subtopics/{subtopic_id}", response_model=SubtopicSchema)
@@ -3900,7 +4344,7 @@ def get_subtopic(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_subtopic = read_subtopic(db, subtopic_id=subtopic_id)
+    db_subtopic = read_subtopic_from_db(db, subtopic_id=subtopic_id)
     if db_subtopic is None:
         raise HTTPException(status_code=404, detail="Subtopic not found")
     return db_subtopic
@@ -3912,7 +4356,7 @@ def put_subtopic(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_subtopic = update_subtopic(db, subtopic_id, subtopic)
+    db_subtopic = update_subtopic_in_db(db, subtopic_id, subtopic)
     if db_subtopic is None:
         raise HTTPException(status_code=404, detail="Subtopic not found")
     return db_subtopic
@@ -3923,7 +4367,7 @@ def delete_subtopic_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_subtopic(db, subtopic_id)
+    success = delete_subtopic_from_db(db, subtopic_id)
     if not success:
         raise HTTPException(status_code=404, detail="Subtopic not found")
     return success
@@ -3934,15 +4378,18 @@ def delete_subtopic_endpoint(
 ```py
 # filename: app/api/endpoints/topics.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.crud.crud_topics import (create_topic_in_db, delete_topic_from_db, read_topic_from_db,
+                                  read_topics_from_db, update_topic_in_db)
 from app.db.session import get_db
-from app.schemas.topics import TopicSchema, TopicCreateSchema, TopicUpdateSchema
-from app.crud.crud_topics import create_topic, read_topic, read_topics, update_topic, delete_topic
-from app.services.user_service import get_current_user
 from app.models.users import UserModel
+from app.schemas.topics import (TopicCreateSchema, TopicSchema,
+                                TopicUpdateSchema)
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3952,7 +4399,7 @@ def post_topic(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    return create_topic(db=db, topic=topic)
+    return create_topic_in_db(db=db, topic=topic)
 
 @router.get("/topics/", response_model=List[TopicSchema])
 def get_topics(
@@ -3961,7 +4408,7 @@ def get_topics(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    topics = read_topics(db, skip=skip, limit=limit)
+    topics = read_topics_from_db(db, skip=skip, limit=limit)
     return topics
 
 @router.get("/topics/{topic_id}", response_model=TopicSchema)
@@ -3970,7 +4417,7 @@ def get_topic(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_topic = read_topic(db, topic_id=topic_id)
+    db_topic = read_topic_from_db(db, topic_id=topic_id)
     if db_topic is None:
         raise HTTPException(status_code=404, detail="Topic not found")
     return db_topic
@@ -3982,7 +4429,7 @@ def put_topic(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    db_topic = update_topic(db, topic_id, topic)
+    db_topic = update_topic_in_db(db, topic_id, topic)
     if db_topic is None:
         raise HTTPException(status_code=404, detail="Topic not found")
     return db_topic
@@ -3993,7 +4440,7 @@ def delete_topic_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    success = delete_topic(db, topic_id)
+    success = delete_topic_from_db(db, topic_id)
     if not success:
         raise HTTPException(status_code=404, detail="Topic not found")
     return success
@@ -4004,23 +4451,24 @@ def delete_topic_endpoint(
 ```py
 # filename: app/api/endpoints/user_responses.py
 
+from datetime import datetime, timezone, timezone
 from typing import List, Optional
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, status, HTTPException, Response
-from sqlalchemy.orm import Session
-from app.crud.crud_user_responses import (
-    create_user_response_crud,
-    get_user_response_crud,
-    get_user_responses_crud,
-    update_user_response_crud,
-    delete_user_response_crud
-)
-from app.db.session import get_db
-from app.schemas.user_responses import UserResponseSchema, UserResponseCreateSchema, UserResponseUpdateSchema
-from app.models.users import UserModel
-from app.services.user_service import get_current_user
-from app.services.logging_service import logger
 
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy.orm import Session
+
+from app.crud.crud_user_responses import (create_user_response_in_db,
+                                          delete_user_response_from_db,
+                                          read_user_response_from_db,
+                                          read_user_responses_from_db,
+                                          update_user_response_in_db)
+from app.db.session import get_db
+from app.models.users import UserModel
+from app.schemas.user_responses import (UserResponseCreateSchema,
+                                        UserResponseSchema,
+                                        UserResponseUpdateSchema)
+from app.services.logging_service import logger
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -4041,7 +4489,7 @@ def create_user_response_endpoint(
         user_response = UserResponseCreateSchema(**user_response_data)
         logger.debug("Re-instantiated user response: %s", user_response)
 
-        created_response = create_user_response_crud(db=db, user_response=user_response)
+        created_response = create_user_response_in_db(db=db, user_response=user_response)
         logger.debug("User response created successfully: %s", created_response)
         return created_response
     except ValueError as e:
@@ -4057,7 +4505,7 @@ def get_user_response_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    user_response = get_user_response_crud(db, user_response_id)
+    user_response = read_user_response_from_db(db, user_response_id)
     if not user_response:
         raise HTTPException(status_code=404, detail="User response not found")
     return user_response
@@ -4073,7 +4521,7 @@ def get_user_responses_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    user_responses = get_user_responses_crud(
+    user_responses = read_user_responses_from_db(
         db,
         user_id=user_id,
         question_id=question_id,
@@ -4092,7 +4540,7 @@ def update_user_response_endpoint(
     current_user: UserModel = Depends(get_current_user)
 ):
     user_response = UserResponseUpdateSchema(**user_response_data)
-    updated_user_response = update_user_response_crud(db, user_response_id, user_response)
+    updated_user_response = update_user_response_in_db(db, user_response_id, user_response)
     return updated_user_response
 
 @router.delete("/user-responses/{user_response_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -4101,7 +4549,7 @@ def delete_user_response_endpoint(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    delete_user_response_crud(db, user_response_id)
+    delete_user_response_from_db(db, user_response_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 ```
@@ -4111,14 +4559,16 @@ def delete_user_response_endpoint(
 # filename: app/api/endpoints/users.py
 
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
+from app.crud.crud_user import create_user_in_db, update_user_in_db
 from app.db.session import get_db
 from app.models.users import UserModel
-from app.crud.crud_user import create_user_crud, update_user_crud
 from app.schemas.user import UserCreateSchema, UserSchema, UserUpdateSchema
-from app.services.user_service import get_current_user
 from app.services.logging_service import logger
+from app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -4131,7 +4581,7 @@ def create_user(
     user_data['db'] = db
     user = UserCreateSchema(**user_data)
     try:
-        new_user = create_user_crud(db=db, user=user)
+        new_user = create_user_in_db(db=db, user=user)
         return new_user
     except Exception as e:
         raise HTTPException(
@@ -4174,7 +4624,7 @@ def update_user_me(
         user_update = UserUpdateSchema(**user_data)
         logger.debug("Re-instantiated user update: %s", user_update)
 
-        updated_user = update_user_crud(db=db, user_id=current_user.id, updated_user=user_update)
+        updated_user = update_user_in_db(db=db, user_id=current_user.id, updated_user=user_update)
         logger.debug("User updated successfully: %s", updated_user)
         return updated_user
     except ValueError as e:
@@ -4197,9 +4647,11 @@ def update_user_me(
 ```py
 # filename: app/models/answer_choices.py
 
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Boolean, Column, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class AnswerChoiceModel(Base):
     __tablename__ = "answer_choices"
@@ -4221,7 +4673,8 @@ class AnswerChoiceModel(Base):
 ```py
 # filename: app/models/associations.py
 
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, ForeignKey, Integer
+
 from app.db.base import Base
 
 
@@ -4325,9 +4778,11 @@ class SubtopicToConceptAssociation(Base):
 ```py
 # filename: app/models/authentication.py
 
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.sql import func
+
 from app.db.base import Base
+
 
 class RevokedTokenModel(Base):
     __tablename__ = "revoked_tokens"
@@ -4349,7 +4804,9 @@ class RevokedTokenModel(Base):
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class ConceptModel(Base):
     __tablename__ = "concepts"
@@ -4369,9 +4826,11 @@ class ConceptModel(Base):
 ```py
 # filename: app/models/disciplines.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class DisciplineModel(Base):
     __tablename__ = "disciplines"
@@ -4393,7 +4852,9 @@ class DisciplineModel(Base):
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class DomainModel(Base):
     __tablename__ = "domains"
@@ -4412,9 +4873,11 @@ class DomainModel(Base):
 ```py
 # filename: app/models/groups.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class GroupModel(Base):
     __tablename__ = "groups"
@@ -4440,10 +4903,12 @@ class GroupModel(Base):
 ```py
 # filename: app/models/leaderboard.py
 
-from sqlalchemy import Column, Integer, ForeignKey, DateTime
+from sqlalchemy import Column, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.base import Base
+
 
 class LeaderboardModel(Base):
     __tablename__ = "leaderboards"
@@ -4469,11 +4934,13 @@ class LeaderboardModel(Base):
 ```py
 # filename: app/models/permissions.py
 
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.base import Base
 from app.models.associations import RoleToPermissionAssociation
+
 
 class PermissionModel(Base):
     __tablename__ = "permissions"
@@ -4500,10 +4967,12 @@ class PermissionModel(Base):
 ```py
 # filename: app/models/question_sets.py
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.base import Base
+
 
 class QuestionSetModel(Base):
     __tablename__ = "question_sets"
@@ -4530,10 +4999,12 @@ class QuestionSetModel(Base):
 ```py
 # filename: app/models/question_tags.py
 
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.base import Base
+
 
 class QuestionTagModel(Base):
     __tablename__ = "question_tags"
@@ -4556,18 +5027,14 @@ class QuestionTagModel(Base):
 ```py
 # filename: app/models/questions.py
 
-from sqlalchemy import Column, Integer, String, Enum, DateTime, ForeignKey
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.db.base import Base
-from enum import Enum as PyEnum
 
-class DifficultyLevel(PyEnum):
-    BEGINNER = "Beginner"
-    EASY = "Easy"
-    MEDIUM = "Medium"
-    HARD = "Hard"
-    EXPERT = "Expert"
+from app.db.base import Base
+
+from app.core.config import DifficultyLevel
+
 
 class QuestionModel(Base):
     __tablename__ = "questions"
@@ -4599,11 +5066,13 @@ class QuestionModel(Base):
 ```py
 # filename: app/models/roles.py
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.base import Base
 from app.models.associations import RoleToPermissionAssociation
+
 
 class RoleModel(Base):
     __tablename__ = "roles"
@@ -4634,7 +5103,9 @@ class RoleModel(Base):
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class SubjectModel(Base):
     __tablename__ = "subjects"
@@ -4657,7 +5128,9 @@ class SubjectModel(Base):
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class SubtopicModel(Base):
     __tablename__ = "subtopics"
@@ -4679,7 +5152,9 @@ class SubtopicModel(Base):
 # filename: app/models/time_period.py
 
 from sqlalchemy import Column, Integer, String
+
 from app.db.base import Base
+
 
 class TimePeriodModel(Base):
     __tablename__ = "time_periods"
@@ -4714,7 +5189,9 @@ class TimePeriodModel(Base):
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class TopicModel(Base):
     __tablename__ = "topics"
@@ -4735,10 +5212,12 @@ class TopicModel(Base):
 ```py
 # filename: app/models/user_responses.py
 
-from sqlalchemy import Column, Integer, Boolean, ForeignKey, DateTime
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.base import Base
+
 
 class UserResponseModel(Base):
     __tablename__ = "user_responses"
@@ -4765,9 +5244,11 @@ class UserResponseModel(Base):
 ```py
 # filename: app/models/users.py
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class UserModel(Base):
     __tablename__ = "users"
@@ -4805,15 +5286,17 @@ class UserModel(Base):
 ```py
 # app/middleware/authorization_middleware.py
 
-from fastapi import Request, HTTPException, status
+from fastapi import HTTPException, Request, status
 from pydantic import ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.services.user_service import get_current_user, oauth2_scheme
+
+from app.core.config import settings_core
+from app.db.session import get_db
+from app.models.permissions import PermissionModel
 from app.services.authorization_service import has_permission
 from app.services.logging_service import logger
-from app.db.session import get_db
-from app.core.config import settings_core
-from app.models.permissions import PermissionModel
+from app.services.user_service import get_current_user, oauth2_scheme
+
 
 class AuthorizationMiddleware(BaseHTTPMiddleware):
     method_map = {
@@ -4879,11 +5362,12 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
 ```py
 # filename: app/middleware/blacklist_middleware.py
 
-from fastapi import Request, HTTPException, status
+from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.core.config import settings_core
 from app.db.session import get_db
 from app.models.authentication import RevokedTokenModel
-from app.core.config import settings_core
 from app.services.logging_service import logger
 
 
@@ -4930,7 +5414,6 @@ class BlacklistMiddleware(BaseHTTPMiddleware):
 
 from fastapi.middleware.cors import CORSMiddleware
 
-
 origins = [
     "http://localhost",
     "http://localhost:8080",
@@ -4959,13 +5442,23 @@ def add_cors_middleware(app):
 ```py
 # filename: app/core/config.py
 
-from pydantic_settings import BaseSettings
-from pydantic import ValidationError
-import toml
 import os
+from enum import Enum as PyEnum
+
 import dotenv
+import toml
+from pydantic import ValidationError
+from pydantic_settings import BaseSettings
+
 from app.services.logging_service import logger
 
+
+class DifficultyLevel(PyEnum):
+    BEGINNER = "Beginner"
+    EASY = "Easy"
+    MEDIUM = "Medium"
+    HARD = "Hard"
+    EXPERT = "Expert"
 
 class SettingsCore(BaseSettings):
     SECRET_KEY: str
@@ -5056,10 +5549,12 @@ settings_core = load_settings()
 ```py
 # filename: app/core/jwt.py
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta, timezone
 from typing import Optional
-from jose import jwt, JWTError
+
 from fastapi import HTTPException, status
+from jose import JWTError, jwt
+
 from app.core.config import settings_core
 from app.services.logging_service import logger
 
@@ -5106,6 +5601,7 @@ def verify_token(token: str, credentials_exception):
 # filename: app/core/security.py
 
 from passlib.context import CryptContext
+
 from app.services.logging_service import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

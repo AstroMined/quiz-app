@@ -1,26 +1,27 @@
 # filename: app/services/validation_service.py
 
+from fastapi import HTTPException
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
-from sqlalchemy.orm.base import instance_state
 from sqlalchemy.orm.attributes import instance_dict
-from fastapi import HTTPException
+from sqlalchemy.orm.base import instance_state
+
 from app.db.base import Base
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
-from app.models.questions import QuestionModel
+from app.models.answer_choices import AnswerChoiceModel
+from app.models.authentication import RevokedTokenModel
 from app.models.groups import GroupModel
-from app.models.users import UserModel
+from app.models.leaderboard import LeaderboardModel
 from app.models.permissions import PermissionModel
+from app.models.question_sets import QuestionSetModel
+from app.models.question_tags import QuestionTagModel
+from app.models.questions import QuestionModel
 from app.models.roles import RoleModel
 from app.models.subjects import SubjectModel
-from app.models.topics import TopicModel
 from app.models.subtopics import SubtopicModel
-from app.models.question_tags import QuestionTagModel
-from app.models.leaderboard import LeaderboardModel
+from app.models.topics import TopicModel
 from app.models.user_responses import UserResponseModel
-from app.models.answer_choices import AnswerChoiceModel
-from app.models.question_sets import QuestionSetModel
-from app.models.authentication import RevokedTokenModel
+from app.models.users import UserModel
+from app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
 
 def validate_foreign_keys(mapper, connection, target):

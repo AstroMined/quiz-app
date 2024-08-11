@@ -1,8 +1,11 @@
 # filename: app/schemas/filters.py
 
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, validator
+
 from app.schemas.questions import DifficultyLevel
+
 
 class FilterParamsSchema(BaseModel):
     subject: Optional[str] = Field(None, max_length=100, description="Filter questions by subject")

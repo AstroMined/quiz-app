@@ -1,17 +1,13 @@
 # filename: app/models/questions.py
 
-from sqlalchemy import Column, Integer, String, Enum, DateTime, ForeignKey
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.db.base import Base
-from enum import Enum as PyEnum
 
-class DifficultyLevel(PyEnum):
-    BEGINNER = "Beginner"
-    EASY = "Easy"
-    MEDIUM = "Medium"
-    HARD = "Hard"
-    EXPERT = "Expert"
+from app.db.base import Base
+
+from app.core.config import DifficultyLevel
+
 
 class QuestionModel(Base):
     __tablename__ = "questions"

@@ -27,15 +27,17 @@ filter_questions_endpoint(
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query, Depends, Request
-from sqlalchemy.orm import Session
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import ValidationError
+from sqlalchemy.orm import Session
+
+from app.crud.crud_filters import read_filtered_questions_from_db
+from app.db.session import get_db
+from app.models.users import UserModel
 from app.schemas.filters import FilterParamsSchema
 from app.schemas.questions import QuestionSchema
-from app.crud.crud_filters import filter_questions_crud
-from app.db.session import get_db
 from app.services.user_service import get_current_user
-from app.models.users import UserModel
 
 router = APIRouter()
 
@@ -118,7 +120,7 @@ async def filter_questions_endpoint(
             difficulty=difficulty,
             question_tags=question_tags
         )
-        questions = filter_questions_crud(
+        questions = read_filtered_questions_from_db(
             db=db,
             filters=filters.model_dump(),
             skip=skip,

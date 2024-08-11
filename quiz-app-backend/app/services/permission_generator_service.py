@@ -1,10 +1,10 @@
 # app/services/permission_generator_service.py
 
 from fastapi import FastAPI
-from sqlalchemy.orm import Session
+
 from app.core.config import settings_core
-from app.services.logging_service import logger
 from app.models.permissions import PermissionModel
+
 
 def generate_permissions(app: FastAPI):
     permissions = set()
@@ -23,7 +23,6 @@ def generate_permissions(app: FastAPI):
                     if path not in settings_core.UNPROTECTED_ENDPOINTS:
                         permission = f"{method_map[method]}_{path}"
                         permissions.add(permission)
-                        logger.debug("Generated permission: %s", permission)
 
     return permissions
 
@@ -35,4 +34,3 @@ def ensure_permissions_in_db(db, permissions):
         db.add(PermissionModel(name=permission))
 
     db.commit()
-    logger.debug(f"Added {len(new_permissions)} new permissions to the database")

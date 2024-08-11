@@ -69,8 +69,8 @@ def test_answer_choice_schema():
     assert schema.is_correct is True
     assert schema.explanation == "This is a complete explanation"
 
-def test_answer_choice_schema_from_orm(test_answer_choices):
-    orm_object = test_answer_choices[0]
+def test_answer_choice_schema_from_orm(test_model_answer_choices):
+    orm_object = test_model_answer_choices[0]
     schema = AnswerChoiceSchema.model_validate(orm_object)
     assert schema.id == orm_object.id
     assert schema.text == orm_object.text

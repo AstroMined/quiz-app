@@ -2,6 +2,7 @@
 
 import random
 
+
 def randomize_questions(questions):
     return random.sample(questions, len(questions))
 

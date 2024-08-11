@@ -1,30 +1,32 @@
 # filename: main.py
 
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api.endpoints import answer_choices as answer_choices_router
 from app.api.endpoints import authentication as authentication_router
+from app.api.endpoints import concepts as concepts_router
+from app.api.endpoints import disciplines as disciplines_router
+from app.api.endpoints import domains as domains_router
 from app.api.endpoints import filters as filters_router
 from app.api.endpoints import groups as groups_router
 from app.api.endpoints import leaderboard as leaderboard_router
 from app.api.endpoints import question_sets as question_sets_router
 from app.api.endpoints import questions as questions_router
 from app.api.endpoints import register as register_router
-from app.api.endpoints import domains as domains_router
-from app.api.endpoints import disciplines as disciplines_router
-from app.api.endpoints import concepts as concepts_router
 from app.api.endpoints import subjects as subjects_router
-from app.api.endpoints import topics as topics_router
 from app.api.endpoints import subtopics as subtopics_router
+from app.api.endpoints import topics as topics_router
 from app.api.endpoints import user_responses as user_responses_router
 from app.api.endpoints import users as users_router
+from app.db.session import get_db
 from app.middleware.authorization_middleware import AuthorizationMiddleware
 from app.middleware.blacklist_middleware import BlacklistMiddleware
 from app.middleware.cors_middleware import add_cors_middleware
-from app.services.permission_generator_service import generate_permissions, ensure_permissions_in_db
+from app.services.permission_generator_service import (
+    ensure_permissions_in_db, generate_permissions)
 from app.services.validation_service import register_validation_listeners
-from app.db.session import get_db
 
 app = FastAPI()
 

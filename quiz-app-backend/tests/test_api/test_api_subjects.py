@@ -4,15 +4,15 @@ from app.schemas.subjects import SubjectCreateSchema
 from app.services.logging_service import logger
 
 
-def test_create_subject(logged_in_client, test_discipline):
-    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+def test_create_subject(logged_in_client, test_model_discipline):
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_model_discipline.id)
     response = logged_in_client.post("/subjects/", json=subject_data.model_dump())
     assert response.status_code == 201
     assert response.json()["name"] == "Test Subject"
 
-def test_read_subject(logged_in_client, test_discipline):
+def test_read_subject(logged_in_client, test_model_discipline):
     # Create a test subject
-    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_model_discipline.id)
     created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
 
     # Read the created subject
@@ -20,9 +20,9 @@ def test_read_subject(logged_in_client, test_discipline):
     assert response.status_code == 200
     assert response.json()["name"] == "Test Subject"
 
-def test_update_subject(logged_in_client, test_discipline):
+def test_update_subject(logged_in_client, test_model_discipline):
     # Create a test subject
-    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_model_discipline.id)
     created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
 
     # Update the subject
@@ -32,9 +32,9 @@ def test_update_subject(logged_in_client, test_discipline):
     assert response.status_code == 200
     assert response.json()["name"] == "Updated Subject"
 
-def test_delete_subject(logged_in_client, test_discipline):
+def test_delete_subject(logged_in_client, test_model_discipline):
     # Create a test subject
-    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_discipline.id)
+    subject_data = SubjectCreateSchema(name="Test Subject", discipline_id=test_model_discipline.id)
     created_subject = logged_in_client.post("/subjects/", json=subject_data.model_dump()).json()
 
     # Delete the subject

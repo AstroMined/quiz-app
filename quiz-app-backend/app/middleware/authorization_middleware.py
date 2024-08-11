@@ -1,14 +1,16 @@
 # app/middleware/authorization_middleware.py
 
-from fastapi import Request, HTTPException, status
+from fastapi import HTTPException, Request, status
 from pydantic import ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.services.user_service import get_current_user, oauth2_scheme
+
+from app.core.config import settings_core
+from app.db.session import get_db
+from app.models.permissions import PermissionModel
 from app.services.authorization_service import has_permission
 from app.services.logging_service import logger
-from app.db.session import get_db
-from app.core.config import settings_core
-from app.models.permissions import PermissionModel
+from app.services.user_service import get_current_user, oauth2_scheme
+
 
 class AuthorizationMiddleware(BaseHTTPMiddleware):
     method_map = {

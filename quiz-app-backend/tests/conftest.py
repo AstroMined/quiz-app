@@ -15,19 +15,19 @@ from app.db.base import Base
 from app.db.session import get_db, init_db
 
 # CRUD imports
-from app.crud.crud_answer_choices import create_answer_choice_crud
-from app.crud.crud_user import create_user_crud
-from app.crud.crud_question_sets import create_question_set_crud
-from app.crud.crud_question_tags import create_question_tag_crud, delete_question_tag_crud
-from app.crud.crud_roles import create_role_crud, delete_role_crud
-from app.crud.crud_groups import create_group_crud, read_group_crud
-from app.crud.crud_domains import create_domain
-from app.crud.crud_disciplines import create_discipline
-from app.crud.crud_subjects import create_subject
-from app.crud.crud_topics import create_topic
-from app.crud.crud_subtopics import create_subtopic
-from app.crud.crud_concepts import create_concept
-from app.crud.crud_questions import create_question, create_question_with_answers
+from app.crud.crud_answer_choices import create_answer_choice_in_db
+from app.crud.crud_user import create_user_in_db
+from app.crud.crud_question_sets import create_question_set_in_db
+from app.crud.crud_question_tags import create_question_tag_in_db, delete_question_tag_from_db
+from app.crud.crud_roles import create_role_in_db, delete_role_from_db
+from app.crud.crud_groups import create_group_in_db, read_group_from_db
+from app.crud.crud_domains import create_domain_in_db
+from app.crud.crud_disciplines import create_discipline_in_db
+from app.crud.crud_subjects import create_subject_in_db
+from app.crud.crud_topics import create_topic_in_db
+from app.crud.crud_subtopics import create_subtopic_in_db
+from app.crud.crud_concepts import create_concept_in_db
+from app.crud.crud_questions import create_question_in_db #, create_question_with_answers
 
 # Schema imports
 from app.schemas.user import UserCreateSchema
@@ -130,7 +130,7 @@ def test_permission(db_session):
     return permission
 
 @pytest.fixture(scope="function")
-def test_permissions(db_session):
+def test_model_permissions(db_session):
     from app.main import app  # Import the actual FastAPI app instance
     from app.services.permission_generator_service import generate_permissions, ensure_permissions_in_db
 
@@ -150,7 +150,7 @@ def test_permissions(db_session):
     db_session.commit()
 
 @pytest.fixture(scope="function")
-def test_role(db_session, test_permissions):
+def test_model_role(db_session, test_model_permissions):
     try:
         # Create a test role with all permissions
         role = RoleModel(
@@ -158,14 +158,13 @@ def test_role(db_session, test_permissions):
             description="Test Role",
             default=False
         )
-        role.permissions.extend(test_permissions)
+        role.permissions.extend(test_model_permissions)
         db_session.add(role)
         db_session.commit()
         db_session.refresh(role)
         
         yield role
     except Exception as e:
-        logger.exception(f"Error in test_role fixture: {str(e)}")
         raise
     finally:
         logger.debug("Tearing down test_role fixture")
@@ -176,211 +175,184 @@ def random_username():
     yield "test.user_" + "".join(random.choices(string.ascii_letters + string.digits, k=5))
 
 @pytest.fixture(scope="function")
-def test_user(db_session, random_username, test_role):
+def test_model_user(db_session, random_username, test_model_role):
     try:
-        logger.debug("Setting up test_user fixture")
         email = f"{random_username}@example.com"
         hashed_password = get_password_hash("TestPassword123!")
         
-        logger.error(f"Creating test user with role ID: {test_role.id}")
         user = UserModel(
             username=random_username,
             email=email,
             hashed_password=hashed_password,
             is_active=True,
             is_admin=True,
-            role_id=test_role.id
+            role_id=test_model_role.id
         )
         
         db_session.add(user)
         db_session.commit()
         db_session.refresh(user)
         
-        logger.error(f"Created test user: {sqlalchemy_obj_to_dict(user)}")
         yield user
     except Exception as e:
-        logger.exception(f"Error in test_user fixture: {str(e)}")
         raise
     finally:
-        logger.debug("Tearing down test_user fixture")
         db_session.rollback()
 
 @pytest.fixture(scope="function")
-def test_group(db_session, test_user):
+def test_model_group(db_session, test_model_user):
     try:
-        logger.debug("Setting up test_group fixture")
-        group_data = GroupCreateSchema(
+        group = GroupModel(
             name="Test Group",
             description="This is a test group",
-            creator_id=test_user.id
+            creator_id=test_model_user.id
         )
-        group = create_group_crud(db_session, group_data, test_user.id)
         db_session.add(group)
         db_session.commit()
+        db_session.refresh(group)
         yield group
     except Exception as e:
-        logger.exception("Error in test_group fixture: %s", str(e))
         raise
     finally:
-        logger.debug("Tearing down test_group fixture")
-        db_group = read_group_crud(db_session, group.id)
-        if db_group:
-            db_session.delete(group)
-            db_session.commit()
+        db_session.rollback()
 
 @pytest.fixture(scope="function")
-def test_user_with_group(db_session, test_user, test_group):
+def test_model_user_with_group(db_session, test_model_user, test_model_group):
     try:
-        logger.debug("Setting up test_user_with_group fixture")
-        association = UserToGroupAssociation(user_id=test_user.id, group_id=test_group.id)
+        association = UserToGroupAssociation(user_id=test_model_user.id, group_id=test_model_group.id)
         db_session.add(association)
         db_session.commit()
-        yield test_user
+        yield test_model_user
     except Exception as e:
-        logger.exception("Error in test_user_with_group fixture: %s", str(e))
         raise
     finally:
-        logger.debug("Tearing down test_user_with_group fixture")
+        db_session.rollback()
 
 @pytest.fixture(scope="function")
-def test_tag(db_session):
-    tag_data = QuestionTagCreateSchema(tag="Test Tag")
-    tag = create_question_tag_crud(db_session, tag_data)
+def test_model_tag(db_session):
+    tag = QuestionTagModel(tag="Test Tag")
+    db_session.add(tag)
+    db_session.commit()
+    db_session.refresh(tag)
     yield tag
-    delete_question_tag_crud(db_session, tag.id)
 
 @pytest.fixture(scope='function')
-def test_question_set_data(db_session, test_user_with_group):
+def test_model_question_set(db_session, test_model_user_with_group):
     try:
-        logger.debug("Setting up test_question_set_data fixture")
-        test_question_set_data_create = {
-            "name": "Test Question Set",
-            "is_public": True,
-            "creator_id": test_user_with_group.id
-        }
-        created_test_question_set_data = QuestionSetCreateSchema(**test_question_set_data_create)
-        return created_test_question_set_data
-    except Exception as e:
-        logger.exception("Error in test_question_set_data fixture: %s", str(e))
-        raise
-    finally:
-        logger.debug("Tearing down test_question_set_data fixture")
-
-@pytest.fixture(scope="function")
-def test_question_set(db_session, test_user, test_question_set_data):
-    try:
-        logger.debug("Setting up test_question_set fixture")
-        question_set = create_question_set_crud(
-            db=db_session,
-            question_set=test_question_set_data
+        question_set = QuestionSetModel(
+            name = "Test Question Set",
+            is_public= True,
+            creator_id = test_model_user_with_group.id
         )
+        db_session.add(question_set)
         db_session.commit()
-        yield question_set
+        db_session.refresh(question_set)
+        return question_set
     except Exception as e:
-        logger.exception("Error in test_question_set fixture: %s", str(e))
         raise
     finally:
-        logger.debug("Tearing down test_question_set fixture")
+        db_session.rollback()
 
 @pytest.fixture(scope="function")
-def test_answer_choices(db_session):
+def test_model_answer_choices(db_session):
     answer_choices = [
-        AnswerChoiceModel(text="Answer 1", is_correct=True, explanation="Explanation 1"),
-        AnswerChoiceModel(text="Answer 2", is_correct=False, explanation="Explanation 2"),
-        AnswerChoiceModel(text="Answer 3", is_correct=False, explanation="Explanation 3"),
-        AnswerChoiceModel(text="Answer 4", is_correct=True, explanation="Explanation 4")
+        AnswerChoiceModel(text="Answer 1 for Q1", is_correct=True, explanation="Explanation 1 for Q1"),
+        AnswerChoiceModel(text="Answer 2 for Q1", is_correct=False, explanation="Explanation 2 for Q1"),
+        AnswerChoiceModel(text="Answer 1 for Q2", is_correct=True, explanation="Explanation 1 for Q2"),
+        AnswerChoiceModel(text="Answer 2 for Q2", is_correct=False, explanation="Explanation 2 for Q2")
     ]
     
-    db_answer_choices = []
     for answer_choice in answer_choices:
         db_session.add(answer_choice)
-        db_session.commit()
-        db_session.refresh(answer_choice)
-        db_answer_choices.append(answer_choice)
+    db_session.commit()
     
-    yield db_answer_choices
+    yield answer_choices
 
 @pytest.fixture(scope="function")
-def test_questions(db_session, test_subject, test_topic, test_subtopic, test_concept, test_answer_choices):
-    try:
-        logger.debug("Setting up test_questions fixture")
-        question1 = QuestionModel(text="Test Question 1", difficulty=DifficultyLevel.EASY)
-        #question1.answer_choices.append([test_answer_choices[0], test_answer_choices[1]])
-        question2 = QuestionModel(text="Test Question 2", difficulty=DifficultyLevel.MEDIUM)
-        #question2.answer_choices.append([test_answer_choices[2], test_answer_choices[3]])
-        questions = [question1, question2]
-        
-        for question in questions:
-            question.subjects.append(test_subject)
-            question.topics.append(test_topic)
-            question.subtopics.append(test_subtopic)
-            question.concepts.append(test_concept)
-        
-        db_session.add_all(questions)
-        db_session.commit()
-
-        yield questions
-    except Exception as e:
-        logger.exception("Error in test_questions fixture: %s", str(e))
-        raise
-    finally:
-        logger.debug("Tearing down test_questions fixture")
-
-@pytest.fixture(scope="function")
-def test_domain(db_session):
+def test_model_domain(db_session):
     domain = DomainModel(name="Test Domain")
+    db_session.add(domain)
+    db_session.commit()
     yield domain
 
 
 @pytest.fixture(scope="function")
-def test_discipline(db_session, test_domain):
+def test_model_discipline(db_session, test_model_domain):
     discipline = DisciplineModel(name="Test Discipline")
+    discipline.domains.append(test_model_domain)
     db_session.add(discipline)
     db_session.commit()
     yield discipline
 
 
 @pytest.fixture(scope="function")
-def test_subject(db_session, test_discipline):
+def test_model_subject(db_session, test_model_discipline):
     subject = SubjectModel(name="Test Subject")
-    subject.disciplines.append(test_discipline)
+    subject.disciplines.append(test_model_discipline)
     db_session.add(subject)
     db_session.commit()
     yield subject
 
 
 @pytest.fixture(scope="function")
-def test_topic(db_session, test_subject):
+def test_model_topic(db_session, test_model_subject):
     topic = TopicModel(name="Test Topic")
-    topic.subjects.append(test_subject)
+    topic.subjects.append(test_model_subject)
     db_session.add(topic)
     db_session.commit()
     yield topic
 
 
 @pytest.fixture(scope="function")
-def test_subtopic(db_session, test_topic):
+def test_model_subtopic(db_session, test_model_topic):
     subtopic = SubtopicModel(name="Test Subtopic")
-    subtopic.topics.append(test_topic)
+    subtopic.topics.append(test_model_topic)
     db_session.add(subtopic)
     db_session.commit()
     yield subtopic
 
 
 @pytest.fixture(scope="function")
-def test_concept(db_session, test_subtopic):
+def test_model_concept(db_session, test_model_subtopic):
     concept = ConceptModel(name="Test Concept")
-    concept.subtopics.append(test_subtopic)
+    concept.subtopics.append(test_model_subtopic)
     db_session.add(concept)
     db_session.commit()
     yield concept
 
+@pytest.fixture(scope="function")
+def test_model_questions(db_session, test_model_subject, test_model_topic, test_model_subtopic, test_model_concept, test_model_answer_choices):
+    try:
+        questions = []
+        for i in range(2):
+            question = QuestionModel(
+                text=f"Test Question {i+1}",
+                difficulty=DifficultyLevel.EASY,
+                subjects=[test_model_subject],
+                topics=[test_model_topic],
+                subtopics=[test_model_subtopic],
+                concepts=[test_model_concept]
+            )
+            db_session.add(question)
+            db_session.flush()  # Flush to get the question ID
+
+            # Associate answer choices with the question
+            question.answer_choices.extend(test_model_answer_choices[i*2:(i+1)*2])
+            questions.append(question)
+
+        db_session.commit()
+        yield questions
+    except Exception as e:
+        logger.exception("Error in test_questions fixture: %s", str(e))
+        raise
+    finally:
+        db_session.rollback()
 
 @pytest.fixture(scope="function")
-def test_token(test_user):
+def test_token(test_model_user):
     try:
         logger.debug("Setting up test_token fixture")
-        access_token = create_access_token(data={"sub": test_user.username})
+        access_token = create_access_token(data={"sub": test_model_user.username})
         yield access_token
     except Exception as e:
         logger.exception("Error in test_token fixture: %s", str(e))
@@ -389,11 +361,11 @@ def test_token(test_user):
         logger.debug("Tearing down test_token fixture")
 
 @pytest.fixture(scope="function")
-def logged_in_client(client, test_user_with_group):
+def logged_in_client(client, test_model_user_with_group):
     try:
         logger.debug("Setting up logged_in_client fixture")
-        login_data = {"username": test_user_with_group.username, "password": "TestPassword123!"}
-        logger.debug("Logging in with username: %s", test_user_with_group.username)
+        login_data = {"username": test_model_user_with_group.username, "password": "TestPassword123!"}
+        logger.debug("Logging in with username: %s", test_model_user_with_group.username)
         response = client.post("/login", data=login_data)
         logger.debug("Login response status code: %s", response.status_code)
         access_token = response.json()["access_token"]
@@ -414,45 +386,45 @@ def setup_filter_questions_data(db_session):
         logger.debug("Setting up filter questions data")
 
         # Create Domains
-        domain1 = create_domain(db_session, DomainCreateSchema(name="Science"))
-        domain2 = create_domain(db_session, DomainCreateSchema(name="Mathematics"))
+        domain1 = create_domain_in_db(db_session, DomainCreateSchema(name="Science"))
+        domain2 = create_domain_in_db(db_session, DomainCreateSchema(name="Mathematics"))
 
         # Create Disciplines
-        discipline1 = create_discipline(db_session, DisciplineCreateSchema(name="Physics", domain=domain1))
-        discipline2 = create_discipline(db_session, DisciplineCreateSchema(name="Pure Mathematics", domain=domain2))
+        discipline1 = create_discipline_in_db(db_session, DisciplineCreateSchema(name="Physics", domain=domain1))
+        discipline2 = create_discipline_in_db(db_session, DisciplineCreateSchema(name="Pure Mathematics", domain=domain2))
 
         # Create Subjects
-        subject1 = create_subject(db_session, SubjectCreateSchema(name="Classical Mechanics", discipline=discipline1))
-        subject2 = create_subject(db_session, SubjectCreateSchema(name="Algebra", discipline=discipline2))
+        subject1 = create_subject_in_db(db_session, SubjectCreateSchema(name="Classical Mechanics", discipline=discipline1))
+        subject2 = create_subject_in_db(db_session, SubjectCreateSchema(name="Algebra", discipline=discipline2))
 
         # Create Topics
-        topic1 = create_topic(db_session, TopicCreateSchema(name="Newton's Laws", subject=subject1))
-        topic2 = create_topic(db_session, TopicCreateSchema(name="Linear Algebra", subject=subject2))
+        topic1 = create_topic_in_db(db_session, TopicCreateSchema(name="Newton's Laws", subject=subject1))
+        topic2 = create_topic_in_db(db_session, TopicCreateSchema(name="Linear Algebra", subject=subject2))
 
         # Create Subtopics
-        subtopic1 = create_subtopic(db_session, SubtopicCreateSchema(name="First Law of Motion", topic=topic1))
-        subtopic2 = create_subtopic(db_session, SubtopicCreateSchema(name="Second Law of Motion", topic=topic1))
-        subtopic3 = create_subtopic(db_session, SubtopicCreateSchema(name="Matrices", topic=topic2))
-        subtopic4 = create_subtopic(db_session, SubtopicCreateSchema(name="Vector Spaces", topic=topic2))
+        subtopic1 = create_subtopic_in_db(db_session, SubtopicCreateSchema(name="First Law of Motion", topic=topic1))
+        subtopic2 = create_subtopic_in_db(db_session, SubtopicCreateSchema(name="Second Law of Motion", topic=topic1))
+        subtopic3 = create_subtopic_in_db(db_session, SubtopicCreateSchema(name="Matrices", topic=topic2))
+        subtopic4 = create_subtopic_in_db(db_session, SubtopicCreateSchema(name="Vector Spaces", topic=topic2))
 
         # Create Concepts
-        concept1 = create_concept(db_session, ConceptCreateSchema(name="Inertia", subtopic=subtopic1))
-        concept2 = create_concept(db_session, ConceptCreateSchema(name="Force and Acceleration", subtopic=subtopic2))
-        concept3 = create_concept(db_session, ConceptCreateSchema(name="Matrix Operations", subtopic=subtopic3))
-        concept4 = create_concept(db_session, ConceptCreateSchema(name="Linear Independence", subtopic=subtopic4))
+        concept1 = create_concept_in_db(db_session, ConceptCreateSchema(name="Inertia", subtopic=subtopic1))
+        concept2 = create_concept_in_db(db_session, ConceptCreateSchema(name="Force and Acceleration", subtopic=subtopic2))
+        concept3 = create_concept_in_db(db_session, ConceptCreateSchema(name="Matrix Operations", subtopic=subtopic3))
+        concept4 = create_concept_in_db(db_session, ConceptCreateSchema(name="Linear Independence", subtopic=subtopic4))
 
         # Create Tags
-        tag1 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="physics"))
-        tag2 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="mathematics"))
-        tag3 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="mechanics"))
-        tag4 = create_question_tag_crud(db_session, QuestionTagCreateSchema(tag="linear algebra"))
+        tag1 = create_question_tag_in_db(db_session, QuestionTagCreateSchema(tag="physics"))
+        tag2 = create_question_tag_in_db(db_session, QuestionTagCreateSchema(tag="mathematics"))
+        tag3 = create_question_tag_in_db(db_session, QuestionTagCreateSchema(tag="mechanics"))
+        tag4 = create_question_tag_in_db(db_session, QuestionTagCreateSchema(tag="linear algebra"))
 
         # Create Question Sets
-        question_set1 = create_question_set_crud(db_session, QuestionSetCreateSchema(name="Physics Question Set", is_public=True))
-        question_set2 = create_question_set_crud(db_session, QuestionSetCreateSchema(name="Math Question Set", is_public=True))
+        question_set1 = create_question_set_in_db(db_session, QuestionSetCreateSchema(name="Physics Question Set", is_public=True))
+        question_set2 = create_question_set_in_db(db_session, QuestionSetCreateSchema(name="Math Question Set", is_public=True))
 
         # Create Questions
-        question1 = create_question(db_session, QuestionCreateSchema(
+        question1 = create_question_in_db(db_session, QuestionCreateSchema(
             text="What is Newton's First Law of Motion?",
             subject=subject1,
             topic=topic1,
@@ -462,7 +434,7 @@ def setup_filter_questions_data(db_session):
             question_tag_ids=[tag1.id, tag3.id],
             question_set_ids=[question_set1.id]
         ))
-        question2 = create_question(db_session, QuestionCreateSchema(
+        question2 = create_question_in_db(db_session, QuestionCreateSchema(
             text="How does force relate to acceleration according to Newton's Second Law?",
             subject=subject1,
             topic=topic1,
@@ -472,7 +444,7 @@ def setup_filter_questions_data(db_session):
             question_tag_ids=[tag1.id, tag3.id],
             question_set_ids=[question_set1.id]
         ))
-        question3 = create_question(db_session, QuestionCreateSchema(
+        question3 = create_question_in_db(db_session, QuestionCreateSchema(
             text="What is the result of multiplying a 2x2 identity matrix with any 2x2 matrix?",
             subject=subject2,
             topic=topic2,
@@ -482,7 +454,7 @@ def setup_filter_questions_data(db_session):
             question_tag_ids=[tag2.id, tag4.id],
             question_set_ids=[question_set2.id]
         ))
-        question4 = create_question(db_session, QuestionCreateSchema(
+        question4 = create_question_in_db(db_session, QuestionCreateSchema(
             text="What does it mean for a set of vectors to be linearly independent?",
             subject=subject2,
             topic=topic2,

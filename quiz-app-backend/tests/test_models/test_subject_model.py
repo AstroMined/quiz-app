@@ -45,15 +45,15 @@ def test_subject_topics_relationship(db_session):
     assert topic in subject.topics
     assert subject in topic.subjects
 
-def test_subject_questions_relationship(db_session, test_questions):
+def test_subject_questions_relationship(db_session, test_model_questions):
     subject = SubjectModel(name="Geography")
-    subject.questions.extend(test_questions[:2])
+    subject.questions.extend(test_model_questions[:2])
     db_session.add(subject)
     db_session.commit()
 
     assert len(subject.questions) == 2
-    assert test_questions[0] in subject.questions
-    assert test_questions[1] in subject.questions
+    assert test_model_questions[0] in subject.questions
+    assert test_model_questions[1] in subject.questions
 
 def test_subject_required_fields(db_session):
     # Test missing name

@@ -72,10 +72,10 @@ def test_discipline_schema():
     assert schema.subjects[1]["id"] == 4
     assert schema.subjects[2]["id"] == 5
 
-def test_discipline_schema_from_attributes(test_discipline):
-    schema = DisciplineSchema.model_validate(test_discipline)
-    assert schema.id == test_discipline.id
-    assert schema.name == test_discipline.name
+def test_discipline_schema_from_attributes(test_model_discipline):
+    schema = DisciplineSchema.model_validate(test_model_discipline)
+    assert schema.id == test_model_discipline.id
+    assert schema.name == test_model_discipline.name
     assert isinstance(schema.domains, list)
     assert isinstance(schema.subjects, list)
     for domain in schema.domains:

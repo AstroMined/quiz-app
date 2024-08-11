@@ -1,27 +1,29 @@
 # filename: app/crud/crud_user_responses.py
 
-from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
 from app.models.user_responses import UserResponseModel
-from app.schemas.user_responses import UserResponseCreateSchema, UserResponseUpdateSchema
 
 
-def create_user_response_crud(
-    db: Session,
-    user_response: UserResponseCreateSchema
-) -> UserResponseModel:
-    db_user_response = UserResponseModel(**user_response.model_dump())
+def create_user_response_in_db(db: Session, user_response_data: Dict) -> UserResponseModel:
+    db_user_response = UserResponseModel(
+        user_id=user_response_data['user_id'],
+        question_id=user_response_data['question_id'],
+        answer_choice_id=user_response_data['answer_choice_id'],
+        is_correct=user_response_data['is_correct'],
+        response_time=user_response_data.get('response_time'),
+        timestamp=user_response_data.get('timestamp', datetime.now(timezone.utc))
+    )
     db.add(db_user_response)
     db.commit()
     db.refresh(db_user_response)
     return db_user_response
 
-def get_user_response_crud(db: Session, user_response_id: int) -> Optional[UserResponseModel]:
+def read_user_response_from_db(db: Session, user_response_id: int) -> Optional[UserResponseModel]:
     return db.query(UserResponseModel).filter(UserResponseModel.id == user_response_id).first()
 
-def get_user_responses_crud(
+def read_user_responses_from_db(
     db: Session,
     user_id: Optional[int] = None,
     question_id: Optional[int] = None,
@@ -31,7 +33,6 @@ def get_user_responses_crud(
     limit: int = 100
 ) -> List[UserResponseModel]:
     query = db.query(UserResponseModel)
-
     if user_id:
         query = query.filter(UserResponseModel.user_id == user_id)
     if question_id:
@@ -40,30 +41,27 @@ def get_user_responses_crud(
         query = query.filter(UserResponseModel.timestamp >= start_time)
     if end_time:
         query = query.filter(UserResponseModel.timestamp <= end_time)
+    return query.offset(skip).limit(limit).all()
 
-    user_responses = query.offset(skip).limit(limit).all()
-    return user_responses
-
-def update_user_response_crud(
-    db: Session,
-    user_response_id: int,
-    user_response: UserResponseUpdateSchema
-) -> UserResponseModel:
-    db_user_response = db.query(UserResponseModel).filter(
-        UserResponseModel.id == user_response_id).first()
-    if not db_user_response:
-        raise HTTPException(status_code=404, detail="User response not found")
-    update_data = user_response.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_user_response, key, value)
-    db.commit()
-    db.refresh(db_user_response)
+def update_user_response_in_db(db: Session, user_response_id: int, user_response_data: Dict) -> Optional[UserResponseModel]:
+    db_user_response = read_user_response_from_db(db, user_response_id)
+    if db_user_response:
+        for key, value in user_response_data.items():
+            setattr(db_user_response, key, value)
+        db.commit()
+        db.refresh(db_user_response)
     return db_user_response
 
-def delete_user_response_crud(db: Session, user_response_id: int) -> None:
-    db_user_response = db.query(UserResponseModel).filter(
-        UserResponseModel.id == user_response_id).first()
-    if not db_user_response:
-        raise HTTPException(status_code=404, detail="User response not found")
-    db.delete(db_user_response)
-    db.commit()
+def delete_user_response_from_db(db: Session, user_response_id: int) -> bool:
+    db_user_response = read_user_response_from_db(db, user_response_id)
+    if db_user_response:
+        db.delete(db_user_response)
+        db.commit()
+        return True
+    return False
+
+def read_user_responses_for_user_from_db(db: Session, user_id: int) -> List[UserResponseModel]:
+    return db.query(UserResponseModel).filter(UserResponseModel.user_id == user_id).all()
+
+def read_user_responses_for_question_from_db(db: Session, question_id: int) -> List[UserResponseModel]:
+    return db.query(UserResponseModel).filter(UserResponseModel.question_id == question_id).all()

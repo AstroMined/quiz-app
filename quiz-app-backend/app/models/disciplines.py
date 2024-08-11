@@ -1,8 +1,10 @@
 # filename: app/models/disciplines.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class DisciplineModel(Base):
     __tablename__ = "disciplines"
