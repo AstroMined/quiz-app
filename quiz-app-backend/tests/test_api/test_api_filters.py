@@ -10,7 +10,6 @@ from app.models.concepts import ConceptModel
 from app.models.question_tags import QuestionTagModel
 from app.models.question_sets import QuestionSetModel
 from app.models.questions import QuestionModel
-from app.crud.crud_questions import read_question
 from app.api.endpoints.filters import filter_questions_endpoint
 
 

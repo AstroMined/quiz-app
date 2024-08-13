@@ -5,11 +5,12 @@ from pydantic import ValidationError
 from app.schemas.user import UserCreateSchema, UserUpdateSchema, UserSchema
 from app.core.security import verify_password
 
-def test_user_create_schema_valid():
+def test_user_create_schema_valid(test_model_role):
     user_data = {
         "username": "testuser",
         "password": "TestPassword123!",
-        "email": "testuser@example.com"
+        "email": "testuser@example.com",
+        "role_id": test_model_role.id
     }
     user_schema = UserCreateSchema(**user_data)
     assert user_schema.username == "testuser"

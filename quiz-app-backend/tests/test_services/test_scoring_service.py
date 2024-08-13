@@ -3,7 +3,7 @@
 import pytest
 from app.services.scoring_service import calculate_user_score, calculate_leaderboard_scores
 from app.models.time_period import TimePeriodModel
-from app.crud.crud_user_responses import create_user_response_crud, get_user_responses_crud
+from app.crud.crud_user_responses import create_user_response_in_db, read_user_responses_from_db
 from app.schemas.user_responses import UserResponseCreateSchema
 from app.services.logging_service import logger
 
@@ -23,11 +23,11 @@ def test_calculate_user_score(
             answer_choice_id=question.answer_choices[0].id,
             is_correct=is_correct
         )
-        created_response = create_user_response_crud(db=db_session, user_response=user_response_data)
+        created_response = create_user_response_in_db(db=db_session, user_response=user_response_data)
         logger.info(f"Created user response: {created_response}")
 
     # Verify the created responses
-    user_responses = get_user_responses_crud(db_session, user_id=test_model_user.id)
+    user_responses = read_user_responses_from_db(db_session, user_id=test_model_user.id)
     logger.info(f"Retrieved user responses: {user_responses}")
     
     # Calculate the user's score
@@ -53,7 +53,7 @@ def test_calculate_leaderboard_scores(
             answer_choice_id=question.answer_choices[0].id,
             is_correct=is_correct
         )
-        create_user_response_crud(db=db_session, user_response=user_response_data)
+        create_user_response_in_db(db=db_session, user_response=user_response_data)
 
     # Test daily leaderboard
     daily_scores = calculate_leaderboard_scores(db_session, TimePeriodModel.DAILY)

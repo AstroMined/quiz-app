@@ -16,4 +16,4 @@ class DisciplineModel(Base):
     subjects = relationship("SubjectModel", secondary="discipline_to_subject_association", back_populates="disciplines")
 
     def __repr__(self):
-        return f"<Discipline(id={self.id}, name='{self.name}', domain_id={self.domain_id})>"
+        return f"<Discipline(id={self.id}, name='{self.name}')>"
