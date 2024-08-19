@@ -1,0 +1,19 @@
+# pyproject.toml
+[tool.app]
+secret_key = "your_default_secret_key"
+access_token_expire_minutes = 30
+database_url_dev = "sqlite:///./backend/quiz_app.db"
+database_url_test = "sqlite:///./backend/test.db"
+unprotected_endpoints = ["/", "/login", "/logout", "/register", "/docs", "/redoc", "/openapi.json"]
+
+[tool.pylint."MESSAGES CONTROL"]
+ignored-argument-names="^current_user$"
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+testpaths = [
+    "./backend/tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning"
+]

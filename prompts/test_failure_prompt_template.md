@@ -22,7 +22,7 @@ Hello, I'm presenting you with a detailed markdown file named `repo_summary.md`,
 
 **Task:** 
 
-**Context:** You are tasked with addressing and fixing failing tests within the pytest testing suite for the `/code/quiz-app/quiz-app-backend` FastAPI project. This project encompasses Python scripts for models, schemas, CRUD operations, and API endpoints, which have been experiencing issues in their testing components. Utilizing SQLAlchemy ORM for database management and Pydantic for data validation, your goal is to identify and rectify the failing tests to ensure the project's stability and reliability.
+**Context:** You are tasked with addressing and fixing failing tests within the pytest testing suite for the `/code/quiz-app/backend` FastAPI project. This project encompasses Python scripts for models, schemas, CRUD operations, and API endpoints, which have been experiencing issues in their testing components. Utilizing SQLAlchemy ORM for database management and Pydantic for data validation, your goal is to identify and rectify the failing tests to ensure the project's stability and reliability.
 
 **Steps:**
 

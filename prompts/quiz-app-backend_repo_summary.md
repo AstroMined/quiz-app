@@ -1,5 +1,5 @@
 
-# Directory: /code/quiz-app/quiz-app-backend/
+# Directory: /code/quiz-app/backend/
 
 ## File: logging_fixer.py
 ```py
@@ -70,7 +70,7 @@ filterwarnings = [
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app
+# Directory: /code/quiz-app/backend/app
 
 ## File: __init__.py
 ```py
@@ -85,29 +85,29 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.endpoints import answer_choices as answer_choices_router
-from app.api.endpoints import authentication as authentication_router
-from app.api.endpoints import concepts as concepts_router
-from app.api.endpoints import disciplines as disciplines_router
-from app.api.endpoints import domains as domains_router
-from app.api.endpoints import filters as filters_router
-from app.api.endpoints import groups as groups_router
-from app.api.endpoints import leaderboard as leaderboard_router
-from app.api.endpoints import question_sets as question_sets_router
-from app.api.endpoints import questions as questions_router
-from app.api.endpoints import register as register_router
-from app.api.endpoints import subjects as subjects_router
-from app.api.endpoints import subtopics as subtopics_router
-from app.api.endpoints import topics as topics_router
-from app.api.endpoints import user_responses as user_responses_router
-from app.api.endpoints import users as users_router
-from app.db.session import get_db
-from app.middleware.authorization_middleware import AuthorizationMiddleware
-from app.middleware.blacklist_middleware import BlacklistMiddleware
-from app.middleware.cors_middleware import add_cors_middleware
-from app.services.permission_generator_service import (
+from backend.app.api.endpoints import answer_choices as answer_choices_router
+from backend.app.api.endpoints import authentication as authentication_router
+from backend.app.api.endpoints import concepts as concepts_router
+from backend.app.api.endpoints import disciplines as disciplines_router
+from backend.app.api.endpoints import domains as domains_router
+from backend.app.api.endpoints import filters as filters_router
+from backend.app.api.endpoints import groups as groups_router
+from backend.app.api.endpoints import leaderboard as leaderboard_router
+from backend.app.api.endpoints import question_sets as question_sets_router
+from backend.app.api.endpoints import questions as questions_router
+from backend.app.api.endpoints import register as register_router
+from backend.app.api.endpoints import subjects as subjects_router
+from backend.app.api.endpoints import subtopics as subtopics_router
+from backend.app.api.endpoints import topics as topics_router
+from backend.app.api.endpoints import user_responses as user_responses_router
+from backend.app.api.endpoints import users as users_router
+from backend.app.db.session import get_db
+from backend.app.middleware.authorization_middleware import AuthorizationMiddleware
+from backend.app.middleware.blacklist_middleware import BlacklistMiddleware
+from backend.app.middleware.cors_middleware import add_cors_middleware
+from backend.app.services.permission_generator_service import (
     ensure_permissions_in_db, generate_permissions)
-from app.services.validation_service import register_validation_listeners
+from backend.app.services.validation_service import register_validation_listeners
 
 app = FastAPI()
 
@@ -155,7 +155,7 @@ def read_root():
 
 ## File: validate_openapi.py
 ```py
-# filename: /code/quiz-app/quiz-app-backend/app/validate_openapi.py
+# filename: /code/quiz-app/backend/app/validate_openapi.py
 
 import os
 import sys
@@ -165,7 +165,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi.openapi.utils import get_openapi
 
-from app.main import \
+from backend.app.main import \
     app  # Adjust the import based on your actual app file and instance
 
 
@@ -189,7 +189,7 @@ if __name__ == "__main__":
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app/schemas
+# Directory: /code/quiz-app/backend/app/schemas
 
 ## File: __init__.py
 ```py
@@ -198,7 +198,7 @@ if __name__ == "__main__":
 
 ## File: answer_choices.py
 ```py
-# filename: app/schemas/answer_choices.py
+# filename: backend/app/schemas/answer_choices.py
 
 from typing import Optional
 
@@ -240,7 +240,7 @@ class AnswerChoiceSchema(AnswerChoiceBaseSchema):
 
 ## File: authentication.py
 ```py
-# filename: app/schemas/authentication.py
+# filename: backend/app/schemas/authentication.py
 
 from pydantic import BaseModel, Field
 
@@ -257,7 +257,7 @@ class TokenSchema(BaseModel):
 
 ## File: concepts.py
 ```py
-# filename: app/schemas/concepts.py
+# filename: backend/app/schemas/concepts.py
 
 from typing import List, Optional
 
@@ -323,7 +323,7 @@ class ConceptSchema(ConceptBaseSchema):
 
 ## File: disciplines.py
 ```py
-# filename: app/schemas/disciplines.py
+# filename: backend/app/schemas/disciplines.py
 
 from typing import List, Optional
 
@@ -377,7 +377,7 @@ class DisciplineSchema(DisciplineBaseSchema):
 
 ## File: domains.py
 ```py
-# filename: app/schemas/domains.py
+# filename: backend/app/schemas/domains.py
 
 from typing import List, Optional
 
@@ -428,13 +428,13 @@ class DomainSchema(DomainBaseSchema):
 
 ## File: filters.py
 ```py
-# filename: app/schemas/filters.py
+# filename: backend/app/schemas/filters.py
 
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, validator
 
-from app.schemas.questions import DifficultyLevel
+from backend.app.schemas.questions import DifficultyLevel
 
 
 class FilterParamsSchema(BaseModel):
@@ -466,7 +466,7 @@ class FilterParamsSchema(BaseModel):
 
 ## File: groups.py
 ```py
-# filename: app/schemas/groups.py
+# filename: backend/app/schemas/groups.py
 
 import re
 from typing import List, Optional
@@ -521,13 +521,13 @@ class GroupSchema(GroupBaseSchema):
 
 ## File: leaderboard.py
 ```py
-# filename: app/schemas/leaderboard.py
+# filename: backend/app/schemas/leaderboard.py
 
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from app.schemas.time_period import TimePeriodSchema
+from backend.app.schemas.time_period import TimePeriodSchema
 
 
 class LeaderboardBaseSchema(BaseModel):
@@ -553,7 +553,7 @@ class LeaderboardSchema(LeaderboardBaseSchema):
 
 ## File: permissions.py
 ```py
-# filename: app/schemas/permissions.py
+# filename: backend/app/schemas/permissions.py
 
 import re
 from typing import Optional
@@ -594,7 +594,7 @@ class PermissionSchema(PermissionBaseSchema):
 
 ## File: question_sets.py
 ```py
-# filename: app/schemas/question_sets.py
+# filename: backend/app/schemas/question_sets.py
 
 import re
 from typing import List, Optional
@@ -655,7 +655,7 @@ class QuestionSetSchema(QuestionSetBaseSchema):
 
 ## File: question_tags.py
 ```py
-# filename: app/schemas/question_tags.py
+# filename: backend/app/schemas/question_tags.py
 
 from typing import Optional
 
@@ -695,17 +695,17 @@ class QuestionTagSchema(QuestionTagBaseSchema):
 
 ## File: questions.py
 ```py
-# filename: app/schemas/questions.py
+# filename: backend/app/schemas/questions.py
 
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator, validator
 
-from app.schemas.answer_choices import AnswerChoiceCreateSchema, AnswerChoiceSchema
-from app.schemas.question_sets import QuestionSetCreateSchema
-from app.schemas.question_tags import QuestionTagCreateSchema
+from backend.app.schemas.answer_choices import AnswerChoiceCreateSchema, AnswerChoiceSchema
+from backend.app.schemas.question_sets import QuestionSetCreateSchema
+from backend.app.schemas.question_tags import QuestionTagCreateSchema
 
-from app.core.config import DifficultyLevel
+from backend.app.core.config import DifficultyLevel
 
 class QuestionBaseSchema(BaseModel):
     text: str = Field(..., min_length=1, max_length=10000, description="The text of the question")
@@ -792,7 +792,7 @@ class QuestionWithAnswersCreateSchema(QuestionCreateSchema):
 
 ## File: roles.py
 ```py
-# filename: app/schemas/roles.py
+# filename: backend/app/schemas/roles.py
 
 from typing import List, Optional
 
@@ -846,7 +846,7 @@ class RoleSchema(RoleBaseSchema):
 
 ## File: subjects.py
 ```py
-# filename: app/schemas/subjects.py
+# filename: backend/app/schemas/subjects.py
 
 from typing import List, Optional
 
@@ -901,7 +901,7 @@ class SubjectSchema(SubjectBaseSchema):
 
 ## File: subtopics.py
 ```py
-# filename: app/schemas/subtopics.py
+# filename: backend/app/schemas/subtopics.py
 
 from typing import List, Optional
 
@@ -956,7 +956,7 @@ class SubtopicSchema(SubtopicBaseSchema):
 
 ## File: time_period.py
 ```py
-# filename: app/schemas/time_period.py
+# filename: backend/app/schemas/time_period.py
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -987,7 +987,7 @@ class TimePeriodSchema(BaseModel):
 
 ## File: topics.py
 ```py
-# filename: app/schemas/topics.py
+# filename: backend/app/schemas/topics.py
 
 from typing import List, Optional
 
@@ -1042,14 +1042,14 @@ class TopicSchema(TopicBaseSchema):
 
 ## File: user.py
 ```py
-# filename: app/schemas/user.py
+# filename: backend/app/schemas/user.py
 
 import re
 from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field, SecretStr, field_validator
 
-from app.core.security import get_password_hash
+from backend.app.core.security import get_password_hash
 
 
 class UserBaseSchema(BaseModel):
@@ -1141,7 +1141,7 @@ class UserSchema(UserBaseSchema):
 
 ## File: user_responses.py
 ```py
-# filename: app/schemas/user_responses.py
+# filename: backend/app/schemas/user_responses.py
 
 from datetime import datetime, timezone
 from typing import Optional
@@ -1178,7 +1178,7 @@ class UserResponseSchema(UserResponseBaseSchema):
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app/services
+# Directory: /code/quiz-app/backend/app/services
 
 ## File: __init__.py
 ```py
@@ -1187,13 +1187,13 @@ class UserResponseSchema(UserResponseBaseSchema):
 
 ## File: authentication_service.py
 ```py
-# filename: app/services/authentication_service.py
+# filename: backend/app/services/authentication_service.py
 
 from sqlalchemy.orm import Session
 
-from app.core.security import get_password_hash, verify_password
-from app.models.users import UserModel
-from app.crud.crud_user import read_user_by_username_from_db
+from backend.app.core.security import get_password_hash, verify_password
+from backend.app.models.users import UserModel
+from backend.app.crud.crud_user import read_user_by_username_from_db
 
 
 def authenticate_user(db: Session, username: str, password: str) -> UserModel:
@@ -1215,16 +1215,16 @@ def authenticate_user(db: Session, username: str, password: str) -> UserModel:
 
 ## File: authorization_service.py
 ```py
-# filename: app/services/authorization_service.py
+# filename: backend/app/services/authorization_service.py
 
 from typing import List
 
 from sqlalchemy.orm import Session
 
-from app.models.groups import GroupModel
-from app.models.roles import RoleModel
-from app.models.users import UserModel
-from app.services.logging_service import logger
+from backend.app.models.groups import GroupModel
+from backend.app.models.roles import RoleModel
+from backend.app.models.users import UserModel
+from backend.app.services.logging_service import logger
 
 
 def get_user_permissions(db: Session, user: UserModel) -> List[str]:
@@ -1330,8 +1330,8 @@ logger = setup_logging(disable_logging=False, disable_cli_logging=True)
 
 from fastapi import FastAPI
 
-from app.core.config import settings_core
-from app.models.permissions import PermissionModel
+from backend.app.core.config import settings_core
+from backend.app.models.permissions import PermissionModel
 
 
 def generate_permissions(app: FastAPI):
@@ -1367,7 +1367,7 @@ def ensure_permissions_in_db(db, permissions):
 
 ## File: randomization_service.py
 ```py
-# filename: app/utils/randomization.py
+# filename: backend/app/utils/randomization.py
 
 import random
 
@@ -1382,18 +1382,18 @@ def randomize_answer_choices(answer_choices):
 
 ## File: scoring_service.py
 ```py
-# filename: app/services/scoring_service.py
+# filename: backend/app/services/scoring_service.py
 
 from datetime import datetime, timezone, timedelta, timezone
 from typing import Dict
 
 from sqlalchemy.orm import Session
 
-from app.models.associations import UserToGroupAssociation
-from app.models.time_period import TimePeriodModel
-from app.models.user_responses import UserResponseModel
-from app.models.users import UserModel
-from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
+from backend.app.models.associations import UserToGroupAssociation
+from backend.app.models.time_period import TimePeriodModel
+from backend.app.models.user_responses import UserResponseModel
+from backend.app.models.users import UserModel
+from backend.app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
 
 
 def calculate_user_score(user_id: int, db: Session) -> int:
@@ -1454,7 +1454,7 @@ def leaderboard_to_schema(leaderboard_model):
 
 ## File: user_service.py
 ```py
-# filename: app/services/user_service.py
+# filename: backend/app/services/user_service.py
 
 from datetime import datetime, timezone, timezone
 
@@ -1463,11 +1463,11 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
 
-from app.core.jwt import decode_access_token
-from app.db.session import get_db
-from app.models.authentication import RevokedTokenModel
-from app.crud.crud_user import read_user_by_username_from_db
-from app.services.logging_service import logger
+from backend.app.core.jwt import decode_access_token
+from backend.app.db.session import get_db
+from backend.app.models.authentication import RevokedTokenModel
+from backend.app.crud.crud_user import read_user_by_username_from_db
+from backend.app.services.logging_service import logger
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
@@ -1510,7 +1510,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 
 ## File: validation_service.py
 ```py
-# filename: app/services/validation_service.py
+# filename: backend/app/services/validation_service.py
 
 from fastapi import HTTPException
 from sqlalchemy import event, inspect
@@ -1518,22 +1518,22 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import instance_dict
 from sqlalchemy.orm.base import instance_state
 
-from app.db.base import Base
-from app.models.answer_choices import AnswerChoiceModel
-from app.models.authentication import RevokedTokenModel
-from app.models.groups import GroupModel
-from app.models.leaderboard import LeaderboardModel
-from app.models.permissions import PermissionModel
-from app.models.question_sets import QuestionSetModel
-from app.models.question_tags import QuestionTagModel
-from app.models.questions import QuestionModel
-from app.models.roles import RoleModel
-from app.models.subjects import SubjectModel
-from app.models.subtopics import SubtopicModel
-from app.models.topics import TopicModel
-from app.models.user_responses import UserResponseModel
-from app.models.users import UserModel
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
+from backend.app.db.base import Base
+from backend.app.models.answer_choices import AnswerChoiceModel
+from backend.app.models.authentication import RevokedTokenModel
+from backend.app.models.groups import GroupModel
+from backend.app.models.leaderboard import LeaderboardModel
+from backend.app.models.permissions import PermissionModel
+from backend.app.models.question_sets import QuestionSetModel
+from backend.app.models.question_tags import QuestionTagModel
+from backend.app.models.questions import QuestionModel
+from backend.app.models.roles import RoleModel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.user_responses import UserResponseModel
+from backend.app.models.users import UserModel
+from backend.app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
 
 def validate_foreign_keys(mapper, connection, target):
@@ -1669,7 +1669,7 @@ def register_validation_listeners():
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app/crud
+# Directory: /code/quiz-app/backend/app/crud
 
 ## File: __init__.py
 ```py
@@ -1678,13 +1678,13 @@ def register_validation_listeners():
 
 ## File: crud_answer_choices.py
 ```py
-# filename: app/crud/crud_answer_choices.py
+# filename: backend/app/crud/crud_answer_choices.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.answer_choices import AnswerChoiceModel
-from app.models.questions import QuestionModel
-from app.models.associations import QuestionToAnswerAssociation
+from backend.app.models.answer_choices import AnswerChoiceModel
+from backend.app.models.questions import QuestionModel
+from backend.app.models.associations import QuestionToAnswerAssociation
 
 def create_answer_choice_in_db(db: Session, answer_choice_data: Dict) -> AnswerChoiceModel:
     db_answer_choice = AnswerChoiceModel(
@@ -1754,14 +1754,14 @@ def read_questions_for_answer_choice_from_db(db: Session, answer_choice_id: int)
 
 ## File: crud_concepts.py
 ```py
-# filename: app/crud/crud_concepts.py
+# filename: backend/app/crud/crud_concepts.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.concepts import ConceptModel
-from app.models.subtopics import SubtopicModel
-from app.models.questions import QuestionModel
-from app.models.associations import SubtopicToConceptAssociation, QuestionToConceptAssociation
+from backend.app.models.concepts import ConceptModel
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.questions import QuestionModel
+from backend.app.models.associations import SubtopicToConceptAssociation, QuestionToConceptAssociation
 
 def create_concept_in_db(db: Session, concept_data: Dict) -> ConceptModel:
     db_concept = ConceptModel(name=concept_data['name'])
@@ -1850,14 +1850,14 @@ def read_questions_for_concept_from_db(db: Session, concept_id: int) -> List[Que
 
 ## File: crud_disciplines.py
 ```py
-# filename: app/crud/crud_disciplines.py
+# filename: backend/app/crud/crud_disciplines.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.disciplines import DisciplineModel
-from app.models.domains import DomainModel
-from app.models.subjects import SubjectModel
-from app.models.associations import DomainToDisciplineAssociation, DisciplineToSubjectAssociation
+from backend.app.models.disciplines import DisciplineModel
+from backend.app.models.domains import DomainModel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.associations import DomainToDisciplineAssociation, DisciplineToSubjectAssociation
 
 def create_discipline_in_db(db: Session, discipline_data: Dict) -> DisciplineModel:
     db_discipline = DisciplineModel(name=discipline_data['name'])
@@ -1946,13 +1946,13 @@ def read_subjects_for_discipline_from_db(db: Session, discipline_id: int) -> Lis
 
 ## File: crud_domains.py
 ```py
-# filename: app/crud/crud_domains.py
+# filename: backend/app/crud/crud_domains.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.domains import DomainModel
-from app.models.disciplines import DisciplineModel
-from app.models.associations import DomainToDisciplineAssociation
+from backend.app.models.domains import DomainModel
+from backend.app.models.disciplines import DisciplineModel
+from backend.app.models.associations import DomainToDisciplineAssociation
 
 def create_domain_in_db(db: Session, domain_data: Dict) -> DomainModel:
     db_domain = DomainModel(name=domain_data['name'])
@@ -2016,16 +2016,16 @@ def read_disciplines_for_domain_from_db(db: Session, domain_id: int) -> List[Dis
 
 ## File: crud_filters.py
 ```py
-# filename: app/crud/crud_filters.py
+# filename: backend/app/crud/crud_filters.py
 
 from typing import List, Dict
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
-from app.models.questions import QuestionModel
-from app.models.subjects import SubjectModel
-from app.models.topics import TopicModel
-from app.models.subtopics import SubtopicModel
-from app.models.question_tags import QuestionTagModel
+from backend.app.models.questions import QuestionModel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.question_tags import QuestionTagModel
 
 def read_filtered_questions_from_db(
     db: Session,
@@ -2057,14 +2057,14 @@ def read_filtered_questions_from_db(
 
 ## File: crud_groups.py
 ```py
-# filename: app/crud/crud_groups.py
+# filename: backend/app/crud/crud_groups.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.groups import GroupModel
-from app.models.users import UserModel
-from app.models.question_sets import QuestionSetModel
-from app.models.associations import UserToGroupAssociation, QuestionSetToGroupAssociation
+from backend.app.models.groups import GroupModel
+from backend.app.models.users import UserModel
+from backend.app.models.question_sets import QuestionSetModel
+from backend.app.models.associations import UserToGroupAssociation, QuestionSetToGroupAssociation
 
 def create_group_in_db(db: Session, group_data: Dict) -> GroupModel:
     db_group = GroupModel(
@@ -2155,12 +2155,12 @@ def read_question_sets_for_group_from_db(db: Session, group_id: int) -> List[Que
 
 ## File: crud_leaderboard.py
 ```py
-# filename: app/crud/crud_leaderboard.py
+# filename: backend/app/crud/crud_leaderboard.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.leaderboard import LeaderboardModel
-from app.models.time_period import TimePeriodModel
+from backend.app.models.leaderboard import LeaderboardModel
+from backend.app.models.time_period import TimePeriodModel
 
 def create_leaderboard_entry_in_db(db: Session, leaderboard_data: Dict) -> LeaderboardModel:
     db_leaderboard_entry = LeaderboardModel(
@@ -2225,13 +2225,13 @@ def read_leaderboard_entries_for_group_from_db(db: Session, group_id: int) -> Li
 
 ## File: crud_permissions.py
 ```py
-# filename: app/crud/crud_permissions.py
+# filename: backend/app/crud/crud_permissions.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.permissions import PermissionModel
-from app.models.roles import RoleModel
-from app.models.associations import RoleToPermissionAssociation
+from backend.app.models.permissions import PermissionModel
+from backend.app.models.roles import RoleModel
+from backend.app.models.associations import RoleToPermissionAssociation
 
 def create_permission_in_db(db: Session, permission_data: Dict) -> PermissionModel:
     db_permission = PermissionModel(
@@ -2298,14 +2298,14 @@ def read_roles_for_permission_from_db(db: Session, permission_id: int) -> List[R
 
 ## File: crud_question_sets.py
 ```py
-# filename: app/crud/crud_question_sets.py
+# filename: backend/app/crud/crud_question_sets.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.question_sets import QuestionSetModel
-from app.models.questions import QuestionModel
-from app.models.groups import GroupModel
-from app.models.associations import QuestionSetToQuestionAssociation, QuestionSetToGroupAssociation
+from backend.app.models.question_sets import QuestionSetModel
+from backend.app.models.questions import QuestionModel
+from backend.app.models.groups import GroupModel
+from backend.app.models.associations import QuestionSetToQuestionAssociation, QuestionSetToGroupAssociation
 
 def create_question_set_in_db(db: Session, question_set_data: Dict) -> QuestionSetModel:
     db_question_set = QuestionSetModel(
@@ -2397,13 +2397,13 @@ def read_groups_for_question_set_from_db(db: Session, question_set_id: int) -> L
 
 ## File: crud_question_tags.py
 ```py
-# filename: app/crud/crud_question_tags.py
+# filename: backend/app/crud/crud_question_tags.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.question_tags import QuestionTagModel
-from app.models.questions import QuestionModel
-from app.models.associations import QuestionToTagAssociation
+from backend.app.models.question_tags import QuestionTagModel
+from backend.app.models.questions import QuestionModel
+from backend.app.models.associations import QuestionToTagAssociation
 
 def create_question_tag_in_db(db: Session, question_tag_data: Dict) -> QuestionTagModel:
     db_question_tag = QuestionTagModel(
@@ -2475,18 +2475,18 @@ def read_questions_for_tag_from_db(db: Session, tag_id: int) -> List[QuestionMod
 
 ## File: crud_questions.py
 ```py
-# filename: app/crud/crud_questions.py
+# filename: backend/app/crud/crud_questions.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.questions import QuestionModel, DifficultyLevel
-from app.models.answer_choices import AnswerChoiceModel
-from app.models.question_tags import QuestionTagModel
-from app.models.question_sets import QuestionSetModel
-from app.models.subjects import SubjectModel
-from app.models.topics import TopicModel
-from app.models.subtopics import SubtopicModel
-from app.models.concepts import ConceptModel
+from backend.app.models.questions import QuestionModel, DifficultyLevel
+from backend.app.models.answer_choices import AnswerChoiceModel
+from backend.app.models.question_tags import QuestionTagModel
+from backend.app.models.question_sets import QuestionSetModel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.concepts import ConceptModel
 
 def associate_related_models(db: Session, db_question: QuestionModel, question_data: Dict) -> None:
     """Helper function to associate related models with the question."""
@@ -2577,14 +2577,14 @@ def delete_question_from_db(db: Session, question_id: int) -> bool:
 
 ## File: crud_roles.py
 ```py
-# filename: app/crud/crud_roles.py
+# filename: backend/app/crud/crud_roles.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.roles import RoleModel
-from app.models.permissions import PermissionModel
-from app.models.users import UserModel
-from app.models.associations import RoleToPermissionAssociation
+from backend.app.models.roles import RoleModel
+from backend.app.models.permissions import PermissionModel
+from backend.app.models.users import UserModel
+from backend.app.models.associations import RoleToPermissionAssociation
 
 def create_role_in_db(db: Session, role_data: Dict) -> RoleModel:
     db_role = RoleModel(
@@ -2655,15 +2655,15 @@ def read_users_for_role_from_db(db: Session, role_id: int) -> List[UserModel]:
 
 ## File: crud_subjects.py
 ```py
-# filename: app/crud/crud_subjects.py
+# filename: backend/app/crud/crud_subjects.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.subjects import SubjectModel
-from app.models.disciplines import DisciplineModel
-from app.models.topics import TopicModel
-from app.models.questions import QuestionModel
-from app.models.associations import DisciplineToSubjectAssociation, SubjectToTopicAssociation, QuestionToSubjectAssociation
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.disciplines import DisciplineModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.questions import QuestionModel
+from backend.app.models.associations import DisciplineToSubjectAssociation, SubjectToTopicAssociation, QuestionToSubjectAssociation
 
 def create_subject_in_db(db: Session, subject_data: Dict) -> SubjectModel:
     db_subject = SubjectModel(name=subject_data['name'])
@@ -2777,15 +2777,15 @@ def read_questions_for_subject_from_db(db: Session, subject_id: int) -> List[Que
 
 ## File: crud_subtopics.py
 ```py
-# filename: app/crud/crud_subtopics.py
+# filename: backend/app/crud/crud_subtopics.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.subtopics import SubtopicModel
-from app.models.topics import TopicModel
-from app.models.concepts import ConceptModel
-from app.models.questions import QuestionModel
-from app.models.associations import TopicToSubtopicAssociation, SubtopicToConceptAssociation, QuestionToSubtopicAssociation
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.concepts import ConceptModel
+from backend.app.models.questions import QuestionModel
+from backend.app.models.associations import TopicToSubtopicAssociation, SubtopicToConceptAssociation, QuestionToSubtopicAssociation
 
 def create_subtopic_in_db(db: Session, subtopic_data: Dict) -> SubtopicModel:
     db_subtopic = SubtopicModel(name=subtopic_data['name'])
@@ -2899,15 +2899,15 @@ def read_questions_for_subtopic_from_db(db: Session, subtopic_id: int) -> List[Q
 
 ## File: crud_topics.py
 ```py
-# filename: app/crud/crud_topics.py
+# filename: backend/app/crud/crud_topics.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.topics import TopicModel
-from app.models.subjects import SubjectModel
-from app.models.subtopics import SubtopicModel
-from app.models.questions import QuestionModel
-from app.models.associations import SubjectToTopicAssociation, TopicToSubtopicAssociation, QuestionToTopicAssociation
+from backend.app.models.topics import TopicModel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.questions import QuestionModel
+from backend.app.models.associations import SubjectToTopicAssociation, TopicToSubtopicAssociation, QuestionToTopicAssociation
 
 def create_topic_in_db(db: Session, topic_data: Dict) -> TopicModel:
     db_topic = TopicModel(name=topic_data['name'])
@@ -3021,16 +3021,16 @@ def read_questions_for_topic_from_db(db: Session, topic_id: int) -> List[Questio
 
 ## File: crud_user.py
 ```py
-# filename: app/crud/crud_users.py
+# filename: backend/app/crud/crud_users.py
 
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.users import UserModel
-from app.models.groups import GroupModel
-from app.models.roles import RoleModel
-from app.models.question_sets import QuestionSetModel
-from app.models.associations import UserToGroupAssociation
-from app.core.security import get_password_hash
+from backend.app.models.users import UserModel
+from backend.app.models.groups import GroupModel
+from backend.app.models.roles import RoleModel
+from backend.app.models.question_sets import QuestionSetModel
+from backend.app.models.associations import UserToGroupAssociation
+from backend.app.core.security import get_password_hash
 
 def create_user_in_db(db: Session, user_data: Dict) -> UserModel:
     hashed_password = get_password_hash(user_data['password'])
@@ -3115,12 +3115,12 @@ def read_created_question_sets_for_user_from_db(db: Session, user_id: int) -> Li
 
 ## File: crud_user_responses.py
 ```py
-# filename: app/crud/crud_user_responses.py
+# filename: backend/app/crud/crud_user_responses.py
 
 from datetime import datetime, timezone
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.user_responses import UserResponseModel
+from backend.app.models.user_responses import UserResponseModel
 
 def create_user_response_in_db(db: Session, user_response_data: Dict) -> UserResponseModel:
     db_user_response = UserResponseModel(
@@ -3184,7 +3184,7 @@ def read_user_responses_for_question_from_db(db: Session, question_id: int) -> L
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app/db
+# Directory: /code/quiz-app/backend/app/db
 
 ## File: __init__.py
 ```py
@@ -3193,7 +3193,7 @@ def read_user_responses_for_question_from_db(db: Session, question_id: int) -> L
 
 ## File: base.py
 ```py
-# filename: app/db/base.py
+# filename: backend/app/db/base.py
 
 from sqlalchemy.orm import declarative_base
 
@@ -3203,16 +3203,16 @@ Base = declarative_base()
 
 ## File: session.py
 ```py
-# filename: app/db/session.py
+# filename: backend/app/db/session.py
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.core.config import settings_core
-from app.db.base import Base
-from app.models.permissions import PermissionModel
-from app.models.roles import RoleModel
-from app.services.logging_service import logger
+from backend.app.core.config import settings_core
+from backend.app.db.base import Base
+from backend.app.models.permissions import PermissionModel
+from backend.app.models.roles import RoleModel
+from backend.app.services.logging_service import logger
 
 engine = create_engine(settings_core.DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -3251,14 +3251,14 @@ def get_db():
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app/api
+# Directory: /code/quiz-app/backend/app/api
 
 ## File: __init__.py
 ```py
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app/api/endpoints
+# Directory: /code/quiz-app/backend/app/api/endpoints
 
 ## File: __init__.py
 ```py
@@ -3267,24 +3267,24 @@ def get_db():
 
 ## File: answer_choices.py
 ```py
-# filename: /code/quiz-app/quiz-app-backend/app/api/endpoints/answer_choices.py
+# filename: /code/quiz-app/backend/app/api/endpoints/answer_choices.py
 
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.crud.crud_answer_choices import (create_answer_choice_in_db,
+from backend.app.crud.crud_answer_choices import (create_answer_choice_in_db,
                                           delete_answer_choice_from_db,
                                           read_answer_choice_from_db,
                                           read_answer_choices_from_db,
                                           update_answer_choice_in_db)
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.answer_choices import (AnswerChoiceCreateSchema,
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.answer_choices import (AnswerChoiceCreateSchema,
                                         AnswerChoiceSchema,
                                         AnswerChoiceUpdateSchema)
-from app.services.user_service import get_current_user
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3343,7 +3343,7 @@ def delete_answer_choice(
 
 ## File: authentication.py
 ```py
-# filename: app/api/endpoints/authentication.py
+# filename: backend/app/api/endpoints/authentication.py
 
 from datetime import timedelta
 
@@ -3351,13 +3351,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app.core.config import settings_core
-from app.core.jwt import create_access_token
-from app.db.session import get_db
-from app.models.authentication import RevokedTokenModel
-from app.schemas.authentication import TokenSchema
-from app.services.authentication_service import authenticate_user
-from app.services.logging_service import logger
+from backend.app.core.config import settings_core
+from backend.app.core.jwt import create_access_token
+from backend.app.db.session import get_db
+from backend.app.models.authentication import RevokedTokenModel
+from backend.app.schemas.authentication import TokenSchema
+from backend.app.services.authentication_service import authenticate_user
+from backend.app.services.logging_service import logger
 
 router = APIRouter()
 
@@ -3423,21 +3423,21 @@ async def logout_endpoint(token: str = Depends(oauth2_scheme), db: Session = Dep
 
 ## File: concepts.py
 ```py
-# filename: app/api/endpoints/concepts.py
+# filename: backend/app/api/endpoints/concepts.py
 
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.crud.crud_concepts import (create_concept_in_db, delete_concept_from_db,
+from backend.app.crud.crud_concepts import (create_concept_in_db, delete_concept_from_db,
                                     read_concept_from_db, read_concepts_from_db,
                                     update_concept_in_db)
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.concepts import (ConceptCreateSchema, ConceptSchema,
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.concepts import (ConceptCreateSchema, ConceptSchema,
                                   ConceptUpdateSchema)
-from app.services.user_service import get_current_user
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3497,21 +3497,21 @@ def delete_concept_endpoint(
 
 ## File: disciplines.py
 ```py
-# filename: app/api/endpoints/disciplines.py
+# filename: backend/app/api/endpoints/disciplines.py
 
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.crud.crud_disciplines import (create_discipline_in_db, delete_discipline_from_db,
+from backend.app.crud.crud_disciplines import (create_discipline_in_db, delete_discipline_from_db,
                                        read_discipline_from_db, read_disciplines_from_db,
                                        update_discipline_in_db)
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.disciplines import (DisciplineCreateSchema, DisciplineSchema,
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.disciplines import (DisciplineCreateSchema, DisciplineSchema,
                                      DisciplineUpdateSchema)
-from app.services.user_service import get_current_user
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3571,20 +3571,20 @@ def delete_discipline_endpoint(
 
 ## File: domains.py
 ```py
-# filename: app/api/endpoints/domains.py
+# filename: backend/app/api/endpoints/domains.py
 
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.crud.crud_domains import (create_domain_in_db, delete_domain_from_db, read_domain_from_db,
+from backend.app.crud.crud_domains import (create_domain_in_db, delete_domain_from_db, read_domain_from_db,
                                    read_domains_from_db, update_domain_in_db)
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.domains import (DomainCreateSchema, DomainSchema,
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.domains import (DomainCreateSchema, DomainSchema,
                                  DomainUpdateSchema)
-from app.services.user_service import get_current_user
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3644,7 +3644,7 @@ def delete_domain_endpoint(
 
 ## File: filters.py
 ```py
-# filename: app/api/endpoints/filters.py
+# filename: backend/app/api/endpoints/filters.py
 """
 This module defines the API endpoints for filtering questions in the application.
 
@@ -3678,12 +3678,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.crud.crud_filters import read_filtered_questions_from_db
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.filters import FilterParamsSchema
-from app.schemas.questions import QuestionSchema
-from app.services.user_service import get_current_user
+from backend.app.crud.crud_filters import read_filtered_questions_from_db
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.filters import FilterParamsSchema
+from backend.app.schemas.questions import QuestionSchema
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3780,20 +3780,20 @@ async def filter_questions_endpoint(
 
 ## File: groups.py
 ```py
-# filename: app/api/endpoints/groups.py
+# filename: backend/app/api/endpoints/groups.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.crud.crud_groups import (create_group_in_db, delete_group_from_db,
+from backend.app.crud.crud_groups import (create_group_in_db, delete_group_from_db,
                                   read_group_from_db, update_group_in_db)
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.groups import (GroupCreateSchema, GroupSchema,
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.groups import (GroupCreateSchema, GroupSchema,
                                 GroupUpdateSchema)
-from app.services.logging_service import logger
-from app.services.user_service import get_current_user
+from backend.app.services.logging_service import logger
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3883,20 +3883,20 @@ def delete_group_endpoint(
 
 ## File: leaderboard.py
 ```py
-# filename: app/api/endpoints/leaderboard.py
+# filename: backend/app/api/endpoints/leaderboard.py
 
 from typing import List
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-from app.models.time_period import TimePeriodModel
-from app.models.users import UserModel
-from app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
-from app.services.scoring_service import (calculate_leaderboard_scores,
+from backend.app.db.session import get_db
+from backend.app.models.time_period import TimePeriodModel
+from backend.app.models.users import UserModel
+from backend.app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
+from backend.app.services.scoring_service import (calculate_leaderboard_scores,
                                           time_period_to_schema)
-from app.services.user_service import get_current_user
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -3930,7 +3930,7 @@ def get_leaderboard(
 
 ## File: question_sets.py
 ```py
-# filename: app/api/endpoints/question_sets.py
+# filename: backend/app/api/endpoints/question_sets.py
 
 import json
 from typing import List
@@ -3940,20 +3940,20 @@ from fastapi import (APIRouter, Depends, File, Form, HTTPException, Response,
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.crud.crud_question_sets import (create_question_set_in_db,
+from backend.app.crud.crud_question_sets import (create_question_set_in_db,
                                          delete_question_set_from_db,
                                          read_question_set_from_db,
                                          read_question_sets_from_db,
                                          update_question_set_in_db)
-from app.crud.crud_questions import create_question_in_db
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.question_sets import (QuestionSetCreateSchema,
+from backend.app.crud.crud_questions import create_question_in_db
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.question_sets import (QuestionSetCreateSchema,
                                        QuestionSetSchema,
                                        QuestionSetUpdateSchema)
-from app.schemas.questions import QuestionCreateSchema
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
-from app.services.user_service import get_current_user
+from backend.app.schemas.questions import QuestionCreateSchema
+from backend.app.services.logging_service import logger, sqlalchemy_obj_to_dict
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -4129,24 +4129,24 @@ def delete_question_set_endpoint(
 
 ## File: questions.py
 ```py
-# filename: /code/quiz-app/quiz-app-backend/app/api/endpoints/questions.py
+# filename: /code/quiz-app/backend/app/api/endpoints/questions.py
 
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.crud.crud_questions import (create_question_in_db, 
+from backend.app.crud.crud_questions import (create_question_in_db, 
                                      delete_question_from_db, read_question_from_db,
                                      read_questions_from_db, update_question_in_db)
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.questions import (DetailedQuestionSchema,
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.questions import (DetailedQuestionSchema,
                                    QuestionCreateSchema, QuestionSchema,
                                    QuestionUpdateSchema,
                                    QuestionWithAnswersCreateSchema)
-from app.services.logging_service import logger
-from app.services.user_service import get_current_user
+from backend.app.services.logging_service import logger
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -4216,7 +4216,7 @@ def delete_question_endpoint(
 
 ## File: register.py
 ```py
-# filename: app/api/endpoints/register.py
+# filename: backend/app/api/endpoints/register.py
 """
 This module provides an endpoint for user registration.
 
@@ -4227,11 +4227,11 @@ the provided data and creating a new user in the database.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.security import get_password_hash
-from app.crud.crud_user import create_user_in_db, read_user_by_email_from_db, read_user_by_username_from_db
-from app.db.session import get_db
-from app.models.roles import RoleModel
-from app.schemas.user import UserCreateSchema
+from backend.app.core.security import get_password_hash
+from backend.app.crud.crud_user import create_user_in_db, read_user_by_email_from_db, read_user_by_username_from_db
+from backend.app.db.session import get_db
+from backend.app.models.roles import RoleModel
+from backend.app.schemas.user import UserCreateSchema
 
 router = APIRouter()
 
@@ -4260,21 +4260,21 @@ def register_user(user: UserCreateSchema, db: Session = Depends(get_db)):
 
 ## File: subjects.py
 ```py
-# filename: app/api/endpoints/subjects.py
+# filename: backend/app/api/endpoints/subjects.py
 
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.crud.crud_subjects import (create_subject_in_db, delete_subject_from_db,
+from backend.app.crud.crud_subjects import (create_subject_in_db, delete_subject_from_db,
                                     read_subject_from_db, read_subjects_from_db,
                                     update_subject_in_db)
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.subjects import (SubjectCreateSchema, SubjectSchema,
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.subjects import (SubjectCreateSchema, SubjectSchema,
                                   SubjectUpdateSchema)
-from app.services.user_service import get_current_user
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -4334,21 +4334,21 @@ def delete_subject_endpoint(
 
 ## File: subtopics.py
 ```py
-# filename: app/api/endpoints/subtopics.py
+# filename: backend/app/api/endpoints/subtopics.py
 
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.crud.crud_subtopics import (create_subtopic_in_db, delete_subtopic_from_db,
+from backend.app.crud.crud_subtopics import (create_subtopic_in_db, delete_subtopic_from_db,
                                      read_subtopic_from_db, read_subtopics_from_db,
                                      update_subtopic_in_db)
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.subtopics import (SubtopicCreateSchema, SubtopicSchema,
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.subtopics import (SubtopicCreateSchema, SubtopicSchema,
                                    SubtopicUpdateSchema)
-from app.services.user_service import get_current_user
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -4408,20 +4408,20 @@ def delete_subtopic_endpoint(
 
 ## File: topics.py
 ```py
-# filename: app/api/endpoints/topics.py
+# filename: backend/app/api/endpoints/topics.py
 
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.crud.crud_topics import (create_topic_in_db, delete_topic_from_db, read_topic_from_db,
+from backend.app.crud.crud_topics import (create_topic_in_db, delete_topic_from_db, read_topic_from_db,
                                   read_topics_from_db, update_topic_in_db)
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.topics import (TopicCreateSchema, TopicSchema,
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.topics import (TopicCreateSchema, TopicSchema,
                                 TopicUpdateSchema)
-from app.services.user_service import get_current_user
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -4481,7 +4481,7 @@ def delete_topic_endpoint(
 
 ## File: user_responses.py
 ```py
-# filename: app/api/endpoints/user_responses.py
+# filename: backend/app/api/endpoints/user_responses.py
 
 from datetime import datetime, timezone, timezone
 from typing import List, Optional
@@ -4489,18 +4489,18 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app.crud.crud_user_responses import (create_user_response_in_db,
+from backend.app.crud.crud_user_responses import (create_user_response_in_db,
                                           delete_user_response_from_db,
                                           read_user_response_from_db,
                                           read_user_responses_from_db,
                                           update_user_response_in_db)
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.user_responses import (UserResponseCreateSchema,
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.user_responses import (UserResponseCreateSchema,
                                         UserResponseSchema,
                                         UserResponseUpdateSchema)
-from app.services.logging_service import logger
-from app.services.user_service import get_current_user
+from backend.app.services.logging_service import logger
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -4588,19 +4588,19 @@ def delete_user_response_endpoint(
 
 ## File: users.py
 ```py
-# filename: app/api/endpoints/users.py
+# filename: backend/app/api/endpoints/users.py
 
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.crud.crud_user import create_user_in_db, update_user_in_db
-from app.db.session import get_db
-from app.models.users import UserModel
-from app.schemas.user import UserCreateSchema, UserSchema, UserUpdateSchema
-from app.services.logging_service import logger
-from app.services.user_service import get_current_user
+from backend.app.crud.crud_user import create_user_in_db, update_user_in_db
+from backend.app.db.session import get_db
+from backend.app.models.users import UserModel
+from backend.app.schemas.user import UserCreateSchema, UserSchema, UserUpdateSchema
+from backend.app.services.logging_service import logger
+from backend.app.services.user_service import get_current_user
 
 router = APIRouter()
 
@@ -4668,7 +4668,7 @@ def update_user_me(
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app/models
+# Directory: /code/quiz-app/backend/app/models
 
 ## File: __init__.py
 ```py
@@ -4677,12 +4677,12 @@ def update_user_me(
 
 ## File: answer_choices.py
 ```py
-# filename: app/models/answer_choices.py
+# filename: backend/app/models/answer_choices.py
 
 from sqlalchemy import Boolean, Column, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class AnswerChoiceModel(Base):
@@ -4703,11 +4703,11 @@ class AnswerChoiceModel(Base):
 
 ## File: associations.py
 ```py
-# filename: app/models/associations.py
+# filename: backend/app/models/associations.py
 
 from sqlalchemy import Column, ForeignKey, Integer
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class UserToGroupAssociation(Base):
@@ -4808,12 +4808,12 @@ class SubtopicToConceptAssociation(Base):
 
 ## File: authentication.py
 ```py
-# filename: app/models/authentication.py
+# filename: backend/app/models/authentication.py
 
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class RevokedTokenModel(Base):
@@ -4832,12 +4832,12 @@ class RevokedTokenModel(Base):
 
 ## File: concepts.py
 ```py
-# filename: app/models/concepts.py
+# filename: backend/app/models/concepts.py
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class ConceptModel(Base):
@@ -4856,12 +4856,12 @@ class ConceptModel(Base):
 
 ## File: disciplines.py
 ```py
-# filename: app/models/disciplines.py
+# filename: backend/app/models/disciplines.py
 
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class DisciplineModel(Base):
@@ -4880,12 +4880,12 @@ class DisciplineModel(Base):
 
 ## File: domains.py
 ```py
-# filename: app/models/domains.py
+# filename: backend/app/models/domains.py
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class DomainModel(Base):
@@ -4903,12 +4903,12 @@ class DomainModel(Base):
 
 ## File: groups.py
 ```py
-# filename: app/models/groups.py
+# filename: backend/app/models/groups.py
 
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class GroupModel(Base):
@@ -4933,13 +4933,13 @@ class GroupModel(Base):
 
 ## File: leaderboard.py
 ```py
-# filename: app/models/leaderboard.py
+# filename: backend/app/models/leaderboard.py
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class LeaderboardModel(Base):
@@ -4964,14 +4964,14 @@ class LeaderboardModel(Base):
 
 ## File: permissions.py
 ```py
-# filename: app/models/permissions.py
+# filename: backend/app/models/permissions.py
 
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
-from app.models.associations import RoleToPermissionAssociation
+from backend.app.db.base import Base
+from backend.app.models.associations import RoleToPermissionAssociation
 
 
 class PermissionModel(Base):
@@ -4997,13 +4997,13 @@ class PermissionModel(Base):
 
 ## File: question_sets.py
 ```py
-# filename: app/models/question_sets.py
+# filename: backend/app/models/question_sets.py
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class QuestionSetModel(Base):
@@ -5029,13 +5029,13 @@ class QuestionSetModel(Base):
 
 ## File: question_tags.py
 ```py
-# filename: app/models/question_tags.py
+# filename: backend/app/models/question_tags.py
 
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class QuestionTagModel(Base):
@@ -5057,15 +5057,15 @@ class QuestionTagModel(Base):
 
 ## File: questions.py
 ```py
-# filename: app/models/questions.py
+# filename: backend/app/models/questions.py
 
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
-from app.core.config import DifficultyLevel
+from backend.app.core.config import DifficultyLevel
 
 
 class QuestionModel(Base):
@@ -5096,14 +5096,14 @@ class QuestionModel(Base):
 
 ## File: roles.py
 ```py
-# filename: app/models/roles.py
+# filename: backend/app/models/roles.py
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
-from app.models.associations import RoleToPermissionAssociation
+from backend.app.db.base import Base
+from backend.app.models.associations import RoleToPermissionAssociation
 
 
 class RoleModel(Base):
@@ -5131,12 +5131,12 @@ class RoleModel(Base):
 
 ## File: subjects.py
 ```py
-# filename: app/models/subjects.py
+# filename: backend/app/models/subjects.py
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class SubjectModel(Base):
@@ -5156,12 +5156,12 @@ class SubjectModel(Base):
 
 ## File: subtopics.py
 ```py
-# filename: app/models/subtopics.py
+# filename: backend/app/models/subtopics.py
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class SubtopicModel(Base):
@@ -5181,11 +5181,11 @@ class SubtopicModel(Base):
 
 ## File: time_period.py
 ```py
-# filename: app/models/time_period.py
+# filename: backend/app/models/time_period.py
 
 from sqlalchemy import Column, Integer, String
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class TimePeriodModel(Base):
@@ -5217,12 +5217,12 @@ class TimePeriodModel(Base):
 
 ## File: topics.py
 ```py
-# filename: app/models/topics.py
+# filename: backend/app/models/topics.py
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class TopicModel(Base):
@@ -5242,13 +5242,13 @@ class TopicModel(Base):
 
 ## File: user_responses.py
 ```py
-# filename: app/models/user_responses.py
+# filename: backend/app/models/user_responses.py
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class UserResponseModel(Base):
@@ -5274,12 +5274,12 @@ class UserResponseModel(Base):
 
 ## File: users.py
 ```py
-# filename: app/models/users.py
+# filename: backend/app/models/users.py
 
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from backend.app.db.base import Base
 
 
 class UserModel(Base):
@@ -5307,7 +5307,7 @@ class UserModel(Base):
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app/middleware
+# Directory: /code/quiz-app/backend/app/middleware
 
 ## File: __init__.py
 ```py
@@ -5322,12 +5322,12 @@ from fastapi import HTTPException, Request, status
 from pydantic import ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.core.config import settings_core
-from app.db.session import get_db
-from app.models.permissions import PermissionModel
-from app.services.authorization_service import has_permission
-from app.services.logging_service import logger
-from app.services.user_service import get_current_user, oauth2_scheme
+from backend.app.core.config import settings_core
+from backend.app.db.session import get_db
+from backend.app.models.permissions import PermissionModel
+from backend.app.services.authorization_service import has_permission
+from backend.app.services.logging_service import logger
+from backend.app.services.user_service import get_current_user, oauth2_scheme
 
 
 class AuthorizationMiddleware(BaseHTTPMiddleware):
@@ -5392,15 +5392,15 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
 
 ## File: blacklist_middleware.py
 ```py
-# filename: app/middleware/blacklist_middleware.py
+# filename: backend/app/middleware/blacklist_middleware.py
 
 from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.core.config import settings_core
-from app.db.session import get_db
-from app.models.authentication import RevokedTokenModel
-from app.services.logging_service import logger
+from backend.app.core.config import settings_core
+from backend.app.db.session import get_db
+from backend.app.models.authentication import RevokedTokenModel
+from backend.app.services.logging_service import logger
 
 
 async def check_revoked_tokens(request: Request, call_next):
@@ -5442,7 +5442,7 @@ class BlacklistMiddleware(BaseHTTPMiddleware):
 
 ## File: cors_middleware.py
 ```py
-# filename: app/middleware/cors_middleware.py
+# filename: backend/app/middleware/cors_middleware.py
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5463,7 +5463,7 @@ def add_cors_middleware(app):
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/app/core
+# Directory: /code/quiz-app/backend/app/core
 
 ## File: __init__.py
 ```py
@@ -5472,7 +5472,7 @@ def add_cors_middleware(app):
 
 ## File: config.py
 ```py
-# filename: app/core/config.py
+# filename: backend/app/core/config.py
 
 import os
 from enum import Enum as PyEnum
@@ -5482,7 +5482,7 @@ import toml
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings
 
-from app.services.logging_service import logger
+from backend.app.services.logging_service import logger
 
 
 class DifficultyLevel(PyEnum):
@@ -5579,7 +5579,7 @@ settings_core = load_settings()
 
 ## File: jwt.py
 ```py
-# filename: app/core/jwt.py
+# filename: backend/app/core/jwt.py
 
 from datetime import datetime, timezone, timedelta, timezone
 from typing import Optional
@@ -5587,8 +5587,8 @@ from typing import Optional
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
 
-from app.core.config import settings_core
-from app.services.logging_service import logger
+from backend.app.core.config import settings_core
+from backend.app.services.logging_service import logger
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -5630,11 +5630,11 @@ def verify_token(token: str, credentials_exception):
 
 ## File: security.py
 ```py
-# filename: app/core/security.py
+# filename: backend/app/core/security.py
 
 from passlib.context import CryptContext
 
-from app.services.logging_service import logger
+from backend.app.services.logging_service import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -5652,13 +5652,13 @@ def get_password_hash(password):
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/tests
+# Directory: /code/quiz-app/backend/tests
 
 ## File: conftest.py
 ```py
-# filename: tests/conftest.py
+# filename: backend/tests/conftest.py
 import sys
-sys.path.insert(0, "/code/quiz-app/quiz-app-backend")
+sys.path.insert(0, "/code/quiz-app/backend")
 
 import random
 import os
@@ -5668,64 +5668,64 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.main import app
-from app.db.base import Base
-from app.db.session import get_db, init_db
+from backend.app.main import app
+from backend.app.db.base import Base
+from backend.app.db.session import get_db, init_db
 
 # CRUD imports
-from app.crud.crud_answer_choices import create_answer_choice_in_db
-from app.crud.crud_user import create_user_in_db
-from app.crud.crud_question_sets import create_question_set_in_db
-from app.crud.crud_question_tags import create_question_tag_in_db, delete_question_tag_from_db
-from app.crud.crud_roles import create_role_in_db, delete_role_from_db
-from app.crud.crud_groups import create_group_in_db, read_group_from_db
-from app.crud.crud_domains import create_domain_in_db
-from app.crud.crud_disciplines import create_discipline_in_db
-from app.crud.crud_subjects import create_subject_in_db
-from app.crud.crud_topics import create_topic_in_db
-from app.crud.crud_subtopics import create_subtopic_in_db
-from app.crud.crud_concepts import create_concept_in_db
-from app.crud.crud_questions import create_question_in_db #, create_question_with_answers
+from backend.app.crud.crud_answer_choices import create_answer_choice_in_db
+from backend.app.crud.crud_user import create_user_in_db
+from backend.app.crud.crud_question_sets import create_question_set_in_db
+from backend.app.crud.crud_question_tags import create_question_tag_in_db, delete_question_tag_from_db
+from backend.app.crud.crud_roles import create_role_in_db, delete_role_from_db
+from backend.app.crud.crud_groups import create_group_in_db, read_group_from_db
+from backend.app.crud.crud_domains import create_domain_in_db
+from backend.app.crud.crud_disciplines import create_discipline_in_db
+from backend.app.crud.crud_subjects import create_subject_in_db
+from backend.app.crud.crud_topics import create_topic_in_db
+from backend.app.crud.crud_subtopics import create_subtopic_in_db
+from backend.app.crud.crud_concepts import create_concept_in_db
+from backend.app.crud.crud_questions import create_question_in_db #, create_question_with_answers
 
 # Schema imports
-from app.schemas.user import UserCreateSchema
-from app.schemas.groups import GroupCreateSchema
-from app.schemas.question_sets import QuestionSetCreateSchema
-from app.schemas.question_tags import QuestionTagCreateSchema
-from app.schemas.questions import QuestionCreateSchema, QuestionWithAnswersCreateSchema
-from app.schemas.roles import RoleCreateSchema
-from app.schemas.answer_choices import AnswerChoiceCreateSchema
-from app.schemas.domains import DomainCreateSchema
-from app.schemas.disciplines import DisciplineCreateSchema
-from app.schemas.subjects import SubjectCreateSchema
-from app.schemas.topics import TopicCreateSchema
-from app.schemas.subtopics import SubtopicCreateSchema
-from app.schemas.concepts import ConceptCreateSchema
+from backend.app.schemas.user import UserCreateSchema
+from backend.app.schemas.groups import GroupCreateSchema
+from backend.app.schemas.question_sets import QuestionSetCreateSchema
+from backend.app.schemas.question_tags import QuestionTagCreateSchema
+from backend.app.schemas.questions import QuestionCreateSchema, QuestionWithAnswersCreateSchema
+from backend.app.schemas.roles import RoleCreateSchema
+from backend.app.schemas.answer_choices import AnswerChoiceCreateSchema
+from backend.app.schemas.domains import DomainCreateSchema
+from backend.app.schemas.disciplines import DisciplineCreateSchema
+from backend.app.schemas.subjects import SubjectCreateSchema
+from backend.app.schemas.topics import TopicCreateSchema
+from backend.app.schemas.subtopics import SubtopicCreateSchema
+from backend.app.schemas.concepts import ConceptCreateSchema
 
 # Model imports
-from app.models.associations import UserToGroupAssociation
-from app.models.answer_choices import AnswerChoiceModel
-from app.models.authentication import RevokedTokenModel
-from app.models.groups import GroupModel
-from app.models.leaderboard import LeaderboardModel
-from app.models.permissions import PermissionModel
-from app.models.question_sets import QuestionSetModel
-from app.models.question_tags import QuestionTagModel
-from app.models.questions import QuestionModel, DifficultyLevel
-from app.models.roles import RoleModel
-from app.models.domains import DomainModel
-from app.models.disciplines import DisciplineModel
-from app.models.subjects import SubjectModel
-from app.models.concepts import ConceptModel
-from app.models.subtopics import SubtopicModel
-from app.models.time_period import TimePeriodModel
-from app.models.topics import TopicModel
-from app.models.user_responses import UserResponseModel
-from app.models.users import UserModel
-from app.core.jwt import create_access_token
-from app.core.security import get_password_hash
-from app.services.permission_generator_service import generate_permissions
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
+from backend.app.models.associations import UserToGroupAssociation
+from backend.app.models.answer_choices import AnswerChoiceModel
+from backend.app.models.authentication import RevokedTokenModel
+from backend.app.models.groups import GroupModel
+from backend.app.models.leaderboard import LeaderboardModel
+from backend.app.models.permissions import PermissionModel
+from backend.app.models.question_sets import QuestionSetModel
+from backend.app.models.question_tags import QuestionTagModel
+from backend.app.models.questions import QuestionModel, DifficultyLevel
+from backend.app.models.roles import RoleModel
+from backend.app.models.domains import DomainModel
+from backend.app.models.disciplines import DisciplineModel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.concepts import ConceptModel
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.time_period import TimePeriodModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.user_responses import UserResponseModel
+from backend.app.models.users import UserModel
+from backend.app.core.jwt import create_access_token
+from backend.app.core.security import get_password_hash
+from backend.app.services.permission_generator_service import generate_permissions
+from backend.app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
 
 # Set the environment to test for pytest
@@ -5781,7 +5781,7 @@ def client(db_session):
 
 @pytest.fixture(scope='function')
 def test_permission(db_session):
-    from app.models.permissions import PermissionModel
+    from backend.app.models.permissions import PermissionModel
     permission = PermissionModel(name="test_permission", description="A test permission")
     db_session.add(permission)
     db_session.commit()
@@ -5789,8 +5789,8 @@ def test_permission(db_session):
 
 @pytest.fixture(scope="function")
 def test_model_permissions(db_session):
-    from app.main import app  # Import the actual FastAPI app instance
-    from app.services.permission_generator_service import generate_permissions, ensure_permissions_in_db
+    from backend.app.main import app  # Import the actual FastAPI app instance
+    from backend.app.services.permission_generator_service import generate_permissions, ensure_permissions_in_db
 
     # Generate permissions
     permissions = generate_permissions(app)
@@ -6133,11 +6133,11 @@ def setup_filter_questions_data(db_session):
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/tests/test_integration
+# Directory: /code/quiz-app/backend/tests/test_integration
 
 ## File: test_integration_auth.py
 ```py
-# filename: tests/test_integration_auth.py
+# filename: backend/tests/test_integration_auth.py
 
 import pytest
 from fastapi import HTTPException
@@ -6171,7 +6171,7 @@ def test_protected_route_with_revoked_token(client, test_token):
 
 ## File: test_integration_cors.py
 ```py
-# filename: tests/test_integration_cors.py
+# filename: backend/tests/test_integration_cors.py
 
 def test_cors_configuration(logged_in_client):
     response = logged_in_client.get("/", headers={"Origin": "http://localhost:3000"})
@@ -6180,15 +6180,15 @@ def test_cors_configuration(logged_in_client):
     assert response.headers["Access-Control-Allow-Credentials"] == "true"
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/tests/test_schemas
+# Directory: /code/quiz-app/backend/tests/test_schemas
 
 ## File: test_schemas_answer_choices.py
 ```py
-# filename: tests/test_schemas_answer_choices.py
+# filename: backend/tests/test_schemas_answer_choices.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.answer_choices import AnswerChoiceBaseSchema, AnswerChoiceCreateSchema, AnswerChoiceUpdateSchema, AnswerChoiceSchema
+from backend.app.schemas.answer_choices import AnswerChoiceBaseSchema, AnswerChoiceCreateSchema, AnswerChoiceUpdateSchema, AnswerChoiceSchema
 
 def test_answer_choice_base_schema_valid():
     data = {
@@ -6267,11 +6267,11 @@ def test_answer_choice_schema_from_orm(test_model_answer_choices):
 
 ## File: test_schemas_concepts.py
 ```py
-# filename: tests/test_schemas/test_schemas_concepts.py
+# filename: backend/tests/test_schemas/test_schemas_concepts.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.concepts import ConceptBaseSchema, ConceptCreateSchema, ConceptUpdateSchema, ConceptSchema
+from backend.app.schemas.concepts import ConceptBaseSchema, ConceptCreateSchema, ConceptUpdateSchema, ConceptSchema
 
 def test_concept_base_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
@@ -6344,11 +6344,11 @@ def test_concept_schema_from_attributes(test_model_concept):
 
 ## File: test_schemas_disciplines.py
 ```py
-# filename: tests/test_schemas/test_schemas_disciplines.py
+# filename: backend/tests/test_schemas/test_schemas_disciplines.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.disciplines import DisciplineBaseSchema, DisciplineCreateSchema, DisciplineUpdateSchema, DisciplineSchema
+from backend.app.schemas.disciplines import DisciplineBaseSchema, DisciplineCreateSchema, DisciplineUpdateSchema, DisciplineSchema
 
 def test_discipline_base_schema_valid():
     data = {
@@ -6435,11 +6435,11 @@ def test_discipline_schema_from_attributes(test_model_discipline):
 
 ## File: test_schemas_domains.py
 ```py
-# filename: tests/test_schemas/test_schemas_domains.py
+# filename: backend/tests/test_schemas/test_schemas_domains.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.domains import DomainBaseSchema, DomainCreateSchema, DomainUpdateSchema, DomainSchema
+from backend.app.schemas.domains import DomainBaseSchema, DomainCreateSchema, DomainUpdateSchema, DomainSchema
 
 def test_domain_base_schema_valid():
     data = {
@@ -6516,12 +6516,12 @@ def test_domain_schema_from_attributes(db_session, test_model_domain):
 
 ## File: test_schemas_filters.py
 ```py
-# filename: tests/test_schemas_filters.py
+# filename: backend/tests/test_schemas_filters.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.filters import FilterParamsSchema
-from app.schemas.questions import DifficultyLevel
+from backend.app.schemas.filters import FilterParamsSchema
+from backend.app.schemas.questions import DifficultyLevel
 
 def test_filter_params_schema_valid():
     data = {
@@ -6578,11 +6578,11 @@ def test_filter_params_schema_extra_fields():
 
 ## File: test_schemas_groups.py
 ```py
-# filename: tests/test_schemas/test_schemas_groups.py
+# filename: backend/tests/test_schemas/test_schemas_groups.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.groups import GroupBaseSchema, GroupCreateSchema, GroupUpdateSchema, GroupSchema
+from backend.app.schemas.groups import GroupBaseSchema, GroupCreateSchema, GroupUpdateSchema, GroupSchema
 
 def test_group_base_schema_valid():
     data = {
@@ -6670,11 +6670,11 @@ def test_group_schema_from_attributes(test_model_group):
 
 ## File: test_schemas_leaderboard.py
 ```py
-# filename: tests/test_schemas_leaderboard.py
+# filename: backend/tests/test_schemas_leaderboard.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.leaderboard import LeaderboardBaseSchema, LeaderboardCreateSchema, LeaderboardUpdateSchema, LeaderboardSchema, TimePeriodSchema
+from backend.app.schemas.leaderboard import LeaderboardBaseSchema, LeaderboardCreateSchema, LeaderboardUpdateSchema, LeaderboardSchema, TimePeriodSchema
 
 def test_leaderboard_base_schema_valid():
     data = {
@@ -6748,8 +6748,8 @@ def test_leaderboard_schema():
     assert schema.group_id == 5
 
 def test_leaderboard_schema_from_attributes(db_session, test_model_user):
-    from app.models.leaderboard import LeaderboardModel
-    from app.models.time_period import TimePeriodModel
+    from backend.app.models.leaderboard import LeaderboardModel
+    from backend.app.models.time_period import TimePeriodModel
 
     time_period = TimePeriodModel(id=1, name="daily")
     db_session.add(time_period)
@@ -6786,11 +6786,11 @@ def test_time_period_schema():
 
 ## File: test_schemas_permissions.py
 ```py
-# filename: tests/test_schemas_permissions.py
+# filename: backend/tests/test_schemas_permissions.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.permissions import PermissionBaseSchema, PermissionCreateSchema, PermissionUpdateSchema, PermissionSchema
+from backend.app.schemas.permissions import PermissionBaseSchema, PermissionCreateSchema, PermissionUpdateSchema, PermissionSchema
 
 def test_permission_base_schema_valid():
     data = {
@@ -6859,11 +6859,11 @@ def test_permission_schema_from_attributes(db_session, test_permission):
 
 ## File: test_schemas_question_sets.py
 ```py
-# filename: tests/test_schemas/test_schemas_question_sets.py
+# filename: backend/tests/test_schemas/test_schemas_question_sets.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.question_sets import QuestionSetBaseSchema, QuestionSetCreateSchema, QuestionSetUpdateSchema, QuestionSetSchema
+from backend.app.schemas.question_sets import QuestionSetBaseSchema, QuestionSetCreateSchema, QuestionSetUpdateSchema, QuestionSetSchema
 
 def test_question_set_base_schema_valid():
     data = {
@@ -6971,11 +6971,11 @@ def test_question_set_schema_from_attributes(test_model_question_set):
 
 ## File: test_schemas_question_tags.py
 ```py
-# filename: tests/test_schemas_question_tags.py
+# filename: backend/tests/test_schemas_question_tags.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.question_tags import QuestionTagBaseSchema, QuestionTagCreateSchema, QuestionTagUpdateSchema, QuestionTagSchema
+from backend.app.schemas.question_tags import QuestionTagBaseSchema, QuestionTagCreateSchema, QuestionTagUpdateSchema, QuestionTagSchema
 
 def test_question_tag_base_schema_valid():
     data = {
@@ -7037,12 +7037,12 @@ def test_question_tag_schema_from_attributes(db_session, test_model_tag):
 
 ## File: test_schemas_questions.py
 ```py
-# filename: tests/test_schemas_questions.py
+# filename: backend/tests/test_schemas_questions.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, QuestionWithAnswersCreateSchema, DetailedQuestionSchema, DifficultyLevel
-from app.schemas.answer_choices import AnswerChoiceSchema
+from backend.app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, QuestionWithAnswersCreateSchema, DetailedQuestionSchema, DifficultyLevel
+from backend.app.schemas.answer_choices import AnswerChoiceSchema
 
 def test_question_create_schema(test_model_subject, test_model_topic, test_model_subtopic, test_model_concept):
     question_data = {
@@ -7167,11 +7167,11 @@ def test_detailed_question_schema_with_object_input(test_model_subject, test_mod
 
 ## File: test_schemas_roles.py
 ```py
-# filename: tests/test_schemas_roles.py
+# filename: backend/tests/test_schemas_roles.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.roles import RoleBaseSchema, RoleCreateSchema, RoleUpdateSchema, RoleSchema
+from backend.app.schemas.roles import RoleBaseSchema, RoleCreateSchema, RoleUpdateSchema, RoleSchema
 
 def test_role_base_schema_valid():
     data = {
@@ -7268,11 +7268,11 @@ def test_role_schema_duplicate_permissions():
 
 ## File: test_schemas_subjects.py
 ```py
-# filename: tests/test_schemas/test_schemas_subjects.py
+# filename: backend/tests/test_schemas/test_schemas_subjects.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.subjects import SubjectBaseSchema, SubjectCreateSchema, SubjectUpdateSchema, SubjectSchema
+from backend.app.schemas.subjects import SubjectBaseSchema, SubjectCreateSchema, SubjectUpdateSchema, SubjectSchema
 
 def test_subject_base_schema_valid():
     data = {
@@ -7367,11 +7367,11 @@ def test_subject_schema_from_attributes(db_session, test_model_subject):
 
 ## File: test_schemas_subtopics.py
 ```py
-# filename: tests/test_schemas_subtopics.py
+# filename: backend/tests/test_schemas_subtopics.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.subtopics import SubtopicBaseSchema, SubtopicCreateSchema, SubtopicUpdateSchema, SubtopicSchema
+from backend.app.schemas.subtopics import SubtopicBaseSchema, SubtopicCreateSchema, SubtopicUpdateSchema, SubtopicSchema
 
 def test_subtopic_base_schema_valid():
     data = {
@@ -7466,11 +7466,11 @@ def test_subtopic_schema_from_attributes(test_model_subtopic):
 
 ## File: test_schemas_time_period.py
 ```py
-# filename: tests/test_schemas/test_schemas_time_period.py
+# filename: backend/tests/test_schemas/test_schemas_time_period.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.time_period import TimePeriodSchema
+from backend.app.schemas.time_period import TimePeriodSchema
 
 def test_time_period_schema_valid():
     data = {
@@ -7495,7 +7495,7 @@ def test_time_period_schema_validation():
     assert "Name must be one of: daily, weekly, monthly, yearly" in str(exc_info.value)
 
 def test_time_period_schema_from_attributes(db_session):
-    from app.models.time_period import TimePeriodModel
+    from backend.app.models.time_period import TimePeriodModel
     
     time_periods = [
         TimePeriodModel.daily(),
@@ -7543,11 +7543,11 @@ def test_time_period_schema_invalid_combinations():
 
 ## File: test_schemas_topics.py
 ```py
-# filename: tests/test_schemas_topics.py
+# filename: backend/tests/test_schemas_topics.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.topics import TopicBaseSchema, TopicCreateSchema, TopicUpdateSchema, TopicSchema
+from backend.app.schemas.topics import TopicBaseSchema, TopicCreateSchema, TopicUpdateSchema, TopicSchema
 
 def test_topic_base_schema_valid():
     data = {
@@ -7642,12 +7642,12 @@ def test_topic_schema_from_attributes(db_session, test_model_topic):
 
 ## File: test_schemas_user.py
 ```py
-# filename: tests/test_schemas_user.py
+# filename: backend/tests/test_schemas_user.py
 
 import pytest
 from pydantic import ValidationError
-from app.schemas.user import UserCreateSchema, UserUpdateSchema, UserSchema
-from app.core.security import verify_password
+from backend.app.schemas.user import UserCreateSchema, UserUpdateSchema, UserSchema
+from backend.app.core.security import verify_password
 
 def test_user_create_schema_valid():
     user_data = {
@@ -7730,12 +7730,12 @@ def test_user_schema(test_model_user):
 
 ## File: test_schemas_user_responses.py
 ```py
-# filename: tests/test_schemas_user_responses.py
+# filename: backend/tests/test_schemas_user_responses.py
 
 import pytest
 from pydantic import ValidationError
 from datetime import datetime, timezone, timezone
-from app.schemas.user_responses import UserResponseBaseSchema, UserResponseCreateSchema, UserResponseUpdateSchema, UserResponseSchema
+from backend.app.schemas.user_responses import UserResponseBaseSchema, UserResponseCreateSchema, UserResponseUpdateSchema, UserResponseSchema
 
 def test_user_response_base_schema_valid():
     data = {
@@ -7813,7 +7813,7 @@ def test_user_response_schema():
     assert isinstance(schema.timestamp, datetime)
 
 def test_user_response_schema_from_attributes(db_session, test_model_user, test_model_questions, test_model_answer_choices):
-    from app.models.user_responses import UserResponseModel
+    from backend.app.models.user_responses import UserResponseModel
     
     user_response = UserResponseModel(
         user_id=test_model_user.id,
@@ -7837,17 +7837,17 @@ def test_user_response_schema_from_attributes(db_session, test_model_user, test_
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/tests/test_api
+# Directory: /code/quiz-app/backend/tests/test_api
 
 ## File: test_api_authentication.py
 ```py
-# filename: tests/test_api/test_api_authentication.py
+# filename: backend/tests/test_api/test_api_authentication.py
 
 from datetime import timedelta
 import pytest
 from fastapi import HTTPException
-from app.core.jwt import create_access_token
-from app.models.authentication import RevokedTokenModel
+from backend.app.core.jwt import create_access_token
+from backend.app.models.authentication import RevokedTokenModel
 
 def test_user_authentication(client, test_model_user):
     """Test user authentication and token retrieval."""
@@ -8026,20 +8026,20 @@ def test_protected_endpoint_expired_token(client, test_model_user, db_session):
 
 ## File: test_api_filters.py
 ```py
-# filename: tests/test_api_filters.py
+# filename: backend/tests/test_api_filters.py
 
 import pytest
-from app.models.domains import DomainModel
-from app.models.disciplines import DisciplineModel
-from app.models.subjects import SubjectModel
-from app.models.topics import TopicModel
-from app.models.subtopics import SubtopicModel
-from app.models.concepts import ConceptModel
-from app.models.question_tags import QuestionTagModel
-from app.models.question_sets import QuestionSetModel
-from app.models.questions import QuestionModel
-from app.crud.crud_questions import read_question
-from app.api.endpoints.filters import filter_questions_endpoint
+from backend.app.models.domains import DomainModel
+from backend.app.models.disciplines import DisciplineModel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.concepts import ConceptModel
+from backend.app.models.question_tags import QuestionTagModel
+from backend.app.models.question_sets import QuestionSetModel
+from backend.app.models.questions import QuestionModel
+from backend.app.crud.crud_questions import read_question
+from backend.app.api.endpoints.filters import filter_questions_endpoint
 
 
 def test_setup_filter_questions_data(db_session, setup_filter_questions_data):
@@ -8298,9 +8298,9 @@ async def test_filter_questions_endpoint_invalid_params_direct(db_session):
 
 ## File: test_api_groups.py
 ```py
-# filename: tests/test_api/test_api_groups.py
+# filename: backend/tests/test_api/test_api_groups.py
 
-from app.services.logging_service import logger
+from backend.app.services.logging_service import logger
 
 
 def test_create_group(logged_in_client):
@@ -8447,10 +8447,10 @@ def test_update_group_long_description(logged_in_client, test_model_user, test_m
 
 ## File: test_api_leaderboard.py
 ```py
-# filename: tests/test_api/test_api_leaderboard.py
+# filename: backend/tests/test_api/test_api_leaderboard.py
 
-from app.models.user_responses import UserResponseModel
-from app.models.time_period import TimePeriodModel
+from backend.app.models.user_responses import UserResponseModel
+from backend.app.models.time_period import TimePeriodModel
 
 def test_get_leaderboard_daily(
     logged_in_client,
@@ -8525,11 +8525,11 @@ def test_get_leaderboard_weekly(
 
 ## File: test_api_question_sets.py
 ```py
-# filename: tests/test_api_question_sets.py
+# filename: backend/tests/test_api_question_sets.py
 
 import json
 import tempfile
-from app.services.logging_service import logger
+from backend.app.services.logging_service import logger
 
 def test_create_question_set_endpoint(logged_in_client):
     data = {"name": "Test Question Set", "is_public": True}
@@ -8685,11 +8685,11 @@ def test_update_question_set_invalid_question_ids(logged_in_client, db_session, 
 
 ## File: test_api_questions.py
 ```py
-# filename: tests/test_api_questions.py
+# filename: backend/tests/test_api_questions.py
 
 import pytest
 from fastapi import HTTPException
-from app.services.logging_service import logger
+from backend.app.services.logging_service import logger
 
 def test_create_question_endpoint(logged_in_client, test_model_subject, test_model_topic, test_model_subtopic, test_model_question_set, test_model_concept):
     data = {
@@ -8774,9 +8774,9 @@ def test_update_question_endpoint(logged_in_client, test_model_questions):
 
 ## File: test_api_register.py
 ```py
-# filename: tests/test_api/test_api_register.py
+# filename: backend/tests/test_api/test_api_register.py
 
-from app.services.logging_service import logger
+from backend.app.services.logging_service import logger
 
 
 def test_register_user_success(client, db_session, test_model_role):
@@ -8850,10 +8850,10 @@ def test_registration_user_exists(client, test_model_user):
 
 ## File: test_api_subjects.py
 ```py
-# filename: tests/test_api_subjects.py
+# filename: backend/tests/test_api_subjects.py
 
-from app.schemas.subjects import SubjectCreateSchema
-from app.services.logging_service import logger
+from backend.app.schemas.subjects import SubjectCreateSchema
+from backend.app.services.logging_service import logger
 
 
 def test_create_subject(logged_in_client, test_model_discipline):
@@ -8900,11 +8900,11 @@ def test_delete_subject(logged_in_client, test_model_discipline):
 
 ## File: test_api_topics.py
 ```py
-# filename: tests/test_api_topics.py
+# filename: backend/tests/test_api_topics.py
 
-from app.schemas.topics import TopicCreateSchema
-from app.schemas.subjects import SubjectCreateSchema
-from app.services.logging_service import logger
+from backend.app.schemas.topics import TopicCreateSchema
+from backend.app.schemas.subjects import SubjectCreateSchema
+from backend.app.services.logging_service import logger
 
 
 def test_create_topic(logged_in_client, test_model_discipline):
@@ -8969,10 +8969,10 @@ def test_delete_topic(logged_in_client, test_model_discipline):
 
 ## File: test_api_user_responses.py
 ```py
-# filename: tests/test_api_user_responses.py
+# filename: backend/tests/test_api_user_responses.py
 
 from datetime import datetime, timezone, timezone
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
+from backend.app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
 
 def test_create_user_response_invalid_user(logged_in_client, test_model_questions):
@@ -9161,9 +9161,9 @@ def test_delete_nonexistent_user_response(logged_in_client):
 
 ## File: test_api_users.py
 ```py
-# filename: tests/test_api_users.py
+# filename: backend/tests/test_api_users.py
 
-from app.services.logging_service import logger
+from backend.app.services.logging_service import logger
 
 
 def test_create_user(logged_in_client, random_username):
@@ -9207,16 +9207,16 @@ def test_update_user_me(logged_in_client, db_session):
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/tests/test_services
+# Directory: /code/quiz-app/backend/tests/test_services
 
 ## File: test_authorization_service.py
 ```py
-# filename: tests/test_services/test_authorization_service.py
+# filename: backend/tests/test_services/test_authorization_service.py
 
-from app.services.authorization_service import get_user_permissions
-from app.models.roles import RoleModel
-from app.models.permissions import PermissionModel
-from app.models.users import UserModel
+from backend.app.services.authorization_service import get_user_permissions
+from backend.app.models.roles import RoleModel
+from backend.app.models.permissions import PermissionModel
+from backend.app.models.users import UserModel
 
 
 def test_get_user_permissions(db_session):
@@ -9243,11 +9243,11 @@ def test_get_user_permissions(db_session):
 
 ## File: test_randomization_service.py
 ```py
-# filename: tests/test_utils/test_randomization.py
+# filename: backend/tests/test_utils/test_randomization.py
 
-from app.services.randomization_service import randomize_questions, randomize_answer_choices
-from app.models.questions import QuestionModel
-from app.models.answer_choices import AnswerChoiceModel
+from backend.app.services.randomization_service import randomize_questions, randomize_answer_choices
+from backend.app.models.questions import QuestionModel
+from backend.app.models.answer_choices import AnswerChoiceModel
 
 
 def test_randomize_questions():
@@ -9274,14 +9274,14 @@ def test_randomize_answer_choices():
 
 ## File: test_scoring_service.py
 ```py
-# filename: tests/test_services/test_scoring_service.py
+# filename: backend/tests/test_services/test_scoring_service.py
 
 import pytest
-from app.services.scoring_service import calculate_user_score, calculate_leaderboard_scores
-from app.models.time_period import TimePeriodModel
-from app.crud.crud_user_responses import create_user_response_crud, get_user_responses_crud
-from app.schemas.user_responses import UserResponseCreateSchema
-from app.services.logging_service import logger
+from backend.app.services.scoring_service import calculate_user_score, calculate_leaderboard_scores
+from backend.app.models.time_period import TimePeriodModel
+from backend.app.crud.crud_user_responses import create_user_response_crud, get_user_responses_crud
+from backend.app.schemas.user_responses import UserResponseCreateSchema
+from backend.app.services.logging_service import logger
 
 def test_calculate_user_score(
     db_session,
@@ -9353,11 +9353,11 @@ def test_calculate_leaderboard_scores(
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/tests/test_db
+# Directory: /code/quiz-app/backend/tests/test_db
 
 ## File: test_db_session.py
 ```py
-# filename: tests/test_db_session.py
+# filename: backend/tests/test_db_session.py
 
 from sqlalchemy import inspect
 
@@ -9374,36 +9374,36 @@ def test_database_session_lifecycle(db_session):
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/tests/test_crud
+# Directory: /code/quiz-app/backend/tests/test_crud
 
 ## File: conftest.py
 ```py
 #filename: tests/test_crud/conftest.py
 
 import pytest
-from app.schemas.answer_choices import AnswerChoiceCreateSchema
-from app.schemas.domains import DomainCreateSchema
-from app.schemas.disciplines import DisciplineCreateSchema
-from app.schemas.subjects import SubjectCreateSchema
-from app.schemas.topics import TopicCreateSchema
-from app.schemas.subtopics import SubtopicCreateSchema
-from app.schemas.concepts import ConceptCreateSchema
-from app.schemas.questions import QuestionCreateSchema, QuestionWithAnswersCreateSchema
-from app.schemas.question_sets import QuestionSetCreateSchema
-from app.schemas.question_tags import QuestionTagCreateSchema
-from app.schemas.user import UserCreateSchema
-from app.schemas.groups import GroupCreateSchema
-from app.schemas.roles import RoleCreateSchema
-from app.schemas.permissions import PermissionCreateSchema
-from app.schemas.leaderboard import LeaderboardCreateSchema
-from app.schemas.user_responses import UserResponseCreateSchema
+from backend.app.schemas.answer_choices import AnswerChoiceCreateSchema
+from backend.app.schemas.domains import DomainCreateSchema
+from backend.app.schemas.disciplines import DisciplineCreateSchema
+from backend.app.schemas.subjects import SubjectCreateSchema
+from backend.app.schemas.topics import TopicCreateSchema
+from backend.app.schemas.subtopics import SubtopicCreateSchema
+from backend.app.schemas.concepts import ConceptCreateSchema
+from backend.app.schemas.questions import QuestionCreateSchema, QuestionWithAnswersCreateSchema
+from backend.app.schemas.question_sets import QuestionSetCreateSchema
+from backend.app.schemas.question_tags import QuestionTagCreateSchema
+from backend.app.schemas.user import UserCreateSchema
+from backend.app.schemas.groups import GroupCreateSchema
+from backend.app.schemas.roles import RoleCreateSchema
+from backend.app.schemas.permissions import PermissionCreateSchema
+from backend.app.schemas.leaderboard import LeaderboardCreateSchema
+from backend.app.schemas.user_responses import UserResponseCreateSchema
 
-from app.crud.crud_subjects import create_subject_in_db
-from app.crud.crud_topics import create_topic_in_db
-from app.crud.crud_subtopics import create_subtopic_in_db
-from app.crud.crud_question_tags import create_question_tag_in_db
-from app.crud.crud_questions import create_question_in_db
-from app.models.questions import DifficultyLevel
+from backend.app.crud.crud_subjects import create_subject_in_db
+from backend.app.crud.crud_topics import create_topic_in_db
+from backend.app.crud.crud_subtopics import create_subtopic_in_db
+from backend.app.crud.crud_question_tags import create_question_tag_in_db
+from backend.app.crud.crud_questions import create_question_in_db
+from backend.app.models.questions import DifficultyLevel
 
 @pytest.fixture
 def filter_test_data(db_session, test_schema_question, test_schema_subject, test_schema_topic, test_schema_subtopic, test_schema_question_tag):
@@ -9572,9 +9572,9 @@ def test_schema_user_response(test_model_user, test_model_questions, test_model_
 
 ## File: test_crud_answer_choices.py
 ```py
-# filename: tests/crud/test_crud_answer_choices.py
+# filename: backend/tests/crud/test_crud_answer_choices.py
 
-from app.crud.crud_answer_choices import (
+from backend.app.crud.crud_answer_choices import (
     create_answer_choice_in_db,
     read_answer_choice_from_db,
     read_answer_choices_from_db,
@@ -9585,7 +9585,7 @@ from app.crud.crud_answer_choices import (
     read_answer_choices_for_question_from_db,
     read_questions_for_answer_choice_from_db
 )
-from app.crud.crud_questions import create_question_in_db
+from backend.app.crud.crud_questions import create_question_in_db
 
 def test_create_answer_choice(db_session, test_schema_answer_choice):
     answer_choice = create_answer_choice_in_db(db_session, test_schema_answer_choice.model_dump())
@@ -9646,10 +9646,10 @@ def test_read_questions_for_answer_choice(db_session, test_schema_question, test
 
 ## File: test_crud_concepts.py
 ```py
-# filename: tests/crud/test_crud_concepts.py
+# filename: backend/tests/crud/test_crud_concepts.py
 
 import pytest
-from app.crud.crud_concepts import (
+from backend.app.crud.crud_concepts import (
     create_concept_in_db,
     read_concept_from_db,
     read_concept_by_name_from_db,
@@ -9663,8 +9663,8 @@ from app.crud.crud_concepts import (
     read_subtopics_for_concept_from_db,
     read_questions_for_concept_from_db
 )
-from app.crud.crud_subtopics import create_subtopic_in_db
-from app.crud.crud_questions import create_question_in_db
+from backend.app.crud.crud_subtopics import create_subtopic_in_db
+from backend.app.crud.crud_questions import create_question_in_db
 
 def test_create_concept(db_session, test_schema_concept):
     concept = create_concept_in_db(db_session, test_schema_concept.model_dump())
@@ -9740,10 +9740,10 @@ def test_read_questions_for_concept(db_session, test_schema_concept, test_schema
 
 ## File: test_crud_disciplines.py
 ```py
-# filename: tests/crud/test_crud_disciplines.py
+# filename: backend/tests/crud/test_crud_disciplines.py
 
 import pytest
-from app.crud.crud_disciplines import (
+from backend.app.crud.crud_disciplines import (
     create_discipline_in_db,
     read_discipline_from_db,
     read_discipline_by_name_from_db,
@@ -9757,8 +9757,8 @@ from app.crud.crud_disciplines import (
     read_domains_for_discipline_from_db,
     read_subjects_for_discipline_from_db
 )
-from app.crud.crud_domains import create_domain_in_db
-from app.crud.crud_subjects import create_subject_in_db
+from backend.app.crud.crud_domains import create_domain_in_db
+from backend.app.crud.crud_subjects import create_subject_in_db
 
 def test_create_discipline(db_session, test_schema_discipline):
     discipline = create_discipline_in_db(db_session, test_schema_discipline.model_dump())
@@ -9834,10 +9834,10 @@ def test_read_subjects_for_discipline(db_session, test_schema_discipline, test_s
 
 ## File: test_crud_domains.py
 ```py
-# filename: tests/crud/test_crud_domains.py
+# filename: backend/tests/crud/test_crud_domains.py
 
 import pytest
-from app.crud.crud_domains import (
+from backend.app.crud.crud_domains import (
     create_domain_in_db,
     read_domain_from_db,
     read_domain_by_name_from_db,
@@ -9848,7 +9848,7 @@ from app.crud.crud_domains import (
     delete_domain_to_discipline_association_from_db,
     read_disciplines_for_domain_from_db
 )
-from app.crud.crud_disciplines import create_discipline_in_db
+from backend.app.crud.crud_disciplines import create_discipline_in_db
 
 def test_create_domain(db_session, test_schema_domain):
     domain = create_domain_in_db(db_session, test_schema_domain.model_dump())
@@ -9905,10 +9905,10 @@ def test_read_disciplines_for_domain(db_session, test_schema_domain, test_schema
 
 ## File: test_crud_filters.py
 ```py
-# filename: tests/crud/test_crud_filters.py
+# filename: backend/tests/crud/test_crud_filters.py
 
-from app.crud.crud_filters import read_filtered_questions_from_db
-from app.models.questions import DifficultyLevel
+from backend.app.crud.crud_filters import read_filtered_questions_from_db
+from backend.app.models.questions import DifficultyLevel
 
 def test_read_filtered_questions_no_filter(db_session, filter_test_data):
     results = read_filtered_questions_from_db(db_session, {})
@@ -9959,10 +9959,10 @@ def test_read_filtered_questions_non_matching_filter(db_session, filter_test_dat
 
 ## File: test_crud_groups.py
 ```py
-# filename: tests/crud/test_crud_groups.py
+# filename: backend/tests/crud/test_crud_groups.py
 
 import pytest
-from app.crud.crud_groups import (
+from backend.app.crud.crud_groups import (
     create_group_in_db,
     read_group_from_db,
     read_groups_from_db,
@@ -9975,8 +9975,8 @@ from app.crud.crud_groups import (
     read_users_for_group_from_db,
     read_question_sets_for_group_from_db
 )
-from app.crud.crud_user import create_user_in_db
-from app.crud.crud_question_sets import create_question_set_in_db
+from backend.app.crud.crud_user import create_user_in_db
+from backend.app.crud.crud_question_sets import create_question_set_in_db
 
 def test_create_group(db_session, test_schema_group):
     group = create_group_in_db(db_session, test_schema_group.model_dump())
@@ -10049,11 +10049,11 @@ def test_read_question_sets_for_group(db_session, test_schema_group, test_schema
 
 ## File: test_crud_leaderboard.py
 ```py
-# filename: tests/crud/test_crud_leaderboard.py
+# filename: backend/tests/crud/test_crud_leaderboard.py
 
 import pytest
 from datetime import datetime, timezone, timedelta
-from app.crud.crud_leaderboard import (
+from backend.app.crud.crud_leaderboard import (
     create_leaderboard_entry_in_db,
     read_leaderboard_entry_from_db,
     read_leaderboard_entries_from_db,
@@ -10063,8 +10063,8 @@ from app.crud.crud_leaderboard import (
     read_leaderboard_entries_for_user_from_db,
     read_leaderboard_entries_for_group_from_db
 )
-from app.crud.crud_user import create_user_in_db
-from app.crud.crud_groups import create_group_in_db
+from backend.app.crud.crud_user import create_user_in_db
+from backend.app.crud.crud_groups import create_group_in_db
 
 def test_create_leaderboard_entry(db_session, test_schema_leaderboard):
     entry = create_leaderboard_entry_in_db(db_session, test_schema_leaderboard.model_dump())
@@ -10123,10 +10123,10 @@ def test_read_leaderboard_entries_for_group(db_session, test_schema_leaderboard,
 
 ## File: test_crud_permissions.py
 ```py
-# filename: tests/crud/test_crud_permissions.py
+# filename: backend/tests/crud/test_crud_permissions.py
 
 import pytest
-from app.crud.crud_permissions import (
+from backend.app.crud.crud_permissions import (
     create_permission_in_db,
     read_permission_from_db,
     read_permission_by_name_from_db,
@@ -10137,7 +10137,7 @@ from app.crud.crud_permissions import (
     delete_role_to_permission_association_from_db,
     read_roles_for_permission_from_db
 )
-from app.crud.crud_roles import create_role_in_db
+from backend.app.crud.crud_roles import create_role_in_db
 
 def test_create_permission(db_session, test_schema_permission):
     permission = create_permission_in_db(db_session, test_schema_permission.model_dump())
@@ -10195,10 +10195,10 @@ def test_read_roles_for_permission(db_session, test_schema_permission, test_sche
 
 ## File: test_crud_question_sets.py
 ```py
-# filename: tests/crud/test_crud_question_sets.py
+# filename: backend/tests/crud/test_crud_question_sets.py
 
 import pytest
-from app.crud.crud_question_sets import (
+from backend.app.crud.crud_question_sets import (
     create_question_set_in_db,
     read_question_set_from_db,
     read_question_sets_from_db,
@@ -10211,8 +10211,8 @@ from app.crud.crud_question_sets import (
     read_questions_for_question_set_from_db,
     read_groups_for_question_set_from_db
 )
-from app.crud.crud_questions import create_question_in_db
-from app.crud.crud_groups import create_group_in_db
+from backend.app.crud.crud_questions import create_question_in_db
+from backend.app.crud.crud_groups import create_group_in_db
 
 def test_create_question_set(db_session, test_schema_question_set):
     question_set = create_question_set_in_db(db_session, test_schema_question_set.model_dump())
@@ -10285,10 +10285,10 @@ def test_read_groups_for_question_set(db_session, test_schema_question_set, test
 
 ## File: test_crud_question_tags.py
 ```py
-# filename: tests/crud/test_crud_question_tags.py
+# filename: backend/tests/crud/test_crud_question_tags.py
 
 import pytest
-from app.crud.crud_question_tags import (
+from backend.app.crud.crud_question_tags import (
     create_question_tag_in_db,
     read_question_tag_from_db,
     read_question_tag_by_tag_from_db,
@@ -10300,7 +10300,7 @@ from app.crud.crud_question_tags import (
     read_tags_for_question_from_db,
     read_questions_for_tag_from_db
 )
-from app.crud.crud_questions import create_question_in_db
+from backend.app.crud.crud_questions import create_question_in_db
 
 def test_create_question_tag(db_session, test_schema_question_tag):
     tag = create_question_tag_in_db(db_session, test_schema_question_tag.model_dump())
@@ -10365,17 +10365,17 @@ def test_read_questions_for_tag(db_session, test_schema_question_tag, test_schem
 
 ## File: test_crud_questions.py
 ```py
-# filename: tests/crud/test_crud_questions.py
+# filename: backend/tests/crud/test_crud_questions.py
 
 import pytest
-from app.crud.crud_questions import (
+from backend.app.crud.crud_questions import (
     create_question_in_db,
     read_question_from_db,
     read_questions_from_db,
     update_question_in_db,
     delete_question_from_db
 )
-from app.models.questions import DifficultyLevel
+from backend.app.models.questions import DifficultyLevel
 
 def test_create_question(db_session, test_schema_question):
     question = create_question_in_db(db_session, test_schema_question.model_dump())
@@ -10443,10 +10443,10 @@ def test_update_question_associations(db_session, test_schema_question, test_mod
 
 ## File: test_crud_roles.py
 ```py
-# filename: tests/crud/test_crud_roles.py
+# filename: backend/tests/crud/test_crud_roles.py
 
 import pytest
-from app.crud.crud_roles import (
+from backend.app.crud.crud_roles import (
     create_role_in_db,
     read_role_from_db,
     read_role_by_name_from_db,
@@ -10458,8 +10458,8 @@ from app.crud.crud_roles import (
     read_permissions_for_role_from_db,
     read_users_for_role_from_db
 )
-from app.crud.crud_permissions import create_permission_in_db
-from app.crud.crud_user import create_user_in_db
+from backend.app.crud.crud_permissions import create_permission_in_db
+from backend.app.crud.crud_user import create_user_in_db
 
 def test_create_role(db_session, test_schema_role):
     role = create_role_in_db(db_session, test_schema_role.model_dump())
@@ -10526,10 +10526,10 @@ def test_read_users_for_role(db_session, test_schema_role, test_schema_user):
 
 ## File: test_crud_subjects.py
 ```py
-# filename: tests/crud/test_crud_subjects.py
+# filename: backend/tests/crud/test_crud_subjects.py
 
 import pytest
-from app.crud.crud_subjects import (
+from backend.app.crud.crud_subjects import (
     create_subject_in_db,
     read_subject_from_db,
     read_subject_by_name_from_db,
@@ -10546,9 +10546,9 @@ from app.crud.crud_subjects import (
     read_topics_for_subject_from_db,
     read_questions_for_subject_from_db
 )
-from app.crud.crud_disciplines import create_discipline_in_db
-from app.crud.crud_topics import create_topic_in_db
-from app.crud.crud_questions import create_question_in_db
+from backend.app.crud.crud_disciplines import create_discipline_in_db
+from backend.app.crud.crud_topics import create_topic_in_db
+from backend.app.crud.crud_questions import create_question_in_db
 
 def test_create_subject(db_session, test_schema_subject):
     subject = create_subject_in_db(db_session, test_schema_subject.model_dump())
@@ -10643,10 +10643,10 @@ def test_read_questions_for_subject(db_session, test_schema_subject, test_schema
 
 ## File: test_crud_subtopics.py
 ```py
-# filename: tests/crud/test_crud_subtopics.py
+# filename: backend/tests/crud/test_crud_subtopics.py
 
 import pytest
-from app.crud.crud_subtopics import (
+from backend.app.crud.crud_subtopics import (
     create_subtopic_in_db,
     read_subtopic_from_db,
     read_subtopic_by_name_from_db,
@@ -10663,9 +10663,9 @@ from app.crud.crud_subtopics import (
     read_concepts_for_subtopic_from_db,
     read_questions_for_subtopic_from_db
 )
-from app.crud.crud_topics import create_topic_in_db
-from app.crud.crud_concepts import create_concept_in_db
-from app.crud.crud_questions import create_question_in_db
+from backend.app.crud.crud_topics import create_topic_in_db
+from backend.app.crud.crud_concepts import create_concept_in_db
+from backend.app.crud.crud_questions import create_question_in_db
 
 def test_create_subtopic(db_session, test_schema_subtopic):
     subtopic = create_subtopic_in_db(db_session, test_schema_subtopic.model_dump())
@@ -10760,10 +10760,10 @@ def test_read_questions_for_subtopic(db_session, test_schema_subtopic, test_sche
 
 ## File: test_crud_topics.py
 ```py
-# filename: tests/crud/test_crud_topics.py
+# filename: backend/tests/crud/test_crud_topics.py
 
 import pytest
-from app.crud.crud_topics import (
+from backend.app.crud.crud_topics import (
     create_topic_in_db,
     read_topic_from_db,
     read_topic_by_name_from_db,
@@ -10780,9 +10780,9 @@ from app.crud.crud_topics import (
     read_subtopics_for_topic_from_db,
     read_questions_for_topic_from_db
 )
-from app.crud.crud_subjects import create_subject_in_db
-from app.crud.crud_subtopics import create_subtopic_in_db
-from app.crud.crud_questions import create_question_in_db
+from backend.app.crud.crud_subjects import create_subject_in_db
+from backend.app.crud.crud_subtopics import create_subtopic_in_db
+from backend.app.crud.crud_questions import create_question_in_db
 
 def test_create_topic(db_session, test_schema_topic):
     topic = create_topic_in_db(db_session, test_schema_topic.model_dump())
@@ -10877,10 +10877,10 @@ def test_read_questions_for_topic(db_session, test_schema_topic, test_schema_que
 
 ## File: test_crud_user.py
 ```py
-# filename: tests/crud/test_crud_user.py
+# filename: backend/tests/crud/test_crud_user.py
 
 import pytest
-from app.crud.crud_user import (
+from backend.app.crud.crud_user import (
     create_user_in_db,
     read_user_from_db,
     read_user_by_username_from_db,
@@ -10894,9 +10894,9 @@ from app.crud.crud_user import (
     read_role_for_user_from_db,
     read_created_question_sets_for_user_from_db
 )
-from app.crud.crud_groups import create_group_in_db
-from app.crud.crud_roles import create_role_in_db
-from app.crud.crud_question_sets import create_question_set_in_db
+from backend.app.crud.crud_groups import create_group_in_db
+from backend.app.crud.crud_roles import create_role_in_db
+from backend.app.crud.crud_question_sets import create_question_set_in_db
 
 def test_create_user(db_session, test_schema_user):
     user = create_user_in_db(db_session, test_schema_user.model_dump())
@@ -10977,11 +10977,11 @@ def test_read_created_question_sets_for_user(db_session, test_schema_user, test_
 
 ## File: test_crud_user_responses.py
 ```py
-# filename: tests/crud/test_crud_user_responses.py
+# filename: backend/tests/crud/test_crud_user_responses.py
 
 import pytest
 from datetime import datetime, timezone, timedelta
-from app.crud.crud_user_responses import (
+from backend.app.crud.crud_user_responses import (
     create_user_response_in_db,
     read_user_response_from_db,
     read_user_responses_from_db,
@@ -10990,9 +10990,9 @@ from app.crud.crud_user_responses import (
     read_user_responses_for_user_from_db,
     read_user_responses_for_question_from_db
 )
-from app.crud.crud_user import create_user_in_db
-from app.crud.crud_questions import create_question_in_db
-from app.crud.crud_answer_choices import create_answer_choice_in_db
+from backend.app.crud.crud_user import create_user_in_db
+from backend.app.crud.crud_questions import create_question_in_db
+from backend.app.crud.crud_answer_choices import create_answer_choice_in_db
 
 def test_create_user_response(db_session, test_schema_user_response, test_schema_user, test_schema_question, test_schema_answer_choice):
     user = create_user_in_db(db_session, test_schema_user.model_dump())
@@ -11141,17 +11141,17 @@ def test_read_user_responses_with_time_range(db_session, test_schema_user_respon
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/tests/test_models
+# Directory: /code/quiz-app/backend/tests/test_models
 
 ## File: test_answer_choice_model.py
 ```py
-# filename: tests/models/test_answer_choice_model.py
+# filename: backend/tests/models/test_answer_choice_model.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.answer_choices import AnswerChoiceModel
-from app.models.questions import QuestionModel
-from app.models.user_responses import UserResponseModel
+from backend.app.models.answer_choices import AnswerChoiceModel
+from backend.app.models.questions import QuestionModel
+from backend.app.models.user_responses import UserResponseModel
 
 def test_answer_choice_creation(db_session):
     answer_choice = AnswerChoiceModel(
@@ -11252,22 +11252,22 @@ def test_answer_choice_repr(db_session):
 
 ## File: test_associations.py
 ```py
-# filename: tests/models/test_associations.py
+# filename: backend/tests/models/test_associations.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.users import UserModel
-from app.models.groups import GroupModel
-from app.models.questions import QuestionModel, DifficultyLevel
-from app.models.disciplines import DisciplineModel
-from app.models.subjects import SubjectModel
-from app.models.topics import TopicModel
-from app.models.subtopics import SubtopicModel
-from app.models.concepts import ConceptModel
-from app.models.question_tags import QuestionTagModel
-from app.models.question_sets import QuestionSetModel
-from app.models.roles import RoleModel
-from app.models.permissions import PermissionModel
+from backend.app.models.users import UserModel
+from backend.app.models.groups import GroupModel
+from backend.app.models.questions import QuestionModel, DifficultyLevel
+from backend.app.models.disciplines import DisciplineModel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.concepts import ConceptModel
+from backend.app.models.question_tags import QuestionTagModel
+from backend.app.models.question_sets import QuestionSetModel
+from backend.app.models.roles import RoleModel
+from backend.app.models.permissions import PermissionModel
 
 def test_user_to_group_association(db_session, test_model_user, test_model_group):
     test_model_user.groups.append(test_model_group)
@@ -11451,12 +11451,12 @@ def test_association_integrity(db_session, test_model_user, test_model_group):
 
 ## File: test_concept_model.py
 ```py
-# filename: tests/models/test_concept_model.py
+# filename: backend/tests/models/test_concept_model.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.concepts import ConceptModel
-from app.models.subtopics import SubtopicModel
+from backend.app.models.concepts import ConceptModel
+from backend.app.models.subtopics import SubtopicModel
 
 def test_concept_creation(db_session):
     concept = ConceptModel(name="Pythagorean Theorem")
@@ -11506,16 +11506,16 @@ def test_concept_repr(db_session):
 
 ## File: test_group_model.py
 ```py
-# filename: tests/models/test_group_model.py
+# filename: backend/tests/models/test_group_model.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.groups import GroupModel
-from app.models.users import UserModel
-from app.models.roles import RoleModel
-from app.models.question_sets import QuestionSetModel
-from app.models.leaderboard import LeaderboardModel
-from app.models.time_period import TimePeriodModel
+from backend.app.models.groups import GroupModel
+from backend.app.models.users import UserModel
+from backend.app.models.roles import RoleModel
+from backend.app.models.question_sets import QuestionSetModel
+from backend.app.models.leaderboard import LeaderboardModel
+from backend.app.models.time_period import TimePeriodModel
 
 def test_group_model_creation(db_session, test_model_user):
     group = GroupModel(
@@ -11635,17 +11635,17 @@ def test_group_model_repr(db_session, test_model_user):
 
 ## File: test_question_model.py
 ```py
-# filename: tests/models/test_question_model.py
+# filename: backend/tests/models/test_question_model.py
 
-from app.models.questions import QuestionModel, DifficultyLevel
-from app.models.subjects import SubjectModel
-from app.models.topics import TopicModel
-from app.models.subtopics import SubtopicModel
-from app.models.concepts import ConceptModel
-from app.models.answer_choices import AnswerChoiceModel
-from app.models.user_responses import UserResponseModel
-from app.models.associations import QuestionToAnswerAssociation
-from app.services.validation_service import validate_foreign_keys
+from backend.app.models.questions import QuestionModel, DifficultyLevel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.concepts import ConceptModel
+from backend.app.models.answer_choices import AnswerChoiceModel
+from backend.app.models.user_responses import UserResponseModel
+from backend.app.models.associations import QuestionToAnswerAssociation
+from backend.app.services.validation_service import validate_foreign_keys
 
 def test_question_model_creation(db_session):
     question = QuestionModel(
@@ -11847,11 +11847,11 @@ def test_question_deletion_removes_association_to_answers(db_session, test_model
 
 ## File: test_question_set_model.py
 ```py
-# filename: tests/models/test_question_set_model.py
+# filename: backend/tests/models/test_question_set_model.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.question_sets import QuestionSetModel
+from backend.app.models.question_sets import QuestionSetModel
 
 def test_question_set_creation(db_session, test_model_user):
     question_set = QuestionSetModel(
@@ -11933,11 +11933,11 @@ def test_question_set_repr(db_session, test_model_user):
 
 ## File: test_question_tag_model.py
 ```py
-# filename: tests/models/test_question_tag_model.py
+# filename: backend/tests/models/test_question_tag_model.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.question_tags import QuestionTagModel
+from backend.app.models.question_tags import QuestionTagModel
 
 def test_question_tag_creation(db_session):
     tag = QuestionTagModel(tag="geography")
@@ -11999,12 +11999,12 @@ def test_question_tag_repr(db_session):
 
 ## File: test_role_model.py
 ```py
-# filename: tests/test_models/test_role_model.py
+# filename: backend/tests/test_models/test_role_model.py
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
-from app.models.permissions import PermissionModel
-from app.models.roles import RoleModel
+from backend.app.models.permissions import PermissionModel
+from backend.app.models.roles import RoleModel
 
 
 def test_role_permission_relationship(db_session):
@@ -12051,13 +12051,13 @@ def test_role_permission_relationship(db_session):
 
 ## File: test_subject_model.py
 ```py
-# filename: tests/test_models/test_subject_model.py
+# filename: backend/tests/test_models/test_subject_model.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.subjects import SubjectModel
-from app.models.disciplines import DisciplineModel
-from app.models.topics import TopicModel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.disciplines import DisciplineModel
+from backend.app.models.topics import TopicModel
 
 def test_subject_creation(db_session):
     subject = SubjectModel(name="Mathematics")
@@ -12128,13 +12128,13 @@ def test_subject_repr(db_session):
 
 ## File: test_subtopic_model.py
 ```py
-# filename: tests/test_models/test_subtopic_model.py
+# filename: backend/tests/test_models/test_subtopic_model.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.subtopics import SubtopicModel
-from app.models.topics import TopicModel
-from app.models.concepts import ConceptModel
+from backend.app.models.subtopics import SubtopicModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.concepts import ConceptModel
 
 def test_subtopic_creation(db_session):
     subtopic = SubtopicModel(name="Linear Equations")
@@ -12194,13 +12194,13 @@ def test_subtopic_repr(db_session):
 
 ## File: test_topic_model.py
 ```py
-# filename: tests/test_models/test_topic_model.py
+# filename: backend/tests/test_models/test_topic_model.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.topics import TopicModel
-from app.models.subjects import SubjectModel
-from app.models.subtopics import SubtopicModel
+from backend.app.models.topics import TopicModel
+from backend.app.models.subjects import SubjectModel
+from backend.app.models.subtopics import SubtopicModel
 
 def test_topic_creation(db_session):
     topic = TopicModel(name="Algebra")
@@ -12260,14 +12260,14 @@ def test_topic_repr(db_session):
 
 ## File: test_user_model.py
 ```py
-# filename: tests/models/test_user_model.py
+# filename: backend/tests/models/test_user_model.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.users import UserModel
-from app.models.roles import RoleModel
-from app.models.groups import GroupModel
-from app.models.question_sets import QuestionSetModel
+from backend.app.models.users import UserModel
+from backend.app.models.roles import RoleModel
+from backend.app.models.groups import GroupModel
+from backend.app.models.question_sets import QuestionSetModel
 
 def test_user_model_creation(db_session, test_model_permissions):
     # Create a role first
@@ -12384,11 +12384,11 @@ def test_user_model_repr(db_session):
 
 ## File: test_user_response_model.py
 ```py
-# filename: tests/models/test_user_response_model.py
+# filename: backend/tests/models/test_user_response_model.py
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from app.models.user_responses import UserResponseModel
+from backend.app.models.user_responses import UserResponseModel
 
 def test_user_response_creation(db_session, test_model_user, test_model_questions, test_model_answer_choices):
     user_response = UserResponseModel(
@@ -12484,13 +12484,13 @@ def test_user_response_repr(db_session, test_model_user, test_model_questions, t
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-backend/tests/test_core
+# Directory: /code/quiz-app/backend/tests/test_core
 
 ## File: test_core_auth.py
 ```py
-# filename: tests/test_core_auth.py
+# filename: backend/tests/test_core_auth.py
 
-from app.services.user_service import oauth2_scheme
+from backend.app.services.user_service import oauth2_scheme
 
 
 def test_oauth2_scheme():
@@ -12504,12 +12504,12 @@ def test_oauth2_scheme():
 
 ## File: test_core_jwt.py
 ```py
-# filename: tests/test_core_jwt.py
+# filename: backend/tests/test_core_jwt.py
 
 from datetime import timedelta
 import pytest
 from jose import JWTError
-from app.core.jwt import create_access_token, verify_token
+from backend.app.core.jwt import create_access_token, verify_token
 
 
 @pytest.fixture

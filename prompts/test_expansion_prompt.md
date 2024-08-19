@@ -1,4 +1,4 @@
-Hello, I'm presenting you with a detailed markdown file named `quiz-app-backend_repo_summary.md`, which acts as a comprehensive representation of a project's repository. This file is generated using a Python script that meticulously walks through the project directory, encapsulating the essence of the entire project structure, including directories, files (e.g., README.md, LICENSE), and specific file contents (with a focus on `.py`, `.js`, `.html`, `.css` files) into a structured markdown document. Here's how the content is organized:
+Hello, I'm presenting you with a detailed markdown file named `backend_repo_summary.md`, which acts as a comprehensive representation of a project's repository. This file is generated using a Python script that meticulously walks through the project directory, encapsulating the essence of the entire project structure, including directories, files (e.g., README.md, LICENSE), and specific file contents (with a focus on `.py`, `.js`, `.html`, `.css` files) into a structured markdown document. Here's how the content is organized:
 
 1. **Directories** are prominently highlighted as main headers, formatted as `# Directory: path/to/directory`. This layout showcases each directory within the project with its full path, ensuring a transparent hierarchy of the project's architecture.
 
@@ -22,7 +22,7 @@ Hello, I'm presenting you with a detailed markdown file named `quiz-app-backend_
 
 **Task:** Expand Test Coverage for an Existing Pytest Suite in a FastAPI Project.
 
-**Context:** You're enhancing the test coverage of the `/code/quiz-app/quiz-app-backend` FastAPI project's existing pytest suite. The project includes models, schemas, CRUD operations, and API endpoints, with initial tests in place. You aim to cover more functionalities and edge cases to ensure robustness.
+**Context:** You're enhancing the test coverage of the `/code/quiz-app/backend` FastAPI project's existing pytest suite. The project includes models, schemas, CRUD operations, and API endpoints, with initial tests in place. You aim to cover more functionalities and edge cases to ensure robustness.
 
 **Steps:**
 

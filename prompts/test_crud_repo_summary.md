@@ -1,13 +1,13 @@
 
-# Directory: /code/quiz-app/quiz-app-backend/tests/test_crud/
+# Directory: /code/quiz-app/backend/tests/test_crud/
 
 ## File: test_crud_filters.py
 ```py
-# filename: tests/test_crud_filters.py
+# filename: backend/tests/test_crud_filters.py
 
 import pytest
 from pydantic import ValidationError
-from app.crud.crud_filters import read_filtered_questions_from_db
+from backend.app.crud.crud_filters import read_filtered_questions_from_db
 
 
 def test_filter_questions_extra_invalid_parameter(db_session):
@@ -109,14 +109,14 @@ def test_filter_questions_valid_filters(db_session, test_questions):
 
 ## File: test_crud_question_sets.py
 ```py
-# filename: tests/test_crud_question_sets.py
+# filename: backend/tests/test_crud_question_sets.py
 
 import pytest
 from fastapi import HTTPException
-from app.crud.crud_question_sets import create_question_set_in_db, delete_question_set_from_db, update_question_set_in_db
-from app.crud.crud_subjects import create_subject_in_db
-from app.schemas.subjects import SubjectCreateSchema
-from app.schemas.question_sets import QuestionSetCreateSchema, QuestionSetUpdateSchema
+from backend.app.crud.crud_question_sets import create_question_set_in_db, delete_question_set_from_db, update_question_set_in_db
+from backend.app.crud.crud_subjects import create_subject_in_db
+from backend.app.schemas.subjects import SubjectCreateSchema
+from backend.app.schemas.question_sets import QuestionSetCreateSchema, QuestionSetUpdateSchema
 
 
 def test_create_question_set_in_db(db_session, test_user, test_questions, test_group):
@@ -198,12 +198,12 @@ def test_delete_question_set_not_found(db_session):
 
 ## File: test_crud_questions.py
 ```py
-# filename: tests/test_crud/test_crud_questions.py
+# filename: backend/tests/test_crud/test_crud_questions.py
 
-from app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, QuestionWithAnswersCreateSchema
-from app.models.questions import DifficultyLevel
-from app.schemas.answer_choices import AnswerChoiceCreateSchema
-from app.crud.crud_questions import create_question_in_db, read_question_from_db, update_question_in_db, delete_question_from_db, create_question_with_answers_in_db
+from backend.app.schemas.questions import QuestionCreateSchema, QuestionUpdateSchema, QuestionWithAnswersCreateSchema
+from backend.app.models.questions import DifficultyLevel
+from backend.app.schemas.answer_choices import AnswerChoiceCreateSchema
+from backend.app.crud.crud_questions import create_question_in_db, read_question_from_db, update_question_in_db, delete_question_from_db, create_question_with_answers_in_db
 
 
 def test_create_question_with_answers(db_session, test_subject, test_topic, test_subtopic, test_concept):
@@ -279,14 +279,14 @@ def test_delete_question_not_found(db_session):
 
 ## File: test_crud_roles.py
 ```py
-# filename: tests/test_crud/test_crud_roles.py
+# filename: backend/tests/test_crud/test_crud_roles.py
 
 import pytest
 from fastapi import HTTPException
-from app.crud.crud_roles import create_role_in_db, read_role_from_db, read_roles_from_db, update_role_in_db, delete_role_from_db
-from app.schemas.roles import RoleCreateSchema, RoleUpdateSchema
-from app.services.logging_service import logger
-from app.crud.crud_permissions import read_permissions_from_db
+from backend.app.crud.crud_roles import create_role_in_db, read_role_from_db, read_roles_from_db, update_role_in_db, delete_role_from_db
+from backend.app.schemas.roles import RoleCreateSchema, RoleUpdateSchema
+from backend.app.services.logging_service import logger
+from backend.app.crud.crud_permissions import read_permissions_from_db
 
 
 def test_create_role_in_db(db_session, test_permissions):
@@ -366,10 +366,10 @@ def test_delete_role_from_db(db_session):
 
 ## File: test_crud_subjects.py
 ```py
-# filename: tests/test_crud_subjects.py
+# filename: backend/tests/test_crud_subjects.py
 
-from app.schemas.subjects import SubjectCreateSchema
-from app.crud.crud_subjects import create_subject_in_db
+from backend.app.schemas.subjects import SubjectCreateSchema
+from backend.app.crud.crud_subjects import create_subject_in_db
 
 
 def test_create_subject(db_session, test_discipline):
@@ -385,12 +385,12 @@ def test_create_subject(db_session, test_discipline):
 
 ## File: test_crud_user.py
 ```py
-# filename: tests/test_crud_user.py
+# filename: backend/tests/test_crud_user.py
 
-from app.crud.crud_user import delete_user_from_db, create_user_in_db, update_user_in_db
-from app.schemas.user import UserCreateSchema, UserUpdateSchema
-from app.services.authentication_service import authenticate_user
-from app.core.security import get_password_hash
+from backend.app.crud.crud_user import delete_user_from_db, create_user_in_db, update_user_in_db
+from backend.app.schemas.user import UserCreateSchema, UserUpdateSchema
+from backend.app.services.authentication_service import authenticate_user
+from backend.app.core.security import get_password_hash
 
 def test_remove_user_not_found(db_session):
     user_id = 999  # Assuming this ID does not exist
@@ -432,13 +432,13 @@ def test_update_user(db_session, test_user):
 
 ## File: test_crud_user_responses.py
 ```py
-# filename: tests/test_crud/test_crud_user_responses.py
+# filename: backend/tests/test_crud/test_crud_user_responses.py
 
 from datetime import datetime, timezone
-from app.schemas.user_responses import UserResponseCreateSchema, UserResponseUpdateSchema
-from app.crud.crud_user_responses import create_user_response_in_db, update_user_response_in_db, delete_user_response_from_db
-from app.models.user_responses import UserResponseModel
-from app.services.logging_service import logger, sqlalchemy_obj_to_dict
+from backend.app.schemas.user_responses import UserResponseCreateSchema, UserResponseUpdateSchema
+from backend.app.crud.crud_user_responses import create_user_response_in_db, update_user_response_in_db, delete_user_response_from_db
+from backend.app.models.user_responses import UserResponseModel
+from backend.app.services.logging_service import logger, sqlalchemy_obj_to_dict
 
 def test_create_and_retrieve_user_response(db_session, test_user_with_group, test_questions):
     response_data = UserResponseCreateSchema(

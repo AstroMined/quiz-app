@@ -1,5 +1,5 @@
 
-# Directory: /code/quiz-app/quiz-app-frontend
+# Directory: /code/quiz-app/frontend
 
 ## File: next-env.d.ts
 ```ts
@@ -62,7 +62,7 @@ export default config;
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/app
+# Directory: /code/quiz-app/frontend/app
 
 ## File: globals.css
 ```css
@@ -198,7 +198,7 @@ export default function Home() {
 }
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/app/login
+# Directory: /code/quiz-app/frontend/app/login
 
 ## File: page.tsx
 ```tsx
@@ -302,7 +302,7 @@ export default function Login() {
 }
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/app/register
+# Directory: /code/quiz-app/frontend/app/register
 
 ## File: page.tsx
 ```tsx
@@ -404,7 +404,7 @@ export default function Register() {
 }
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/app/leaderboard
+# Directory: /code/quiz-app/frontend/app/leaderboard
 
 ## File: page.tsx
 ```tsx
@@ -459,7 +459,7 @@ export default function Leaderboard() {
 }
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/app/quizzes
+# Directory: /code/quiz-app/frontend/app/quizzes
 
 ## File: page.tsx
 ```tsx
@@ -480,7 +480,7 @@ export default function Quizzes() {
 }
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/app/quizzes/[id]
+# Directory: /code/quiz-app/frontend/app/quizzes/[id]
 
 ## File: page.tsx
 ```tsx
@@ -567,7 +567,7 @@ export default function Quiz() {
 }
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/src/contexts
+# Directory: /code/quiz-app/frontend/src/contexts
 
 ## File: AuthContext.tsx
 ```tsx
@@ -622,7 +622,7 @@ export const useAuth = () => {
 };
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/src/config
+# Directory: /code/quiz-app/frontend/src/config
 
 ## File: api.ts
 ```ts
@@ -635,7 +635,7 @@ export const initializeApi = () => {
 };
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/src/utils
+# Directory: /code/quiz-app/frontend/src/utils
 
 ## File: api.ts
 ```ts
@@ -654,7 +654,7 @@ export const questionSetsApi = new QuestionSetsApi(getConfig());
 // You can create similar exports for other API services
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/src/api
+# Directory: /code/quiz-app/frontend/src/api
 
 ## File: index.ts
 ```ts
@@ -704,7 +704,7 @@ export { UserResponsesService } from './services/UserResponsesService';
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/src/api/services
+# Directory: /code/quiz-app/frontend/src/api/services
 
 ## File: AuthenticationService.ts
 ```ts
@@ -1819,7 +1819,7 @@ export class UserResponsesService {
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/src/api/models
+# Directory: /code/quiz-app/frontend/src/api/models
 
 ## File: AnswerChoiceCreateSchema.ts
 ```ts
@@ -2190,7 +2190,7 @@ export type ValidationError = {
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/src/api/core
+# Directory: /code/quiz-app/frontend/src/api/core
 
 ## File: ApiError.ts
 ```ts
@@ -2761,7 +2761,7 @@ export const request = <T>(config: OpenAPIConfig, options: ApiRequestOptions, ax
 
 ```
 
-# Directory: /code/quiz-app/quiz-app-frontend/src/components
+# Directory: /code/quiz-app/frontend/src/components
 
 ## File: Layout.tsx
 ```tsx

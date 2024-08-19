@@ -2,7 +2,7 @@ import os
 import subprocess
 
 # Path to your project directory
-project_directory = '/code/quiz-app/quiz-app-backend'
+project_directory = '/code/quiz-app/backend'
 
 # List to store logging statements
 logging_statements = []

@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform linux -- Python 3.11.8, pytest-8.1.2, pluggy-1.4.0
-rootdir: /code/quiz-app/quiz-app-backend
+rootdir: /code/quiz-app/backend
 configfile: pyproject.toml
 plugins: anyio-4.3.0, asyncio-0.23.6, cov-4.1.0
 asyncio: mode=Mode.STRICT
@@ -70,7 +70,7 @@ _____________ ERROR at teardown of test_question_set_relationship ______________
     |     fin()
     |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/fixtures.py", line 922, in _teardown_yield_fixture
     |     next(it)
-    |   File "/code/quiz-app/quiz-app-backend/tests/conftest.py", line 146, in test_permissions
+    |   File "/code/quiz-app/backend/tests/conftest.py", line 146, in test_permissions
     |     db_session.query(PermissionModel).delete()
     |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 3160, in delete
     |     result: CursorResult[Any] = self.session.execute(
@@ -112,9 +112,9 @@ _____________ ERROR at teardown of test_question_set_relationship ______________
     |     fin()
     |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/_pytest/fixtures.py", line 922, in _teardown_yield_fixture
     |     next(it)
-    |   File "/code/quiz-app/quiz-app-backend/tests/conftest.py", line 166, in test_role
+    |   File "/code/quiz-app/backend/tests/conftest.py", line 166, in test_role
     |     delete_role_crud(db_session, role.id)
-    |   File "/code/quiz-app/quiz-app-backend/app/crud/crud_roles.py", line 68, in delete_role_crud
+    |   File "/code/quiz-app/backend/app/crud/crud_roles.py", line 68, in delete_role_crud
     |     db.commit()
     |   File "/home/astromined/anaconda3/envs/fastapi_quiz_app/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1972, in commit
     |     trans.commit(_to_root=True)

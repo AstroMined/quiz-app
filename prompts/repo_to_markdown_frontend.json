@@ -1,5 +1,5 @@
 {
-  "root_directory": "/code/quiz-app/quiz-app-frontend",
+  "root_directory": "/code/quiz-app/frontend",
   "file_extensions": [".js", ".jsx", ".ts", ".tsx", ".css", ".scss", ".html"],
   "specific_files": {},
   "ignore_directories": [
