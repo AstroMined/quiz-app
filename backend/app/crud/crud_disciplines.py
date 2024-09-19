@@ -16,6 +16,15 @@ def create_discipline_in_db(db: Session, discipline_data: Dict) -> DisciplineMod
     db.add(db_discipline)
     db.commit()
     db.refresh(db_discipline)
+
+    if 'domain_ids' in discipline_data and discipline_data['domain_ids']:
+        for domain_id in discipline_data['domain_ids']:
+            create_domain_to_discipline_association_in_db(db, domain_id, db_discipline.id)
+
+    if 'subject_ids' in discipline_data and discipline_data['subject_ids']:
+        for subject_id in discipline_data['subject_ids']:
+            create_discipline_to_subject_association_in_db(db, db_discipline.id, subject_id)
+
     return db_discipline
 
 def read_discipline_from_db(db: Session, discipline_id: int) -> Optional[DisciplineModel]:

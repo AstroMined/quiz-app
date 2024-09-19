@@ -21,6 +21,7 @@ from backend.app.api.endpoints import subtopics as subtopics_router
 from backend.app.api.endpoints import topics as topics_router
 from backend.app.api.endpoints import user_responses as user_responses_router
 from backend.app.api.endpoints import users as users_router
+from backend.app.api.endpoints import time_periods as time_periods_router
 from backend.app.db.session import get_db
 from backend.app.middleware.authorization_middleware import \
     AuthorizationMiddleware
@@ -30,6 +31,7 @@ from backend.app.services.permission_generator_service import (
     ensure_permissions_in_db, generate_permissions)
 from backend.app.services.validation_service import \
     register_validation_listeners
+from backend.app.crud.crud_time_period import init_time_periods_in_db
 
 app = FastAPI()
 
@@ -41,6 +43,7 @@ async def lifespan(app: FastAPI):
     permissions = generate_permissions(app)
     ensure_permissions_in_db(db, permissions)
     register_validation_listeners()
+    init_time_periods_in_db(db)  # Initialize time periods
     yield
     # Anything after the yield runs when the application shuts down
     app.state.db.close()
@@ -69,6 +72,7 @@ app.include_router(user_responses_router.router, tags=["User Responses"])
 app.include_router(users_router.router, tags=["User Management"])
 app.include_router(topics_router.router, tags=["Topics"])
 app.include_router(subtopics_router.router, tags=["Subtopics"])
+app.include_router(time_periods_router.router, tags=["Time Periods"])
 
 @app.get("/")
 def read_root():

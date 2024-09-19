@@ -22,10 +22,10 @@ class QuestionBaseSchema(BaseModel):
         return v
 
 class QuestionCreateSchema(QuestionBaseSchema):
-    subject_ids: List[int] = Field(..., description="IDs of the subjects associated with the question")
-    topic_ids: List[int] = Field(..., description="IDs of the topics associated with the question")
-    subtopic_ids: List[int] = Field(..., description="IDs of the subtopics associated with the question")
-    concept_ids: List[int] = Field(..., description="IDs of the concepts associated with the question")
+    subject_ids: List[int] = Field(..., min_items=1, description="IDs of the subjects associated with the question")
+    topic_ids: List[int] = Field(..., min_items=1, description="IDs of the topics associated with the question")
+    subtopic_ids: List[int] = Field(..., min_items=1, description="IDs of the subtopics associated with the question")
+    concept_ids: List[int] = Field(..., min_items=1, description="IDs of the concepts associated with the question")
     answer_choice_ids: Optional[List[int]] = Field(None, description="List of answer choice IDs associated with the question")
     question_tag_ids: Optional[List[int]] = Field(None, description="List of tag IDs associated with the question")
     question_set_ids: Optional[List[int]] = Field(None, description="List of question set IDs the question belongs to")
@@ -49,13 +49,13 @@ class QuestionUpdateSchema(BaseModel):
 
 class QuestionSchema(QuestionBaseSchema):
     id: int
-    subject_ids: List[int]
-    topic_ids: List[int]
-    subtopic_ids: List[int]
-    concept_ids: List[int]
-    answer_choice_ids: List[int]
-    question_tag_ids: List[int]
-    question_set_ids: List[int]
+    subjects: List[int]
+    topics: List[int]
+    subtopics: List[int]
+    concepts: List[int]
+    answer_choices: List[int]
+    question_tags: List[int]
+    question_sets: List[int]
 
     class Config:
         from_attributes = True

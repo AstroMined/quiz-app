@@ -21,7 +21,7 @@ class UserBaseSchema(BaseModel):
 
 class UserCreateSchema(UserBaseSchema):
     password: SecretStr = Field(..., min_length=8, max_length=100, description="Password for the user")
-    role_id: int = Field(..., description="ID of the role for the user")
+    role_id: Optional[int] = Field(default=None, description="ID of the role for the user")
 
     @field_validator('password')
     @classmethod
@@ -46,6 +46,7 @@ class UserUpdateSchema(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50, description="Username of the user")
     email: Optional[EmailStr] = Field(None, description="Email address of the user")
     password: Optional[SecretStr] = Field(None, min_length=8, max_length=100, description="Password for the user")
+    role_id: Optional[int] = Field(None, description="ID of the role for the user")
 
     @field_validator('username')
     @classmethod

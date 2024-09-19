@@ -74,3 +74,12 @@ def read_permissions_for_role_from_db(db: Session, role_id: int) -> List[Permiss
 
 def read_users_for_role_from_db(db: Session, role_id: int) -> List[UserModel]:
     return db.query(UserModel).filter(UserModel.role_id == role_id).all()
+
+def read_default_role_from_db(db: Session) -> Optional[RoleModel]:
+    return db.query(RoleModel).filter(RoleModel.default == True).first()
+
+def read_role_by_name_from_db(db: Session, name: str) -> Optional[RoleModel]:
+    return db.query(RoleModel).filter(RoleModel.name == name).first()
+
+def read_roles_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[RoleModel]:
+    return db.query(RoleModel).offset(skip).limit(limit).all()

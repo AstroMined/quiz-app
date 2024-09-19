@@ -18,6 +18,19 @@ def create_subtopic_in_db(db: Session, subtopic_data: Dict) -> SubtopicModel:
     db.add(db_subtopic)
     db.commit()
     db.refresh(db_subtopic)
+
+    if 'topic_ids' in subtopic_data and subtopic_data['topic_ids']:
+        for topic_id in subtopic_data['topic_ids']:
+            create_topic_to_subtopic_association_in_db(db, topic_id, db_subtopic.id)
+
+    if 'concept_ids' in subtopic_data and subtopic_data['concept_ids']:
+        for concept_id in subtopic_data['concept_ids']:
+            create_subtopic_to_concept_association_in_db(db, db_subtopic.id, concept_id)
+
+    if 'question_ids' in subtopic_data and subtopic_data['question_ids']:
+        for question_id in subtopic_data['question_ids']:
+            create_question_to_subtopic_association_in_db(db, question_id, db_subtopic.id)
+
     return db_subtopic
 
 def read_subtopic_from_db(db: Session, subtopic_id: int) -> Optional[SubtopicModel]:

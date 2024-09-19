@@ -18,6 +18,13 @@ def create_answer_choice_in_db(db: Session, answer_choice_data: Dict) -> AnswerC
     db.add(db_answer_choice)
     db.commit()
     db.refresh(db_answer_choice)
+    
+    if 'question_ids' in answer_choice_data and answer_choice_data['question_ids']:
+        for question_id in answer_choice_data['question_ids']:
+            create_question_to_answer_association_in_db(db, question_id, db_answer_choice.id)
+    
+    db.refresh(db_answer_choice)
+            
     return db_answer_choice
 
 def read_answer_choice_from_db(db: Session, answer_choice_id: int) -> Optional[AnswerChoiceModel]:

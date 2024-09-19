@@ -13,7 +13,7 @@ Endpoints:
 - GET /questions/filter: Retrieve a list of filtered questions
 
 The endpoint requires appropriate authentication and authorization,
-which is handled by the get_current_user dependency.
+which is handled by the check_auth_status and get_current_user_or_error functions.
 """
 
 from typing import List, Optional
@@ -23,10 +23,10 @@ from sqlalchemy.orm import Session
 
 from backend.app.crud.crud_filters import read_filtered_questions_from_db
 from backend.app.db.session import get_db
-from backend.app.models.users import UserModel
 from backend.app.schemas.filters import FilterParamsSchema
 from backend.app.schemas.questions import QuestionSchema
-from backend.app.services.user_service import get_current_user
+from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
+from backend.app.core.config import DifficultyLevel
 
 router = APIRouter()
 
@@ -58,8 +58,7 @@ async def filter_questions(
     question_tags: Optional[List[str]] = Query(None),
     db: Session = Depends(get_db),
     skip: int = 0,
-    limit: int = 100,
-    current_user: UserModel = Depends(get_current_user)
+    limit: int = 100
 ):
     """
     Retrieve a list of filtered questions.
@@ -77,21 +76,32 @@ async def filter_questions(
         db (Session): The database session.
         skip (int): The number of questions to skip (for pagination).
         limit (int): The maximum number of questions to return (for pagination).
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         List[QuestionSchema]: A list of filtered questions.
 
     Raises:
-        HTTPException: If unexpected parameters are provided in the request.
+        HTTPException: If unexpected parameters are provided in the request, if an invalid difficulty level is specified,
+                       or if the user is not authenticated.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     await forbid_extra_params(request)
+    
+    # Convert difficulty string to DifficultyLevel enum
+    difficulty_enum = None
+    if difficulty:
+        try:
+            difficulty_enum = DifficultyLevel[difficulty.upper()]
+        except KeyError:
+            raise HTTPException(status_code=400, detail=f"Invalid difficulty level: {difficulty}")
     
     filters = FilterParamsSchema(
         subject=subject,
         topic=topic,
         subtopic=subtopic,
-        difficulty=difficulty,
+        difficulty=difficulty_enum,
         question_tags=question_tags
     )
     

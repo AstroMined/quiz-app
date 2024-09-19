@@ -14,6 +14,11 @@ def create_domain_in_db(db: Session, domain_data: Dict) -> DomainModel:
     db.add(db_domain)
     db.commit()
     db.refresh(db_domain)
+
+    if 'discipline_ids' in domain_data and domain_data['discipline_ids']:
+        for discipline_id in domain_data['discipline_ids']:
+            create_domain_to_discipline_association_in_db(db, db_domain.id, discipline_id)
+
     return db_domain
 
 def read_domain_from_db(db: Session, domain_id: int) -> Optional[DomainModel]:

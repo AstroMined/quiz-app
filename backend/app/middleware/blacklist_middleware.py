@@ -1,45 +1,45 @@
 # filename: backend/app/middleware/blacklist_middleware.py
 
-from fastapi import HTTPException, Request, status
+from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
-
-from backend.app.core.config import settings_core
+from starlette.responses import JSONResponse
+from backend.app.core.jwt import decode_access_token
+from backend.app.crud.authentication import is_token_revoked
 from backend.app.db.session import get_db
-from backend.app.models.authentication import RevokedTokenModel
 from backend.app.services.logging_service import logger
-
-
-async def check_revoked_tokens(request: Request, call_next):
-    logger.debug("check_revoked_tokens - Requested URL: %s", request.url.path)
-    if request.url.path in settings_core.UNPROTECTED_ENDPOINTS:
-        logger.debug("check_revoked_tokens - Unprotected endpoint, skipping blacklist check")
-        return await call_next(request)
-    
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
-        logger.debug("check_revoked_tokens - Token: %s", token)
-        db = next(get_db())
-        try:
-            revoked_token = db.query(RevokedTokenModel).filter(RevokedTokenModel.token == token).first()
-            if revoked_token:
-                logger.debug("check_revoked_tokens - Token is revoked")
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
-            logger.debug("check_revoked_tokens - Token is not revoked")
-        except Exception as e:
-            logger.error("check_revoked_tokens - Error during DB query: %s", e)
-        finally:
-            db.close()
-            logger.debug("check_revoked_tokens - DB session closed")
-    
-    logger.debug("check_revoked_tokens - Before calling next middleware or endpoint")
-    response = await call_next(request)
-    logger.debug("check_revoked_tokens - After calling next middleware or endpoint")
-    return response
+from backend.app.core.config import settings_core
 
 class BlacklistMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        logger.debug("BlacklistMiddleware - Requested URL: %s", request.url.path)
-        response = await check_revoked_tokens(request, call_next)
-        logger.debug("BlacklistMiddleware - After calling check_revoked_tokens")
+        logger.debug(f"BlacklistMiddleware: Processing request to {request.url.path}")
+
+        # Allow unprotected endpoints to pass through without token validation
+        if request.url.path in settings_core.UNPROTECTED_ENDPOINTS:
+            logger.debug(f"BlacklistMiddleware: Allowing unprotected endpoint {request.url.path} to pass through")
+            return await call_next(request)
+
+        authorization = request.headers.get("Authorization")
+        if authorization:
+            try:
+                scheme, token = authorization.split()
+                if scheme.lower() != "bearer":
+                    logger.warning("BlacklistMiddleware: Invalid authentication scheme")
+                    raise HTTPException(status_code=401, detail="Invalid authentication scheme")
+
+                db = next(get_db())
+                if is_token_revoked(db, token):
+                    logger.warning("BlacklistMiddleware: Token has been revoked")
+                    raise HTTPException(status_code=401, detail="Token has been revoked")
+
+                logger.debug("BlacklistMiddleware: Token is valid")
+            except HTTPException as e:
+                logger.error(f"BlacklistMiddleware: HTTPException - {e.detail}")
+                return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+            except Exception as e:
+                logger.error(f"BlacklistMiddleware: Unexpected error - {str(e)}")
+                return JSONResponse(status_code=401, content={"detail": str(e)})
+        else:
+            logger.debug("BlacklistMiddleware: No Authorization header present")
+
+        response = await call_next(request)
         return response

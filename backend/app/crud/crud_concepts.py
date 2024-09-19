@@ -16,6 +16,15 @@ def create_concept_in_db(db: Session, concept_data: Dict) -> ConceptModel:
     db.add(db_concept)
     db.commit()
     db.refresh(db_concept)
+
+    if 'subtopic_ids' in concept_data and concept_data['subtopic_ids']:
+        for subtopic_id in concept_data['subtopic_ids']:
+            create_subtopic_to_concept_association_in_db(db, subtopic_id, db_concept.id)
+
+    if 'question_ids' in concept_data and concept_data['question_ids']:
+        for question_id in concept_data['question_ids']:
+            create_question_to_concept_association_in_db(db, question_id, db_concept.id)
+
     return db_concept
 
 def read_concept_from_db(db: Session, concept_id: int) -> Optional[ConceptModel]:

@@ -1,8 +1,0 @@
-﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"282","User Story","Filtering Endpoints","Active","api; filtering","Develop API endpoints for filtering questions based on various criteria such as subject, topic, subtopic, difficulty level, or tags. The endpoints should accept filtering parameters, query the database efficiently, and return the filtered results in a paginated manner. Proper validation and error handling should be implemented.","Filtering endpoints implemented
-Accepts Filtering parameters
-Queries database efficiently
-Returns paginated Results
-Proper validation and error handling
-tested with different Filtering scenarios"
-"283","Task","Implement filtering endpoints","Active","api","<div>Implement question filtering API endpoints </div>",

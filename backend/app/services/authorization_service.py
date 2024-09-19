@@ -4,10 +4,11 @@ from typing import List
 
 from sqlalchemy.orm import Session
 
+from backend.app.crud.crud_roles import read_role_from_db, read_permissions_for_role_from_db
+
 from backend.app.models.groups import GroupModel
 from backend.app.models.roles import RoleModel
 from backend.app.models.users import UserModel
-from backend.app.services.logging_service import logger
 
 
 def get_user_permissions(db: Session, user: UserModel) -> List[str]:
@@ -17,15 +18,16 @@ def get_user_permissions(db: Session, user: UserModel) -> List[str]:
     return []
 
 def has_permission(db: Session, user: UserModel, required_permission: str) -> bool:
-    logger.debug("Checking permission '%s' for user: %s", required_permission, user)
-    user_role = db.query(RoleModel).filter(RoleModel.name == user.role).first()
+    # Use the read_role_by_name_from_db function to get the role
+    user_role = read_role_from_db(db, user.role_id)
+    
     if user_role:
-        user_permissions = [permission.name for permission in user_role.permissions]
-        logger.debug("User permissions: %s", user_permissions)
+        # Use the read_permissions_for_role_from_db function to get the permissions
+        role_permissions = read_permissions_for_role_from_db(db, user_role.id)
+        
+        user_permissions = [permission.name for permission in role_permissions]
         has_perm = required_permission in user_permissions
-        logger.debug("User has permission '%s': %s", required_permission, has_perm)
         return has_perm
-    logger.debug("User role not found")
     return False
 
 def is_group_owner(user: UserModel, group: GroupModel) -> bool:

@@ -11,7 +11,17 @@ from backend.app.models.question_sets import QuestionSetModel
 from backend.app.models.questions import QuestionModel
 
 
+def check_existing_question_set(db: Session, name: str, creator_id: int) -> Optional[QuestionSetModel]:
+    return db.query(QuestionSetModel).filter(
+        QuestionSetModel.name == name,
+        QuestionSetModel.creator_id == creator_id
+    ).first()
+
 def create_question_set_in_db(db: Session, question_set_data: Dict) -> QuestionSetModel:
+    existing_question_set = check_existing_question_set(db, question_set_data['name'], question_set_data['creator_id'])
+    if existing_question_set:
+        raise ValueError("A question set with this name already exists for this user")
+    
     db_question_set = QuestionSetModel(
         name=question_set_data['name'],
         description=question_set_data.get('description'),
@@ -33,8 +43,18 @@ def update_question_set_in_db(db: Session, question_set_id: int, question_set_da
     db_question_set = read_question_set_from_db(db, question_set_id)
     if db_question_set:
         for key, value in question_set_data.items():
-            if key not in ['question_ids', 'group_ids']:
+            if key not in ['question_ids', 'group_ids'] and value is not None:
                 setattr(db_question_set, key, value)
+        
+        if 'question_ids' in question_set_data:
+            # Remove existing associations
+            db.query(QuestionSetToQuestionAssociation).filter_by(question_set_id=question_set_id).delete()
+            
+            # Add new associations
+            for question_id in question_set_data['question_ids']:
+                association = QuestionSetToQuestionAssociation(question_set_id=question_set_id, question_id=question_id)
+                db.add(association)
+        
         db.commit()
         db.refresh(db_question_set)
     return db_question_set

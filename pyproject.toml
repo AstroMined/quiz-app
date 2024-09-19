@@ -1,10 +1,13 @@
 # pyproject.toml
 [tool.app]
+project_name = "Quiz App Backend"
 secret_key = "your_default_secret_key"
 access_token_expire_minutes = 30
-database_url_dev = "sqlite:///./backend/quiz_app.db"
-database_url_test = "sqlite:///./backend/test.db"
-unprotected_endpoints = ["/", "/login", "/logout", "/register", "/docs", "/redoc", "/openapi.json"]
+database_url_dev = "sqlite:///./backend/db/quiz_app.db"
+database_url_test = "sqlite:///./backend/db/test.db"
+unprotected_endpoints = ["/", "/login", "/register", "/docs", "/redoc", "/openapi.json"]
+cors_origins = ["http://localhost", "http://localhost:8080", "http://localhost:3000"]
+sentry_dsn = ""  # Add your Sentry DSN here if you're using Sentry for error tracking
 
 [tool.pylint."MESSAGES CONTROL"]
 ignored-argument-names="^current_user$"

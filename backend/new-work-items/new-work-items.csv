@@ -1,2 +1,0 @@
-﻿ID,Work Item Type,Title,State,Tags,Description,Acceptance Criteria
-"320","Task","Create Role and Permission Models","Active","database; models","<p>Create database models for roles and permissions, including fields for name and description. Establish a many-to-many relationship between RoleModel and PermissionModel. </p>",

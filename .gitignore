@@ -1,3 +1,6 @@
+# Ignore these sub-directories
+prompts/
+
 # Secrets
 .env
 

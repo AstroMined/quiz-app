@@ -19,12 +19,12 @@ Endpoints:
 - DELETE /questions/{question_id}: Delete a specific question
 
 Each endpoint requires appropriate authentication and authorization,
-which is handled by the get_current_user dependency.
+which is handled by the check_auth_status and get_current_user_or_error functions.
 """
 
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from backend.app.crud.crud_questions import (create_question_in_db,
@@ -33,22 +33,21 @@ from backend.app.crud.crud_questions import (create_question_in_db,
                                              read_questions_from_db,
                                              update_question_in_db)
 from backend.app.db.session import get_db
-from backend.app.models.users import UserModel
 from backend.app.schemas.questions import (DetailedQuestionSchema,
                                            QuestionCreateSchema,
                                            QuestionSchema,
                                            QuestionUpdateSchema,
                                            QuestionWithAnswersCreateSchema)
-from backend.app.services.user_service import get_current_user
+from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 
 router = APIRouter()
 
-@router.post("/questions/", response_model=QuestionSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/questions/", response_model=DetailedQuestionSchema, status_code=status.HTTP_201_CREATED)
 async def post_question(
+    request: Request,
     question: QuestionCreateSchema,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
-) -> QuestionSchema:
+    db: Session = Depends(get_db)
+) -> DetailedQuestionSchema:
     """
     Create a new question.
 
@@ -56,23 +55,27 @@ async def post_question(
     The question data is validated using the QuestionCreateSchema.
 
     Args:
+        request (Request): The FastAPI request object.
         question (QuestionCreateSchema): The question data to be created.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         QuestionSchema: The created question data.
 
     Raises:
         HTTPException: 
+            - 401 Unauthorized: If the user is not authenticated.
             - 422 Unprocessable Entity: If the question data is invalid.
             - 500 Internal Server Error: If an unexpected error occurs during question creation.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     try:
         validated_question = QuestionCreateSchema(**question.model_dump())
         question_data = validated_question.model_dump()
         created_question = create_question_in_db(db=db, question_data=question_data)
-        return QuestionSchema.model_validate(created_question)
+        return DetailedQuestionSchema.model_validate(created_question)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                             detail=str(ve)
@@ -86,9 +89,9 @@ async def post_question(
              response_model=DetailedQuestionSchema,
              status_code=status.HTTP_201_CREATED)
 async def post_question_with_answers(
+    request: Request,
     question: QuestionWithAnswersCreateSchema,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ) -> DetailedQuestionSchema:
     """
     Create a new question with associated answers.
@@ -98,18 +101,22 @@ async def post_question_with_answers(
     The question and answer data are validated using the QuestionWithAnswersCreateSchema.
 
     Args:
+        request (Request): The FastAPI request object.
         question (QuestionWithAnswersCreateSchema): The question and answer data to be created.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         DetailedQuestionSchema: The created question data including associated answers.
 
     Raises:
         HTTPException: 
+            - 401 Unauthorized: If the user is not authenticated.
             - 422 Unprocessable Entity: If the question or answer data is invalid.
             - 500 Internal Server Error: If an unexpected error occurs during question creation.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     try:
         validated_question = QuestionWithAnswersCreateSchema(**question.model_dump())
         question_data = validated_question.model_dump()
@@ -121,15 +128,15 @@ async def post_question_with_answers(
                         ) from ve
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="An error occurred while creating the question with answers"
+                            detail=f"An error occurred while creating the question with answers: {e}"
                         ) from e
 
 @router.get("/questions/", response_model=List[DetailedQuestionSchema])
 async def get_questions(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ) -> List[DetailedQuestionSchema]:
     """
     Retrieve a list of questions.
@@ -138,17 +145,22 @@ async def get_questions(
     paginated list of questions from the database.
 
     Args:
+        request (Request): The FastAPI request object.
         skip (int, optional): The number of questions to skip. Defaults to 0.
         limit (int, optional): The maximum number of questions to return. Defaults to 100.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         List[DetailedQuestionSchema]: A list of questions with their details.
 
     Raises:
-        HTTPException: 500 Internal Server Error if an unexpected error occurs during retrieval.
+        HTTPException: 
+            - 401 Unauthorized: If the user is not authenticated.
+            - 500 Internal Server Error: If an unexpected error occurs during retrieval.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     try:
         questions = read_questions_from_db(db, skip=skip, limit=limit)
         return [DetailedQuestionSchema.model_validate(q) for q in questions]
@@ -159,9 +171,9 @@ async def get_questions(
 
 @router.get("/questions/{question_id}", response_model=DetailedQuestionSchema)
 async def get_question(
+    request: Request,
     question_id: int,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ) -> DetailedQuestionSchema:
     """
     Retrieve a specific question by ID.
@@ -169,18 +181,22 @@ async def get_question(
     This endpoint allows authenticated users to retrieve a single question by its ID.
 
     Args:
+        request (Request): The FastAPI request object.
         question_id (int): The ID of the question to retrieve.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         DetailedQuestionSchema: The detailed question data.
 
     Raises:
         HTTPException: 
+            - 401 Unauthorized: If the user is not authenticated.
             - 404 Not Found: If the question with the given ID does not exist.
             - 500 Internal Server Error: If an unexpected error occurs during retrieval.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     try:
         db_question = read_question_from_db(db, question_id=question_id)
         if db_question is None:
@@ -195,10 +211,10 @@ async def get_question(
 
 @router.put("/questions/{question_id}", response_model=DetailedQuestionSchema)
 async def put_question(
+    request: Request,
     question_id: int,
     question: QuestionUpdateSchema,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ) -> DetailedQuestionSchema:
     """
     Update a specific question.
@@ -206,20 +222,24 @@ async def put_question(
     This endpoint allows authenticated users to update an existing question by its ID.
 
     Args:
+        request (Request): The FastAPI request object.
         question_id (int): The ID of the question to update.
         question (QuestionUpdateSchema): The updated question data.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         DetailedQuestionSchema: The updated question data.
 
     Raises:
         HTTPException: 
+            - 401 Unauthorized: If the user is not authenticated.
             - 404 Not Found: If the question with the given ID does not exist.
             - 422 Unprocessable Entity: If the update data is invalid.
             - 500 Internal Server Error: If an unexpected error occurs during the update.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     try:
         validated_question = QuestionUpdateSchema(**question.model_dump())
         question_data = validated_question.model_dump()
@@ -240,9 +260,9 @@ async def put_question(
 
 @router.delete("/questions/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_question(
+    request: Request,
     question_id: int,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Delete a specific question.
@@ -250,18 +270,22 @@ async def delete_question(
     This endpoint allows authenticated users to delete an existing question by its ID.
 
     Args:
+        request (Request): The FastAPI request object.
         question_id (int): The ID of the question to delete.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         None
 
     Raises:
         HTTPException: 
+            - 401 Unauthorized: If the user is not authenticated.
             - 404 Not Found: If the question with the given ID does not exist.
             - 500 Internal Server Error: If an unexpected error occurs during the deletion.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     try:
         success = delete_question_from_db(db, question_id)
         if not success:

@@ -10,7 +10,7 @@ class UserResponseBaseSchema(BaseModel):
     user_id: int = Field(..., gt=0, description="ID of the user who responded")
     question_id: int = Field(..., gt=0, description="ID of the question answered")
     answer_choice_id: int = Field(..., gt=0, description="ID of the chosen answer")
-    is_correct: bool = Field(..., description="Whether the answer is correct")
+    is_correct: Optional[bool] = Field(None, description="Whether the answer is correct")
     response_time: Optional[int] = Field(None, ge=0, description="Response time in seconds")
 
 class UserResponseCreateSchema(UserResponseBaseSchema):

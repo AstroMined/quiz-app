@@ -10,6 +10,7 @@ from backend.app.models.questions import QuestionModel
 from backend.app.models.subjects import SubjectModel
 from backend.app.models.subtopics import SubtopicModel
 from backend.app.models.topics import TopicModel
+from backend.app.core.config import DifficultyLevel
 
 
 def read_filtered_questions_from_db(
@@ -32,7 +33,7 @@ def read_filtered_questions_from_db(
     if filters.get('subtopic'):
         query = query.join(QuestionModel.subtopics).filter(func.lower(SubtopicModel.name) == func.lower(filters['subtopic']))
     if filters.get('difficulty'):
-        query = query.filter(func.lower(QuestionModel.difficulty) == func.lower(filters['difficulty']))
+        query = query.filter(QuestionModel.difficulty == filters['difficulty'])
     if filters.get('question_tags'):
         query = query.join(QuestionModel.question_tags).filter(QuestionTagModel.tag.in_([tag.lower() for tag in filters['question_tags']]))
 

@@ -50,58 +50,58 @@ def test_setup_filter_questions_data(db_session, setup_filter_questions_data):
 
     # Check if the topics are correctly associated with their respective subjects
     newtons_laws_topic = db_session.query(TopicModel).filter(TopicModel.name == "Newton's Laws").first()
-    assert newtons_laws_topic.subject.name == "Classical Mechanics"
+    assert newtons_laws_topic.subjects[0].name == "Classical Mechanics"
 
     linear_algebra_topic = db_session.query(TopicModel).filter(TopicModel.name == "Linear Algebra").first()
-    assert linear_algebra_topic.subject.name == "Algebra"
+    assert linear_algebra_topic.subjects[0].name == "Algebra"
 
     # Check if the subtopics are correctly associated with their respective topics
     first_law_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "First Law of Motion").first()
-    assert first_law_subtopic.topic.name == "Newton's Laws"
+    assert first_law_subtopic.topics[0].name == "Newton's Laws"
 
     second_law_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Second Law of Motion").first()
-    assert second_law_subtopic.topic.name == "Newton's Laws"
+    assert second_law_subtopic.topics[0].name == "Newton's Laws"
 
     matrices_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Matrices").first()
-    assert matrices_subtopic.topic.name == "Linear Algebra"
+    assert matrices_subtopic.topics[0].name == "Linear Algebra"
 
     vector_spaces_subtopic = db_session.query(SubtopicModel).filter(SubtopicModel.name == "Vector Spaces").first()
-    assert vector_spaces_subtopic.topic.name == "Linear Algebra"
+    assert vector_spaces_subtopic.topics[0].name == "Linear Algebra"
 
     # Check if the concepts are correctly associated with their respective subtopics
     inertia_concept = db_session.query(ConceptModel).filter(ConceptModel.name == "Inertia").first()
-    assert inertia_concept.subtopic.name == "First Law of Motion"
+    assert inertia_concept.subtopics[0].name == "First Law of Motion"
 
     force_acceleration_concept = db_session.query(ConceptModel).filter(ConceptModel.name == "Force and Acceleration").first()
-    assert force_acceleration_concept.subtopic.name == "Second Law of Motion"
+    assert force_acceleration_concept.subtopics[0].name == "Second Law of Motion"
 
     matrix_operations_concept = db_session.query(ConceptModel).filter(ConceptModel.name == "Matrix Operations").first()
-    assert matrix_operations_concept.subtopic.name == "Matrices"
+    assert matrix_operations_concept.subtopics[0].name == "Matrices"
 
     linear_independence_concept = db_session.query(ConceptModel).filter(ConceptModel.name == "Linear Independence").first()
-    assert linear_independence_concept.subtopic.name == "Vector Spaces"
+    assert linear_independence_concept.subtopics[0].name == "Vector Spaces"
 
     # Check if the questions are correctly associated with their respective subjects, topics, subtopics, and concepts
     questions = db_session.query(QuestionModel).all()
     for question in questions:
-        assert question.subject is not None
-        assert question.topic is not None
-        assert question.subtopic is not None
-        assert question.concept is not None
+        assert question.subjects is not None
+        assert question.topics is not None
+        assert question.subtopics is not None
+        assert question.concepts is not None
 
     # Check specific questions
     newton_first_law_question = db_session.query(QuestionModel).filter(QuestionModel.text == "What is Newton's First Law of Motion?").first()
-    assert newton_first_law_question.subject.name == "Classical Mechanics"
-    assert newton_first_law_question.topic.name == "Newton's Laws"
-    assert newton_first_law_question.subtopic.name == "First Law of Motion"
-    assert newton_first_law_question.concept.name == "Inertia"
+    assert newton_first_law_question.subjects[0].name == "Classical Mechanics"
+    assert newton_first_law_question.topics[0].name == "Newton's Laws"
+    assert newton_first_law_question.subtopics[0].name == "First Law of Motion"
+    assert newton_first_law_question.concepts[0].name == "Inertia"
     assert set([question_tag.tag for question_tag in newton_first_law_question.question_tags]) == {"physics", "mechanics"}
 
     linear_independence_question = db_session.query(QuestionModel).filter(QuestionModel.text == "What does it mean for a set of vectors to be linearly independent?").first()
-    assert linear_independence_question.subject.name == "Algebra"
-    assert linear_independence_question.topic.name == "Linear Algebra"
-    assert linear_independence_question.subtopic.name == "Vector Spaces"
-    assert linear_independence_question.concept.name == "Linear Independence"
+    assert linear_independence_question.subjects[0].name == "Algebra"
+    assert linear_independence_question.topics[0].name == "Linear Algebra"
+    assert linear_independence_question.subtopics[0].name == "Vector Spaces"
+    assert linear_independence_question.concepts[0].name == "Linear Independence"
     assert set([question_tag.tag for question_tag in linear_independence_question.question_tags]) == {"mathematics", "linear algebra"}
 
 def test_filter_questions(logged_in_client, db_session):

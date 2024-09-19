@@ -24,6 +24,8 @@ def associate_related_models(db: Session, db_question: QuestionModel, question_d
 
         if key == 'answer_choices':
             for answer_choice_data in value:
+                # remove question_ids from answer_choice_data
+                answer_choice_data.pop('question_ids', None)
                 db_answer_choice = AnswerChoiceModel(**answer_choice_data)
                 db.add(db_answer_choice)
                 db_question.answer_choices.append(db_answer_choice)

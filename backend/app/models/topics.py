@@ -10,7 +10,7 @@ class TopicModel(Base):
     __tablename__ = "topics"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False, index=True)
+    name = Column(String, unique=True, nullable=False, index=True)
 
     subjects = relationship("SubjectModel", secondary="subject_to_topic_association", back_populates="topics")
     subtopics = relationship("SubtopicModel", secondary="topic_to_subtopic_association", back_populates="topics")

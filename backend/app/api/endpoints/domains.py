@@ -17,12 +17,12 @@ Endpoints:
 - DELETE /domains/{domain_id}: Delete a specific domain
 
 Each endpoint requires appropriate authentication and authorization,
-which is handled by the get_current_user dependency.
+which is handled by the check_auth_status and get_current_user_or_error functions.
 """
 
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from backend.app.crud.crud_domains import (create_domain_in_db,
@@ -31,18 +31,17 @@ from backend.app.crud.crud_domains import (create_domain_in_db,
                                            read_domains_from_db,
                                            update_domain_in_db)
 from backend.app.db.session import get_db
-from backend.app.models.users import UserModel
 from backend.app.schemas.domains import (DomainCreateSchema, DomainSchema,
                                          DomainUpdateSchema)
-from backend.app.services.user_service import get_current_user
+from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 
 router = APIRouter()
 
 @router.post("/domains/", response_model=DomainSchema, status_code=201)
 def post_domain(
+    request: Request,
     domain: DomainCreateSchema,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Create a new domain.
@@ -51,16 +50,19 @@ def post_domain(
     The domain data is validated using the DomainCreateSchema.
 
     Args:
+        request (Request): The FastAPI request object.
         domain (DomainCreateSchema): The domain data to be created.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         DomainSchema: The created domain data.
 
     Raises:
-        HTTPException: If there's an error during the creation process.
+        HTTPException: If there's an error during the creation process or if the user is not authenticated.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     validated_domain = DomainCreateSchema(**domain.model_dump())
     domain_data = validated_domain.model_dump()
     created_domain = create_domain_in_db(db=db, domain_data=domain_data)
@@ -68,10 +70,10 @@ def post_domain(
 
 @router.get("/domains/", response_model=List[DomainSchema])
 def get_domains(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Retrieve a list of domains.
@@ -79,22 +81,28 @@ def get_domains(
     This endpoint allows authenticated users to retrieve a paginated list of domains from the database.
 
     Args:
+        request (Request): The FastAPI request object.
         skip (int, optional): The number of domains to skip. Defaults to 0.
         limit (int, optional): The maximum number of domains to return. Defaults to 100.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         List[DomainSchema]: A list of domains.
+
+    Raises:
+        HTTPException: If the user is not authenticated.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     domains = read_domains_from_db(db, skip=skip, limit=limit)
     return [DomainSchema.model_validate(d) for d in domains]
 
 @router.get("/domains/{domain_id}", response_model=DomainSchema)
 def get_domain(
+    request: Request,
     domain_id: int,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Retrieve a specific domain by ID.
@@ -102,16 +110,19 @@ def get_domain(
     This endpoint allows authenticated users to retrieve a single domain by its ID.
 
     Args:
+        request (Request): The FastAPI request object.
         domain_id (int): The ID of the domain to retrieve.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         DomainSchema: The domain data.
 
     Raises:
-        HTTPException: If the domain with the given ID is not found.
+        HTTPException: If the domain with the given ID is not found or if the user is not authenticated.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     db_domain = read_domain_from_db(db, domain_id=domain_id)
     if db_domain is None:
         raise HTTPException(status_code=404, detail="Domain not found")
@@ -119,10 +130,10 @@ def get_domain(
 
 @router.put("/domains/{domain_id}", response_model=DomainSchema)
 def put_domain(
+    request: Request,
     domain_id: int,
     domain: DomainUpdateSchema,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Update a specific domain.
@@ -130,17 +141,20 @@ def put_domain(
     This endpoint allows authenticated users to update an existing domain by its ID.
 
     Args:
+        request (Request): The FastAPI request object.
         domain_id (int): The ID of the domain to update.
         domain (DomainUpdateSchema): The updated domain data.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         DomainSchema: The updated domain data.
 
     Raises:
-        HTTPException: If the domain with the given ID is not found.
+        HTTPException: If the domain with the given ID is not found or if the user is not authenticated.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     validated_domain = DomainUpdateSchema(**domain.model_dump())
     domain_data = validated_domain.model_dump()
     updated_domain = update_domain_in_db(db, domain_id, domain_data)
@@ -150,9 +164,9 @@ def put_domain(
 
 @router.delete("/domains/{domain_id}", status_code=204)
 def delete_domain(
+    request: Request,
     domain_id: int,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Delete a specific domain.
@@ -160,16 +174,19 @@ def delete_domain(
     This endpoint allows authenticated users to delete an existing domain by its ID.
 
     Args:
+        request (Request): The FastAPI request object.
         domain_id (int): The ID of the domain to delete.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         None
 
     Raises:
-        HTTPException: If the domain with the given ID is not found.
+        HTTPException: If the domain with the given ID is not found or if the user is not authenticated.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     success = delete_domain_from_db(db, domain_id)
     if not success:
         raise HTTPException(status_code=404, detail="Domain not found")

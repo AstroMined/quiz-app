@@ -10,6 +10,7 @@ from backend.app.models.time_period import TimePeriodModel
 from backend.app.models.user_responses import UserResponseModel
 from backend.app.models.users import UserModel
 from backend.app.schemas.leaderboard import LeaderboardSchema, TimePeriodSchema
+from backend.app.core.config import TimePeriod
 
 
 def calculate_user_score(user_id: int, db: Session) -> int:
@@ -25,13 +26,13 @@ def calculate_leaderboard_scores(
     user_scores = {}
     query = db.query(UserResponseModel)
 
-    if time_period == TimePeriodModel.DAILY:
+    if time_period.id == TimePeriod.DAILY.value:
         start_time = datetime.now(timezone.utc) - timedelta(days=1)
-    elif time_period == TimePeriodModel.WEEKLY:
+    elif time_period.id == TimePeriod.WEEKLY.value:
         start_time = datetime.now(timezone.utc) - timedelta(weeks=1)
-    elif time_period == TimePeriodModel.MONTHLY:
+    elif time_period.id == TimePeriod.MONTHLY.value:
         start_time = datetime.now(timezone.utc) - timedelta(days=30)
-    elif time_period == TimePeriodModel.YEARLY:
+    elif time_period.id == TimePeriod.YEARLY.value:
         start_time = datetime.now(timezone.utc) - timedelta(days=365)
     else:
         start_time = None

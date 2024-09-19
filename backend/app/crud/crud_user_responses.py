@@ -49,7 +49,8 @@ def update_user_response_in_db(db: Session, user_response_id: int, user_response
     db_user_response = read_user_response_from_db(db, user_response_id)
     if db_user_response:
         for key, value in user_response_data.items():
-            setattr(db_user_response, key, value)
+            if key != 'is_correct' or value is not None:  # Only update is_correct if it's explicitly set
+                setattr(db_user_response, key, value)
         db.commit()
         db.refresh(db_user_response)
     return db_user_response

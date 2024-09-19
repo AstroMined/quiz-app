@@ -74,17 +74,6 @@ def test_user_response_required_fields(db_session, test_model_user, test_model_q
         db_session.commit()
     db_session.rollback()
 
-    # Test missing is_correct
-    with pytest.raises(IntegrityError):
-        user_response = UserResponseModel(
-            user_id=test_model_user.id,
-            question_id=test_model_questions[0].id,
-            answer_choice_id=test_model_answer_choices[0].id
-        )
-        db_session.add(user_response)
-        db_session.commit()
-    db_session.rollback()
-
 def test_user_response_repr(db_session, test_model_user, test_model_questions, test_model_answer_choices):
     user_response = UserResponseModel(
         user_id=test_model_user.id,

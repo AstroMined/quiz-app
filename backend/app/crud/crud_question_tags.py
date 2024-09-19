@@ -1,7 +1,7 @@
 # filename: backend/app/crud/crud_question_tags.py
 
 from typing import Dict, List, Optional
-
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.app.models.associations import QuestionToTagAssociation
@@ -10,20 +10,29 @@ from backend.app.models.questions import QuestionModel
 
 
 def create_question_tag_in_db(db: Session, question_tag_data: Dict) -> QuestionTagModel:
+    # Check if the tag already exists
+    existing_tag = read_question_tag_by_tag_from_db(db, question_tag_data['tag'])
+    if existing_tag:
+        raise IntegrityError("Tag already exists", params=question_tag_data, orig=None)
+
     db_question_tag = QuestionTagModel(
         tag=question_tag_data['tag'],
         description=question_tag_data.get('description')
     )
     db.add(db_question_tag)
-    db.commit()
-    db.refresh(db_question_tag)
-    return db_question_tag
+    try:
+        db.commit()
+        db.refresh(db_question_tag)
+        return db_question_tag
+    except IntegrityError as e:
+        db.rollback()
+        raise
 
 def read_question_tag_from_db(db: Session, question_tag_id: int) -> Optional[QuestionTagModel]:
     return db.query(QuestionTagModel).filter(QuestionTagModel.id == question_tag_id).first()
 
 def read_question_tag_by_tag_from_db(db: Session, tag: str) -> Optional[QuestionTagModel]:
-    return db.query(QuestionTagModel).filter(QuestionTagModel.tag == tag).first()
+    return db.query(QuestionTagModel).filter(QuestionTagModel.tag == tag.lower()).first()
 
 def read_question_tags_from_db(db: Session, skip: int = 0, limit: int = 100) -> List[QuestionTagModel]:
     return db.query(QuestionTagModel).offset(skip).limit(limit).all()

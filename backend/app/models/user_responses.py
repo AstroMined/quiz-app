@@ -14,7 +14,7 @@ class UserResponseModel(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     question_id = Column(Integer, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True)
     answer_choice_id = Column(Integer, ForeignKey("answer_choices.id", ondelete="SET NULL"), nullable=False)
-    is_correct = Column(Boolean, nullable=False)
+    is_correct = Column(Boolean, nullable=True)  # Changed to nullable=True
     response_time = Column(Integer, nullable=True)  # Response time in seconds
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 

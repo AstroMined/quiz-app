@@ -1,14 +1,14 @@
-# app/middleware/authorization_middleware.py
+# backend/app/middleware/authorization_middleware.py
 
-from fastapi import HTTPException, Request, status
-from pydantic import ValidationError
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse
+from jose import JWTError, ExpiredSignatureError
 
 from backend.app.core.config import settings_core
 from backend.app.db.session import get_db
 from backend.app.models.permissions import PermissionModel
 from backend.app.services.authorization_service import has_permission
-from backend.app.services.logging_service import logger
 from backend.app.services.user_service import get_current_user, oauth2_scheme
 
 
@@ -21,51 +21,49 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
     }
 
     async def dispatch(self, request: Request, call_next):
-        logger.debug("AuthorizationMiddleware - Requested URL: %s", request.url.path)
-        if request.url.path in settings_core.UNPROTECTED_ENDPOINTS:
-            logger.debug("AuthorizationMiddleware - Unprotected endpoint, skipping authorization")
-            response = await call_next(request)
-            return response
+        request.state.auth_status = {"is_authorized": True, "error": None}
+        request.state.current_user = None
 
-        logger.debug("AuthorizationMiddleware - Protected endpoint, checking authorization")
+        if request.url.path in settings_core.UNPROTECTED_ENDPOINTS:
+            return await call_next(request)
+
         token = await oauth2_scheme(request)
         if not token:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")        
+            request.state.auth_status = {"is_authorized": False, "error": "missing_token"}
+            return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+
         try:
             db = next(get_db())
-            current_user = await get_current_user(token, db)
-            logger.debug("Current user: %s", current_user)
+            
+            # Check if the token has been invalidated by the BlacklistMiddleware
+            if hasattr(request.state, 'auth_status') and not request.state.auth_status["is_authorized"]:
+                error = request.state.auth_status.get("error", "Unknown error")
+                return JSONResponse(status_code=401, content={"detail": f"Authentication failed: {error}"})
+            
+            current_user, user_status = await get_current_user(token, db)
+
+            if user_status != "valid":
+                request.state.auth_status = {"is_authorized": False, "error": user_status}
+                return JSONResponse(status_code=401, content={"detail": f"Authentication failed: {user_status}"})
+
+            request.state.current_user = current_user
+
             route = request.url.path
             crud_verb = self.method_map.get(request.method)
 
             if crud_verb:
-                logger.debug("AuthorizationMiddleware - CRUD verb: %s", crud_verb)
                 required_permission = db.query(PermissionModel).filter(
                     PermissionModel.name == f"{crud_verb}_{route.replace('/', '_')}"
                 ).first()
 
                 if required_permission:
-                    logger.debug("AuthorizationMiddleware - Required permission: %s", required_permission.name)
                     if not has_permission(db, current_user, required_permission.name):
-                        logger.debug("AuthorizationMiddleware - User does not have the required permission")
-                        raise HTTPException(status_code=403, detail="User does not have the required permission")
-                else:
-                    logger.debug("AuthorizationMiddleware - No permission found for the current route and CRUD verb")
-            else:
-                logger.debug("AuthorizationMiddleware - No CRUD verb found for the current request method")
+                        request.state.auth_status = {"is_authorized": False, "error": "insufficient_permissions"}
+                        return JSONResponse(status_code=403, content={"detail": "User does not have the required permission"})
 
-            logger.debug("AuthorizationMiddleware - Before calling the next middleware or endpoint")
-            response = await call_next(request)
-            logger.debug("AuthorizationMiddleware - After calling the next middleware or endpoint")
-            return response
-        except HTTPException as e:
-            logger.error("HTTPException occurred: %s", e.detail)
-            raise e
-        except ValidationError as e:
-            logger.error("ValidationError occurred: %s", e.errors())
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors()) from e
+            return await call_next(request)
         except Exception as e:
-            logger.exception("Unexpected error: %s", str(e))
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error") from e
+            request.state.auth_status = {"is_authorized": False, "error": "internal_error"}
+            return JSONResponse(status_code=500, content={"detail": "Internal server error"})
         finally:
             db.close()

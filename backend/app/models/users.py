@@ -1,7 +1,8 @@
 # filename: backend/app/models/users.py
 
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from backend.app.db.base import Base
 
@@ -16,6 +17,7 @@ class UserModel(Base):
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    token_blacklist_date = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     role = relationship("RoleModel", back_populates="users")
@@ -24,7 +26,7 @@ class UserModel(Base):
     leaderboards = relationship("LeaderboardModel", back_populates="user", cascade="all, delete-orphan")
     created_groups = relationship("GroupModel", back_populates="creator", cascade="all, delete-orphan")
     created_question_sets = relationship("QuestionSetModel", back_populates="creator", cascade="all, delete-orphan")
-    created_questions = relationship("QuestionModel", back_populates="creator")  # Add this line
+    created_questions = relationship("QuestionModel", back_populates="creator")
 
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}', role_id='{self.role_id}')>"

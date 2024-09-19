@@ -19,14 +19,14 @@ Endpoints:
 - DELETE /question-sets/{question_set_id}: Delete a specific question set
 
 Each endpoint requires appropriate authentication and authorization,
-which is handled by the get_current_user dependency.
+which is handled by the check_auth_status and get_current_user_or_error functions.
 """
 
 import json
 from typing import List
 
 from fastapi import (APIRouter, Depends, File, Form, HTTPException, Response,
-                     UploadFile, status)
+                     UploadFile, status, Request)
 from sqlalchemy.orm import Session
 
 from backend.app.crud.crud_question_sets import (create_question_set_in_db,
@@ -36,21 +36,21 @@ from backend.app.crud.crud_question_sets import (create_question_set_in_db,
                                                  update_question_set_in_db)
 from backend.app.crud.crud_questions import create_question_in_db
 from backend.app.db.session import get_db
-from backend.app.models.users import UserModel
 from backend.app.schemas.question_sets import (QuestionSetCreateSchema,
                                                QuestionSetSchema,
-                                               QuestionSetUpdateSchema)
+                                               QuestionSetUpdateSchema,
+                                               QuestionSetBaseSchema)
 from backend.app.schemas.questions import QuestionCreateSchema
-from backend.app.services.user_service import get_current_user
+from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 
 router = APIRouter()
 
 @router.post("/upload-questions/")
 async def upload_question_set(
+    request: Request,
     file: UploadFile = File(...),
     question_set_name: str = Form(...),
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Upload a question set from a file.
@@ -58,10 +58,10 @@ async def upload_question_set(
     This endpoint allows admin users to upload a question set from a JSON file.
 
     Args:
+        request (Request): The FastAPI request object.
         file (UploadFile): The JSON file containing the question set data.
         question_set_name (str): The name for the new question set.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         dict: A message indicating successful upload.
@@ -72,6 +72,9 @@ async def upload_question_set(
             - 400: If the JSON data is invalid.
             - 500: If there's an error during the upload process.
     """
+    check_auth_status(request)
+    current_user = get_current_user_or_error(request)
+
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Only admin users can upload question sets")
@@ -105,10 +108,10 @@ async def upload_question_set(
 
 @router.get("/question-sets/", response_model=List[QuestionSetSchema])
 def get_question_sets(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Retrieve a list of question sets.
@@ -116,22 +119,28 @@ def get_question_sets(
     This endpoint allows authenticated users to retrieve a paginated list of question sets.
 
     Args:
+        request (Request): The FastAPI request object.
         skip (int): The number of question sets to skip (for pagination).
         limit (int): The maximum number of question sets to return (for pagination).
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         List[QuestionSetSchema]: A list of question sets.
+
+    Raises:
+        HTTPException: If the user is not authenticated.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     question_sets = read_question_sets_from_db(db, skip=skip, limit=limit)
     return [QuestionSetSchema.model_validate(qs) for qs in question_sets]
 
 @router.post("/question-sets/", response_model=QuestionSetSchema, status_code=201)
 def post_question_set(
-    question_set: QuestionSetCreateSchema,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    request: Request,
+    question_set: QuestionSetBaseSchema,
+    db: Session = Depends(get_db)
 ):
     """
     Create a new question set.
@@ -139,23 +148,33 @@ def post_question_set(
     This endpoint allows authenticated users to create a new question set.
 
     Args:
-        question_set (QuestionSetCreateSchema): The question set data to be created.
+        request (Request): The FastAPI request object.
+        question_set (QuestionSetBaseSchema): The question set data to be created.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         QuestionSetSchema: The created question set.
+
+    Raises:
+        HTTPException: If a question set with the same name already exists for the user or if the user is not authenticated.
     """
+    check_auth_status(request)
+    current_user = get_current_user_or_error(request)
+
     question_set_data = question_set.model_dump()
     question_set_data['creator_id'] = current_user.id
-    created_question_set = create_question_set_in_db(db=db, question_set_data=question_set_data)
-    return QuestionSetSchema.model_validate(created_question_set)
+    validated_question_set = QuestionSetCreateSchema(**question_set_data)
+    try:
+        created_question_set = create_question_set_in_db(db=db, question_set_data=validated_question_set.model_dump())
+        return QuestionSetSchema.model_validate(created_question_set)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 @router.get("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
 def get_question_set(
+    request: Request,
     question_set_id: int,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Retrieve a specific question set by ID.
@@ -163,16 +182,19 @@ def get_question_set(
     This endpoint allows authenticated users to retrieve a single question set by its ID.
 
     Args:
+        request (Request): The FastAPI request object.
         question_set_id (int): The ID of the question set to retrieve.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         QuestionSetSchema: The question set data.
 
     Raises:
-        HTTPException: If the question set with the given ID is not found.
+        HTTPException: If the question set with the given ID is not found or if the user is not authenticated.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     question_set = read_question_set_from_db(db, question_set_id=question_set_id)
     if not question_set:
         raise HTTPException(status_code=404, detail=f"Question set with ID {question_set_id} not found")
@@ -180,10 +202,10 @@ def get_question_set(
 
 @router.put("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
 def put_question_set(
+    request: Request,
     question_set_id: int,
     question_set: QuestionSetUpdateSchema,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Update a specific question set.
@@ -191,17 +213,20 @@ def put_question_set(
     This endpoint allows authenticated users to update an existing question set by its ID.
 
     Args:
+        request (Request): The FastAPI request object.
         question_set_id (int): The ID of the question set to update.
         question_set (QuestionSetUpdateSchema): The updated question set data.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         QuestionSetSchema: The updated question set data.
 
     Raises:
-        HTTPException: If the question set with the given ID is not found.
+        HTTPException: If the question set with the given ID is not found or if the user is not authenticated.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     question_set_data = question_set.model_dump()
     updated_question_set = update_question_set_in_db(db, question_set_id, question_set_data)
     if updated_question_set is None:
@@ -210,9 +235,9 @@ def put_question_set(
 
 @router.delete("/question-sets/{question_set_id}", status_code=204)
 def delete_question_set(
+    request: Request,
     question_set_id: int,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Delete a specific question set.
@@ -220,16 +245,19 @@ def delete_question_set(
     This endpoint allows authenticated users to delete an existing question set by its ID.
 
     Args:
+        request (Request): The FastAPI request object.
         question_set_id (int): The ID of the question set to delete.
         db (Session): The database session.
-        current_user (UserModel): The authenticated user making the request.
 
     Returns:
         Response: An empty response with a 204 status code.
 
     Raises:
-        HTTPException: If the question set with the given ID is not found.
+        HTTPException: If the question set with the given ID is not found or if the user is not authenticated.
     """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
     deleted = delete_question_set_from_db(db, question_set_id=question_set_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Question set not found")
