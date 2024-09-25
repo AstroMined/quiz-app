@@ -12,11 +12,14 @@ class LeaderboardBaseSchema(BaseModel):
     score: int = Field(..., ge=0)
     group_id: Optional[int] = Field(None, gt=0)
 
+
 class LeaderboardCreateSchema(LeaderboardBaseSchema):
     time_period_id: int = Field(..., gt=0)
 
+
 class LeaderboardUpdateSchema(BaseModel):
     score: int = Field(..., ge=0)
+
 
 class LeaderboardSchema(LeaderboardBaseSchema):
     id: int

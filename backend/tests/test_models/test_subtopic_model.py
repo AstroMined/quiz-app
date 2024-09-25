@@ -16,6 +16,7 @@ def test_subtopic_creation(db_session):
     assert subtopic.id is not None
     assert subtopic.name == "Linear Equations"
 
+
 def test_subtopic_topic_relationship(db_session):
     subtopic = SubtopicModel(name="Quadratic Equations")
     topic = TopicModel(name="Algebra")
@@ -25,6 +26,7 @@ def test_subtopic_topic_relationship(db_session):
 
     assert topic in subtopic.topics
     assert subtopic in topic.subtopics
+
 
 def test_subtopic_concepts_relationship(db_session):
     subtopic = SubtopicModel(name="Trigonometric Functions")
@@ -36,6 +38,7 @@ def test_subtopic_concepts_relationship(db_session):
     assert concept in subtopic.concepts
     assert subtopic in concept.subtopics
 
+
 def test_subtopic_questions_relationship(db_session, test_model_questions):
     subtopic = SubtopicModel(name="Limits")
     subtopic.questions.extend(test_model_questions[:2])
@@ -46,6 +49,7 @@ def test_subtopic_questions_relationship(db_session, test_model_questions):
     assert test_model_questions[0] in subtopic.questions
     assert test_model_questions[1] in subtopic.questions
 
+
 def test_subtopic_required_fields(db_session):
     # Test missing name
     with pytest.raises(IntegrityError):
@@ -53,6 +57,7 @@ def test_subtopic_required_fields(db_session):
         db_session.add(subtopic)
         db_session.commit()
     db_session.rollback()
+
 
 def test_subtopic_repr(db_session):
     subtopic = SubtopicModel(name="Derivatives")

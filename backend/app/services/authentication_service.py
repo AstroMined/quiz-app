@@ -3,9 +3,10 @@
 from sqlalchemy.orm import Session
 
 from backend.app.core.security import verify_password
+from backend.app.crud.authentication import revoke_all_tokens_for_user
 from backend.app.crud.crud_user import read_user_by_username_from_db
 from backend.app.models.users import UserModel
-from backend.app.crud.authentication import revoke_all_tokens_for_user
+
 
 def authenticate_user(db: Session, username: str, password: str = None) -> UserModel:
     user = read_user_by_username_from_db(db, username)
@@ -22,6 +23,7 @@ def authenticate_user(db: Session, username: str, password: str = None) -> UserM
         return False
 
     return user
+
 
 def revoke_all_user_tokens(db: Session, user_id: int):
     """

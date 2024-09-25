@@ -1,0 +1,7 @@
+Your task today is to create new pytest tests and fixtures where appropriate to test all of the functionality of the scripts in the backend/app/crud directory.
+There are already several test scripts in backend/tests/crud, and they are already 100% passing.
+There are many fixtures available in backend/tests/conftest.py and backend/tests/test_crud/conftest.py, but feel free to create new ones as needed.
+If you create new fixtures, please place them in backend/tests/test_crud/conftest.py.
+Again, I'll emphasize that you should examine the available fixtures before you write any tests.
+Below is the current coverage report, where all tests are currently 100% passing.
+It's very important not to break any current tests or functionality with your new tests.

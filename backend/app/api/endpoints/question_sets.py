@@ -25,32 +25,46 @@ which is handled by the check_auth_status and get_current_user_or_error function
 import json
 from typing import List
 
-from fastapi import (APIRouter, Depends, File, Form, HTTPException, Response,
-                     UploadFile, status, Request)
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_question_sets import (create_question_set_in_db,
-                                                 delete_question_set_from_db,
-                                                 read_question_set_from_db,
-                                                 read_question_sets_from_db,
-                                                 update_question_set_in_db)
+from backend.app.crud.crud_question_sets import (
+    create_question_set_in_db,
+    delete_question_set_from_db,
+    read_question_set_from_db,
+    read_question_sets_from_db,
+    update_question_set_in_db,
+)
 from backend.app.crud.crud_questions import create_question_in_db
 from backend.app.db.session import get_db
-from backend.app.schemas.question_sets import (QuestionSetCreateSchema,
-                                               QuestionSetSchema,
-                                               QuestionSetUpdateSchema,
-                                               QuestionSetBaseSchema)
+from backend.app.schemas.question_sets import (
+    QuestionSetBaseSchema,
+    QuestionSetCreateSchema,
+    QuestionSetSchema,
+    QuestionSetUpdateSchema,
+)
 from backend.app.schemas.questions import QuestionCreateSchema
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 
 router = APIRouter()
+
 
 @router.post("/upload-questions/")
 async def upload_question_set(
     request: Request,
     file: UploadFile = File(...),
     question_set_name: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Upload a question set from a file.
@@ -67,7 +81,7 @@ async def upload_question_set(
         dict: A message indicating successful upload.
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 403: If the user is not an admin.
             - 400: If the JSON data is invalid.
             - 500: If there's an error during the upload process.
@@ -76,21 +90,25 @@ async def upload_question_set(
     current_user = get_current_user_or_error(request)
 
     if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Only admin users can upload question sets")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin users can upload question sets",
+        )
 
     try:
         content = await file.read()
-        question_data = json.loads(content.decode('utf-8'))
+        question_data = json.loads(content.decode("utf-8"))
 
         for question in question_data:
             QuestionCreateSchema(**question)
 
-        question_set = QuestionSetCreateSchema(name=question_set_name, creator_id=current_user.id)
+        question_set = QuestionSetCreateSchema(
+            name=question_set_name, creator_id=current_user.id
+        )
         question_set_created = create_question_set_in_db(db, question_set.model_dump())
 
         for question in question_data:
-            question['question_set_id'] = question_set_created.id
+            question["question_set_id"] = question_set_created.id
             create_question_in_db(db, QuestionCreateSchema(**question).model_dump())
 
         return {"message": "Question set uploaded successfully"}
@@ -98,20 +116,18 @@ async def upload_question_set(
     except (json.JSONDecodeError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid JSON data: {str(exc)}"
+            detail=f"Invalid JSON data: {str(exc)}",
         ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error uploading question set: {str(exc)}"
+            detail=f"Error uploading question set: {str(exc)}",
         ) from exc
+
 
 @router.get("/question-sets/", response_model=List[QuestionSetSchema])
 def get_question_sets(
-    request: Request,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
+    request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     """
     Retrieve a list of question sets.
@@ -136,11 +152,10 @@ def get_question_sets(
     question_sets = read_question_sets_from_db(db, skip=skip, limit=limit)
     return [QuestionSetSchema.model_validate(qs) for qs in question_sets]
 
+
 @router.post("/question-sets/", response_model=QuestionSetSchema, status_code=201)
 def post_question_set(
-    request: Request,
-    question_set: QuestionSetBaseSchema,
-    db: Session = Depends(get_db)
+    request: Request, question_set: QuestionSetBaseSchema, db: Session = Depends(get_db)
 ):
     """
     Create a new question set.
@@ -162,19 +177,20 @@ def post_question_set(
     current_user = get_current_user_or_error(request)
 
     question_set_data = question_set.model_dump()
-    question_set_data['creator_id'] = current_user.id
+    question_set_data["creator_id"] = current_user.id
     validated_question_set = QuestionSetCreateSchema(**question_set_data)
     try:
-        created_question_set = create_question_set_in_db(db=db, question_set_data=validated_question_set.model_dump())
+        created_question_set = create_question_set_in_db(
+            db=db, question_set_data=validated_question_set.model_dump()
+        )
         return QuestionSetSchema.model_validate(created_question_set)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
+
 @router.get("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
 def get_question_set(
-    request: Request,
-    question_set_id: int,
-    db: Session = Depends(get_db)
+    request: Request, question_set_id: int, db: Session = Depends(get_db)
 ):
     """
     Retrieve a specific question set by ID.
@@ -197,15 +213,18 @@ def get_question_set(
 
     question_set = read_question_set_from_db(db, question_set_id=question_set_id)
     if not question_set:
-        raise HTTPException(status_code=404, detail=f"Question set with ID {question_set_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Question set with ID {question_set_id} not found"
+        )
     return QuestionSetSchema.model_validate(question_set)
+
 
 @router.put("/question-sets/{question_set_id}", response_model=QuestionSetSchema)
 def put_question_set(
     request: Request,
     question_set_id: int,
     question_set: QuestionSetUpdateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Update a specific question set.
@@ -228,16 +247,19 @@ def put_question_set(
     get_current_user_or_error(request)
 
     question_set_data = question_set.model_dump()
-    updated_question_set = update_question_set_in_db(db, question_set_id, question_set_data)
+    updated_question_set = update_question_set_in_db(
+        db, question_set_id, question_set_data
+    )
     if updated_question_set is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question set not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Question set not found"
+        )
     return QuestionSetSchema.model_validate(updated_question_set)
+
 
 @router.delete("/question-sets/{question_set_id}", status_code=204)
 def delete_question_set(
-    request: Request,
-    question_set_id: int,
-    db: Session = Depends(get_db)
+    request: Request, question_set_id: int, db: Session = Depends(get_db)
 ):
     """
     Delete a specific question set.

@@ -2,9 +2,14 @@
 
 import pytest
 from fastapi import FastAPI
-from backend.app.services.permission_generator_service import generate_permissions, ensure_permissions_in_db
-from backend.app.models.permissions import PermissionModel
+
 from backend.app.core.config import settings_core
+from backend.app.models.permissions import PermissionModel
+from backend.app.services.permission_generator_service import (
+    ensure_permissions_in_db,
+    generate_permissions,
+)
+
 
 def test_generate_permissions():
     app = FastAPI()
@@ -22,8 +27,11 @@ def test_generate_permissions():
 
     permissions = generate_permissions(app)
 
-    assert "read_test" not in permissions  # This should be excluded as it's in UNPROTECTED_ENDPOINTS
+    assert (
+        "read_test" not in permissions
+    )  # This should be excluded as it's in UNPROTECTED_ENDPOINTS
     assert "create_protected" in permissions
+
 
 def test_ensure_permissions_in_db(db_session):
     # Create some existing permissions
@@ -42,6 +50,7 @@ def test_ensure_permissions_in_db(db_session):
 
     # Check that no duplicate permissions were created
     assert db_session.query(PermissionModel).count() == len(new_permissions)
+
 
 # You might need to add more tests depending on the complexity of your FastAPI routes
 # and any edge cases in your permission generation logic

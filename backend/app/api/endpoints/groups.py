@@ -20,26 +20,29 @@ which is handled by the check_auth_status and get_current_user_or_error function
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
 from pydantic import ValidationError
+from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_groups import (create_group_in_db,
-                                          delete_group_from_db,
-                                          read_group_from_db,
-                                          update_group_in_db)
+from backend.app.crud.crud_groups import (
+    create_group_in_db,
+    delete_group_from_db,
+    read_group_from_db,
+    update_group_in_db,
+)
 from backend.app.db.session import get_db
-from backend.app.schemas.groups import (GroupCreateSchema, GroupSchema,
-                                        GroupUpdateSchema, GroupBaseSchema)
+from backend.app.schemas.groups import (
+    GroupBaseSchema,
+    GroupCreateSchema,
+    GroupSchema,
+    GroupUpdateSchema,
+)
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 
 router = APIRouter()
 
+
 @router.post("/groups", response_model=GroupSchema)
-def post_group(
-    request: Request,
-    group: GroupBaseSchema,
-    db: Session = Depends(get_db)
-):
+def post_group(request: Request, group: GroupBaseSchema, db: Session = Depends(get_db)):
     """
     Create a new group.
 
@@ -64,21 +67,21 @@ def post_group(
         group_data = group.model_dump()
         group_data["creator_id"] = current_user.id
         validated_group = GroupCreateSchema(**group_data)
-        created_group = create_group_in_db(db=db, group_data=validated_group.model_dump())
+        created_group = create_group_in_db(
+            db=db, group_data=validated_group.model_dump()
+        )
         return GroupSchema.model_validate(created_group)
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail=f"An error occurred while creating the group: {str(e)}"
-                            ) from e
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while creating the group: {str(e)}",
+        ) from e
+
 
 @router.get("/groups/{group_id}", response_model=GroupSchema)
-def get_group(
-    request: Request,
-    group_id: int, 
-    db: Session = Depends(get_db)
-):
+def get_group(request: Request, group_id: int, db: Session = Depends(get_db)):
     """
     Retrieve a specific group by ID.
 
@@ -103,12 +106,13 @@ def get_group(
         raise HTTPException(status_code=404, detail="Group not found")
     return GroupSchema.model_validate(db_group)
 
+
 @router.put("/groups/{group_id}", response_model=GroupSchema)
 def put_group(
     request: Request,
-    group_id: int, 
+    group_id: int,
     group: GroupUpdateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Update a specific group.
@@ -126,7 +130,7 @@ def put_group(
         GroupSchema: The updated group data.
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 404: If the group with the given ID is not found.
             - 403: If the current user is not the creator of the group.
             - 401: If the user is not authenticated.
@@ -138,18 +142,17 @@ def put_group(
     if db_group is None:
         raise HTTPException(status_code=404, detail="Group not found")
     if db_group.creator_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Only the group creator can update the group")
-    
+        raise HTTPException(
+            status_code=403, detail="Only the group creator can update the group"
+        )
+
     group_data = group.model_dump(exclude_unset=True)
     updated_group = update_group_in_db(db=db, group_id=group_id, group_data=group_data)
     return GroupSchema.model_validate(updated_group)
 
+
 @router.delete("/groups/{group_id}", status_code=204)
-def delete_group(
-    request: Request,
-    group_id: int, 
-    db: Session = Depends(get_db)
-):
+def delete_group(request: Request, group_id: int, db: Session = Depends(get_db)):
     """
     Delete a specific group.
 
@@ -165,7 +168,7 @@ def delete_group(
         None
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 404: If the group with the given ID is not found.
             - 403: If the current user is not the creator of the group.
             - 401: If the user is not authenticated.
@@ -177,6 +180,8 @@ def delete_group(
     if db_group is None:
         raise HTTPException(status_code=404, detail="Group not found")
     if db_group.creator_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Only the group creator can delete the group")
+        raise HTTPException(
+            status_code=403, detail="Only the group creator can delete the group"
+        )
     delete_group_from_db(db=db, group_id=group_id)
     return None

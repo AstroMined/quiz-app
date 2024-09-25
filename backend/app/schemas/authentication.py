@@ -8,6 +8,7 @@ class LoginFormSchema(BaseModel):
     password: str = Field(..., min_length=8, max_length=100)
     remember_me: bool = Field(default=False)
 
+
 class TokenSchema(BaseModel):
     access_token: str = Field(..., min_length=1)
     token_type: str = Field(..., pattern="^bearer$", case_sensitive=False)

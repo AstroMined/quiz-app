@@ -23,27 +23,27 @@ which is handled by the check_auth_status and get_current_user_or_error function
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_topics import (create_topic_in_db,
-                                          delete_topic_from_db,
-                                          read_topic_from_db,
-                                          read_topics_from_db,
-                                          update_topic_in_db)
+from backend.app.crud.crud_topics import (
+    create_topic_in_db,
+    delete_topic_from_db,
+    read_topic_from_db,
+    read_topics_from_db,
+    update_topic_in_db,
+)
 from backend.app.db.session import get_db
-from backend.app.schemas.topics import (TopicCreateSchema, TopicSchema,
-                                        TopicUpdateSchema)
+from backend.app.schemas.topics import TopicCreateSchema, TopicSchema, TopicUpdateSchema
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 from backend.app.services.logging_service import logger
 
 router = APIRouter()
 
+
 @router.post("/topics/", response_model=TopicSchema, status_code=201)
 def post_topic(
-    request: Request,
-    topic: TopicCreateSchema,
-    db: Session = Depends(get_db)
+    request: Request, topic: TopicCreateSchema, db: Session = Depends(get_db)
 ):
     """
     Create a new topic.
@@ -69,18 +69,18 @@ def post_topic(
     try:
         created_topic = create_topic_in_db(db=db, topic_data=topic_data)
     except IntegrityError:
-        raise HTTPException(status_code=400, detail="Topic with this name already exists")
+        raise HTTPException(
+            status_code=400, detail="Topic with this name already exists"
+        )
     except HTTPException as e:
         # Re-raise the HTTPException from create_topic_in_db
         raise e
     return TopicSchema.model_validate(created_topic)
 
+
 @router.get("/topics/", response_model=List[TopicSchema])
 def get_topics(
-    request: Request,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
+    request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     """
     Retrieve a list of topics.
@@ -105,12 +105,9 @@ def get_topics(
     topics = read_topics_from_db(db, skip=skip, limit=limit)
     return [TopicSchema.model_validate(t) for t in topics]
 
+
 @router.get("/topics/{topic_id}", response_model=TopicSchema)
-def get_topic(
-    request: Request,
-    topic_id: int,
-    db: Session = Depends(get_db)
-):
+def get_topic(request: Request, topic_id: int, db: Session = Depends(get_db)):
     """
     Retrieve a specific topic by ID.
 
@@ -133,25 +130,26 @@ def get_topic(
     db_topic = read_topic_from_db(db, topic_id=topic_id)
     if db_topic is None:
         raise HTTPException(status_code=404, detail="Topic not found")
-    
+
     # Debug logging
     logger.debug(f"Raw db_topic: {db_topic}")
     logger.debug(f"db_topic subjects: {db_topic.subjects}")
-    
+
     topic_schema = TopicSchema.model_validate(db_topic)
-    
+
     # More debug logging
     logger.debug(f"Converted topic_schema: {topic_schema}")
     logger.debug(f"topic_schema subjects: {topic_schema.subjects}")
-    
+
     return topic_schema
+
 
 @router.put("/topics/{topic_id}", response_model=TopicSchema)
 def put_topic(
     request: Request,
     topic_id: int,
     topic: TopicUpdateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Update a specific topic.
@@ -177,17 +175,19 @@ def put_topic(
     try:
         db_topic = update_topic_in_db(db, topic_id, topic_data)
         if db_topic is None:
-            raise HTTPException(status_code=404, detail="Topic not found or one or more subjects do not exist")
+            raise HTTPException(
+                status_code=404,
+                detail="Topic not found or one or more subjects do not exist",
+            )
     except IntegrityError:
-        raise HTTPException(status_code=400, detail="Topic with this name already exists")
+        raise HTTPException(
+            status_code=400, detail="Topic with this name already exists"
+        )
     return TopicSchema.model_validate(db_topic)
 
+
 @router.delete("/topics/{topic_id}", status_code=204)
-def delete_topic(
-    request: Request,
-    topic_id: int,
-    db: Session = Depends(get_db)
-):
+def delete_topic(request: Request, topic_id: int, db: Session = Depends(get_db)):
     """
     Delete a specific topic.
 

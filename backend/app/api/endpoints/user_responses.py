@@ -23,23 +23,28 @@ which is handled by the check_auth_status and get_current_user_or_error function
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_user_responses import (create_user_response_in_db,
-                                                  delete_user_response_from_db,
-                                                  read_user_response_from_db,
-                                                  read_user_responses_from_db,
-                                                  update_user_response_in_db)
-from backend.app.crud.crud_questions import read_question_from_db
 from backend.app.crud.crud_answer_choices import read_answer_choice_from_db
+from backend.app.crud.crud_questions import read_question_from_db
+from backend.app.crud.crud_user_responses import (
+    create_user_response_in_db,
+    delete_user_response_from_db,
+    read_user_response_from_db,
+    read_user_responses_from_db,
+    update_user_response_in_db,
+)
 from backend.app.db.session import get_db
-from backend.app.schemas.user_responses import (UserResponseCreateSchema,
-                                                UserResponseSchema,
-                                                UserResponseUpdateSchema)
+from backend.app.schemas.user_responses import (
+    UserResponseCreateSchema,
+    UserResponseSchema,
+    UserResponseUpdateSchema,
+)
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 
 router = APIRouter()
+
 
 def score_user_response(db: Session, user_response_data: dict) -> bool:
     """
@@ -55,25 +60,28 @@ def score_user_response(db: Session, user_response_data: dict) -> bool:
     Raises:
         HTTPException: If the question or answer choice is not found.
     """
-    question = read_question_from_db(db, user_response_data['question_id'])
+    question = read_question_from_db(db, user_response_data["question_id"])
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    answer_choice = read_answer_choice_from_db(db, user_response_data['answer_choice_id'])
+    answer_choice = read_answer_choice_from_db(
+        db, user_response_data["answer_choice_id"]
+    )
     if not answer_choice:
         raise HTTPException(status_code=404, detail="Answer choice not found")
 
     return answer_choice.is_correct
 
+
 @router.post(
     "/user-responses/",
     response_model=UserResponseSchema,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
 )
 def post_user_response(
     request: Request,
     user_response: UserResponseCreateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Create a new user response and score it.
@@ -97,22 +105,23 @@ def post_user_response(
     get_current_user_or_error(request)
 
     user_response_data = user_response.model_dump()
-    
+
     try:
         is_correct = score_user_response(db, user_response_data)
-        user_response_data['is_correct'] = is_correct
+        user_response_data["is_correct"] = is_correct
     except HTTPException as e:
         # If scoring fails, we still create the response but set is_correct to None
-        user_response_data['is_correct'] = None
-    
-    created_response = create_user_response_in_db(db=db, user_response_data=user_response_data)
+        user_response_data["is_correct"] = None
+
+    created_response = create_user_response_in_db(
+        db=db, user_response_data=user_response_data
+    )
     return UserResponseSchema.model_validate(created_response)
+
 
 @router.get("/user-responses/{user_response_id}", response_model=UserResponseSchema)
 def get_user_response(
-    request: Request,
-    user_response_id: int,
-    db: Session = Depends(get_db)
+    request: Request, user_response_id: int, db: Session = Depends(get_db)
 ):
     """
     Retrieve a specific user response by ID.
@@ -138,6 +147,7 @@ def get_user_response(
         raise HTTPException(status_code=404, detail="User response not found")
     return UserResponseSchema.model_validate(user_response)
 
+
 @router.get("/user-responses/", response_model=List[UserResponseSchema])
 def get_user_responses(
     request: Request,
@@ -147,7 +157,7 @@ def get_user_responses(
     end_time: Optional[datetime] = None,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Retrieve a list of user responses.
@@ -181,16 +191,17 @@ def get_user_responses(
         start_time=start_time,
         end_time=end_time,
         skip=skip,
-        limit=limit
+        limit=limit,
     )
     return [UserResponseSchema.model_validate(ur) for ur in user_responses]
+
 
 @router.put("/user-responses/{user_response_id}", response_model=UserResponseSchema)
 def put_user_response(
     request: Request,
     user_response_id: int,
     user_response: UserResponseUpdateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Update a specific user response.
@@ -213,16 +224,19 @@ def put_user_response(
     get_current_user_or_error(request)
 
     user_response_data = user_response.model_dump()
-    updated_user_response = update_user_response_in_db(db, user_response_id, user_response_data)
+    updated_user_response = update_user_response_in_db(
+        db, user_response_id, user_response_data
+    )
     if not updated_user_response:
         raise HTTPException(status_code=404, detail="User response not found")
     return UserResponseSchema.model_validate(updated_user_response)
 
-@router.delete("/user-responses/{user_response_id}", status_code=status.HTTP_204_NO_CONTENT)
+
+@router.delete(
+    "/user-responses/{user_response_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_user_response(
-    request: Request,
-    user_response_id: int,
-    db: Session = Depends(get_db)
+    request: Request, user_response_id: int, db: Session = Depends(get_db)
 ):
     """
     Delete a specific user response.

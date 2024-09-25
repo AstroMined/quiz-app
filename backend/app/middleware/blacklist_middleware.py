@@ -1,13 +1,15 @@
 # filename: backend/app/middleware/blacklist_middleware.py
 
-from fastapi import Request, HTTPException
+from fastapi import HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+
+from backend.app.core.config import settings_core
 from backend.app.core.jwt import decode_access_token
 from backend.app.crud.authentication import is_token_revoked
 from backend.app.db.session import get_db
 from backend.app.services.logging_service import logger
-from backend.app.core.config import settings_core
+
 
 class BlacklistMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -15,7 +17,9 @@ class BlacklistMiddleware(BaseHTTPMiddleware):
 
         # Allow unprotected endpoints to pass through without token validation
         if request.url.path in settings_core.UNPROTECTED_ENDPOINTS:
-            logger.debug(f"BlacklistMiddleware: Allowing unprotected endpoint {request.url.path} to pass through")
+            logger.debug(
+                f"BlacklistMiddleware: Allowing unprotected endpoint {request.url.path} to pass through"
+            )
             return await call_next(request)
 
         authorization = request.headers.get("Authorization")
@@ -24,17 +28,23 @@ class BlacklistMiddleware(BaseHTTPMiddleware):
                 scheme, token = authorization.split()
                 if scheme.lower() != "bearer":
                     logger.warning("BlacklistMiddleware: Invalid authentication scheme")
-                    raise HTTPException(status_code=401, detail="Invalid authentication scheme")
+                    raise HTTPException(
+                        status_code=401, detail="Invalid authentication scheme"
+                    )
 
                 db = next(get_db())
                 if is_token_revoked(db, token):
                     logger.warning("BlacklistMiddleware: Token has been revoked")
-                    raise HTTPException(status_code=401, detail="Token has been revoked")
+                    raise HTTPException(
+                        status_code=401, detail="Token has been revoked"
+                    )
 
                 logger.debug("BlacklistMiddleware: Token is valid")
             except HTTPException as e:
                 logger.error(f"BlacklistMiddleware: HTTPException - {e.detail}")
-                return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+                return JSONResponse(
+                    status_code=e.status_code, content={"detail": e.detail}
+                )
             except Exception as e:
                 logger.error(f"BlacklistMiddleware: Unexpected error - {str(e)}")
                 return JSONResponse(status_code=401, content={"detail": str(e)})

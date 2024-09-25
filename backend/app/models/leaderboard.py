@@ -11,11 +11,19 @@ class LeaderboardModel(Base):
     __tablename__ = "leaderboards"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     score = Column(Integer, nullable=False)
-    time_period_id = Column(Integer, ForeignKey("time_periods.id"), nullable=False, index=True)
-    group_id = Column(Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    time_period_id = Column(
+        Integer, ForeignKey("time_periods.id"), nullable=False, index=True
+    )
+    group_id = Column(
+        Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    timestamp = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     # Relationships
     user = relationship("UserModel", back_populates="leaderboards")

@@ -25,24 +25,27 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_disciplines import (create_discipline_in_db,
-                                               delete_discipline_from_db,
-                                               read_discipline_from_db,
-                                               read_disciplines_from_db,
-                                               update_discipline_in_db)
+from backend.app.crud.crud_disciplines import (
+    create_discipline_in_db,
+    delete_discipline_from_db,
+    read_discipline_from_db,
+    read_disciplines_from_db,
+    update_discipline_in_db,
+)
 from backend.app.db.session import get_db
-from backend.app.schemas.disciplines import (DisciplineCreateSchema,
-                                             DisciplineSchema,
-                                             DisciplineUpdateSchema)
+from backend.app.schemas.disciplines import (
+    DisciplineCreateSchema,
+    DisciplineSchema,
+    DisciplineUpdateSchema,
+)
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 
 router = APIRouter()
 
+
 @router.post("/disciplines/", response_model=DisciplineSchema, status_code=201)
 def post_discipline(
-    request: Request,
-    discipline: DisciplineCreateSchema,
-    db: Session = Depends(get_db)
+    request: Request, discipline: DisciplineCreateSchema, db: Session = Depends(get_db)
 ):
     """
     Create a new discipline.
@@ -69,12 +72,10 @@ def post_discipline(
     created_discipline = create_discipline_in_db(db=db, discipline_data=discipline_data)
     return DisciplineSchema.model_validate(created_discipline)
 
+
 @router.get("/disciplines/", response_model=List[DisciplineSchema])
 def get_disciplines(
-    request: Request,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
+    request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     """
     Retrieve a list of disciplines.
@@ -99,12 +100,9 @@ def get_disciplines(
     disciplines = read_disciplines_from_db(db, skip=skip, limit=limit)
     return [DisciplineSchema.model_validate(d) for d in disciplines]
 
+
 @router.get("/disciplines/{discipline_id}", response_model=DisciplineSchema)
-def get_discipline(
-    request: Request,
-    discipline_id: int,
-    db: Session = Depends(get_db)
-):
+def get_discipline(request: Request, discipline_id: int, db: Session = Depends(get_db)):
     """
     Retrieve a specific discipline by ID.
 
@@ -129,12 +127,13 @@ def get_discipline(
         raise HTTPException(status_code=404, detail="Discipline not found")
     return DisciplineSchema.model_validate(db_discipline)
 
+
 @router.put("/disciplines/{discipline_id}", response_model=DisciplineSchema)
 def put_discipline(
     request: Request,
     discipline_id: int,
     discipline: DisciplineUpdateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Update a specific discipline.
@@ -163,11 +162,10 @@ def put_discipline(
         raise HTTPException(status_code=404, detail="Discipline not found")
     return DisciplineSchema.model_validate(updated_discipline)
 
+
 @router.delete("/disciplines/{discipline_id}", status_code=204)
 def delete_discipline(
-    request: Request,
-    discipline_id: int,
-    db: Session = Depends(get_db)
+    request: Request, discipline_id: int, db: Session = Depends(get_db)
 ):
     """
     Delete a specific discipline.

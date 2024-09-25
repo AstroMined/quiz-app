@@ -6,12 +6,14 @@ from sqlalchemy.exc import IntegrityError
 from backend.app.models.user_responses import UserResponseModel
 
 
-def test_user_response_creation(db_session, test_model_user, test_model_questions, test_model_answer_choices):
+def test_user_response_creation(
+    db_session, test_model_user, test_model_questions, test_model_answer_choices
+):
     user_response = UserResponseModel(
         user_id=test_model_user.id,
         question_id=test_model_questions[0].id,
         answer_choice_id=test_model_answer_choices[0].id,
-        is_correct=True
+        is_correct=True,
     )
     db_session.add(user_response)
     db_session.commit()
@@ -23,12 +25,15 @@ def test_user_response_creation(db_session, test_model_user, test_model_question
     assert user_response.is_correct is True
     assert user_response.timestamp is not None
 
-def test_user_response_relationships(db_session, test_model_user, test_model_questions, test_model_answer_choices):
+
+def test_user_response_relationships(
+    db_session, test_model_user, test_model_questions, test_model_answer_choices
+):
     user_response = UserResponseModel(
         user_id=test_model_user.id,
         question_id=test_model_questions[0].id,
         answer_choice_id=test_model_answer_choices[0].id,
-        is_correct=True
+        is_correct=True,
     )
     db_session.add(user_response)
     db_session.commit()
@@ -40,13 +45,16 @@ def test_user_response_relationships(db_session, test_model_user, test_model_que
     assert user_response in test_model_questions[0].user_responses
     assert user_response in test_model_answer_choices[0].user_responses
 
-def test_user_response_required_fields(db_session, test_model_user, test_model_questions, test_model_answer_choices):
+
+def test_user_response_required_fields(
+    db_session, test_model_user, test_model_questions, test_model_answer_choices
+):
     # Test missing user_id
     with pytest.raises(IntegrityError):
         user_response = UserResponseModel(
             question_id=test_model_questions[0].id,
             answer_choice_id=test_model_answer_choices[0].id,
-            is_correct=True
+            is_correct=True,
         )
         db_session.add(user_response)
         db_session.commit()
@@ -57,7 +65,7 @@ def test_user_response_required_fields(db_session, test_model_user, test_model_q
         user_response = UserResponseModel(
             user_id=test_model_user.id,
             answer_choice_id=test_model_answer_choices[0].id,
-            is_correct=True
+            is_correct=True,
         )
         db_session.add(user_response)
         db_session.commit()
@@ -68,18 +76,21 @@ def test_user_response_required_fields(db_session, test_model_user, test_model_q
         user_response = UserResponseModel(
             user_id=test_model_user.id,
             question_id=test_model_questions[0].id,
-            is_correct=True
+            is_correct=True,
         )
         db_session.add(user_response)
         db_session.commit()
     db_session.rollback()
 
-def test_user_response_repr(db_session, test_model_user, test_model_questions, test_model_answer_choices):
+
+def test_user_response_repr(
+    db_session, test_model_user, test_model_questions, test_model_answer_choices
+):
     user_response = UserResponseModel(
         user_id=test_model_user.id,
         question_id=test_model_questions[0].id,
         answer_choice_id=test_model_answer_choices[0].id,
-        is_correct=True
+        is_correct=True,
     )
     db_session.add(user_response)
     db_session.commit()

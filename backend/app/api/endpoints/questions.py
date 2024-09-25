@@ -24,29 +24,37 @@ which is handled by the check_auth_status and get_current_user_or_error function
 
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_questions import (create_question_in_db,
-                                             delete_question_from_db,
-                                             read_question_from_db,
-                                             read_questions_from_db,
-                                             update_question_in_db)
+from backend.app.crud.crud_questions import (
+    create_question_in_db,
+    delete_question_from_db,
+    read_question_from_db,
+    read_questions_from_db,
+    replace_question_in_db,
+    update_question_in_db,
+)
 from backend.app.db.session import get_db
-from backend.app.schemas.questions import (DetailedQuestionSchema,
-                                           QuestionCreateSchema,
-                                           QuestionSchema,
-                                           QuestionUpdateSchema,
-                                           QuestionWithAnswersCreateSchema)
+from backend.app.schemas.questions import (
+    DetailedQuestionSchema,
+    QuestionCreateSchema,
+    QuestionUpdateSchema,
+    QuestionWithAnswersCreateSchema,
+    QuestionWithAnswersReplaceSchema,
+)
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 
 router = APIRouter()
 
-@router.post("/questions/", response_model=DetailedQuestionSchema, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/questions/",
+    response_model=DetailedQuestionSchema,
+    status_code=status.HTTP_201_CREATED,
+)
 async def post_question(
-    request: Request,
-    question: QuestionCreateSchema,
-    db: Session = Depends(get_db)
+    request: Request, question: QuestionCreateSchema, db: Session = Depends(get_db)
 ) -> DetailedQuestionSchema:
     """
     Create a new question.
@@ -63,7 +71,7 @@ async def post_question(
         QuestionSchema: The created question data.
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 401 Unauthorized: If the user is not authenticated.
             - 422 Unprocessable Entity: If the question data is invalid.
             - 500 Internal Server Error: If an unexpected error occurs during question creation.
@@ -77,21 +85,25 @@ async def post_question(
         created_question = create_question_in_db(db=db, question_data=question_data)
         return DetailedQuestionSchema.model_validate(created_question)
     except ValueError as ve:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail=str(ve)
-                        ) from ve
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve)
+        ) from ve
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="An unexpected error occurred while creating the question"
-                        ) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while creating the question",
+        ) from e
 
-@router.post("/questions/with-answers/",
-             response_model=DetailedQuestionSchema,
-             status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/questions/with-answers/",
+    response_model=DetailedQuestionSchema,
+    status_code=status.HTTP_201_CREATED,
+)
 async def post_question_with_answers(
     request: Request,
     question: QuestionWithAnswersCreateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> DetailedQuestionSchema:
     """
     Create a new question with associated answers.
@@ -109,7 +121,7 @@ async def post_question_with_answers(
         DetailedQuestionSchema: The created question data including associated answers.
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 401 Unauthorized: If the user is not authenticated.
             - 422 Unprocessable Entity: If the question or answer data is invalid.
             - 500 Internal Server Error: If an unexpected error occurs during question creation.
@@ -123,20 +135,19 @@ async def post_question_with_answers(
         created_question = create_question_in_db(db=db, question_data=question_data)
         return DetailedQuestionSchema.model_validate(created_question)
     except ValueError as ve:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail=str(ve)
-                        ) from ve
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve)
+        ) from ve
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"An error occurred while creating the question with answers: {e}"
-                        ) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred while creating the question with answers: {e}",
+        ) from e
+
 
 @router.get("/questions/", response_model=List[DetailedQuestionSchema])
 async def get_questions(
-    request: Request,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
+    request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ) -> List[DetailedQuestionSchema]:
     """
     Retrieve a list of questions.
@@ -154,7 +165,7 @@ async def get_questions(
         List[DetailedQuestionSchema]: A list of questions with their details.
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 401 Unauthorized: If the user is not authenticated.
             - 500 Internal Server Error: If an unexpected error occurs during retrieval.
     """
@@ -165,15 +176,15 @@ async def get_questions(
         questions = read_questions_from_db(db, skip=skip, limit=limit)
         return [DetailedQuestionSchema.model_validate(q) for q in questions]
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="An unexpected error occurred while retrieving questions"
-                        ) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while retrieving questions",
+        ) from e
+
 
 @router.get("/questions/{question_id}", response_model=DetailedQuestionSchema)
 async def get_question(
-    request: Request,
-    question_id: int,
-    db: Session = Depends(get_db)
+    request: Request, question_id: int, db: Session = Depends(get_db)
 ) -> DetailedQuestionSchema:
     """
     Retrieve a specific question by ID.
@@ -189,7 +200,7 @@ async def get_question(
         DetailedQuestionSchema: The detailed question data.
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 401 Unauthorized: If the user is not authenticated.
             - 404 Not Found: If the question with the given ID does not exist.
             - 500 Internal Server Error: If an unexpected error occurs during retrieval.
@@ -200,38 +211,96 @@ async def get_question(
     try:
         db_question = read_question_from_db(db, question_id=question_id)
         if db_question is None:
-            raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Question with ID {question_id} not found"
+            )
         return DetailedQuestionSchema.model_validate(db_question)
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="An unexpected error occurred while retrieving the question"
-                        ) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while retrieving the question",
+        ) from e
+
 
 @router.put("/questions/{question_id}", response_model=DetailedQuestionSchema)
 async def put_question(
     request: Request,
     question_id: int,
-    question: QuestionUpdateSchema,
-    db: Session = Depends(get_db)
+    question: QuestionWithAnswersReplaceSchema,
+    db: Session = Depends(get_db),
 ) -> DetailedQuestionSchema:
     """
-    Update a specific question.
+    Replace a specific question with its answer choices.
 
-    This endpoint allows authenticated users to update an existing question by its ID.
+    This endpoint allows authenticated users to replace an existing question by its ID,
+    including its associated answer choices. It can handle both existing and new answer choices.
+
+    Args:
+        request (Request): The FastAPI request object.
+        question_id (int): The ID of the question to replace.
+        question (QuestionWithAnswersReplaceSchema): The new question data to replace the existing question.
+        db (Session): The database session.
+
+    Returns:
+        DetailedQuestionSchema: The replaced question data.
+
+    Raises:
+        HTTPException:
+            - 401 Unauthorized: If the user is not authenticated.
+            - 404 Not Found: If the question with the given ID does not exist.
+            - 422 Unprocessable Entity: If the replace data is invalid.
+            - 500 Internal Server Error: If an unexpected error occurs during the replacement.
+    """
+    check_auth_status(request)
+    get_current_user_or_error(request)
+
+    try:
+        question_data = question.model_dump()
+        replaced_question = replace_question_in_db(db, question_id, question_data)
+        if replaced_question is None:
+            raise HTTPException(
+                status_code=404, detail=f"Question with ID {question_id} not found"
+            )
+        return DetailedQuestionSchema.model_validate(replaced_question)
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve)
+        ) from ve
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while replacing the question: {str(e)}",
+        ) from e
+
+
+@router.patch("/questions/{question_id}", response_model=DetailedQuestionSchema)
+async def patch_question(
+    request: Request,
+    question_id: int,
+    question: QuestionUpdateSchema,
+    db: Session = Depends(get_db),
+) -> DetailedQuestionSchema:
+    """
+    Partially update a specific question.
+
+    This endpoint allows authenticated users to partially update an existing question by its ID.
+    Only the provided fields will be updated.
 
     Args:
         request (Request): The FastAPI request object.
         question_id (int): The ID of the question to update.
-        question (QuestionUpdateSchema): The updated question data.
+        question (QuestionUpdateSchema): The partial question data to update.
         db (Session): The database session.
 
     Returns:
         DetailedQuestionSchema: The updated question data.
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 401 Unauthorized: If the user is not authenticated.
             - 404 Not Found: If the question with the given ID does not exist.
             - 422 Unprocessable Entity: If the update data is invalid.
@@ -241,28 +310,29 @@ async def put_question(
     get_current_user_or_error(request)
 
     try:
-        validated_question = QuestionUpdateSchema(**question.model_dump())
-        question_data = validated_question.model_dump()
+        question_data = question.model_dump(exclude_unset=True)
         updated_question = update_question_in_db(db, question_id, question_data)
         if updated_question is None:
-            raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Question with ID {question_id} not found"
+            )
         return DetailedQuestionSchema.model_validate(updated_question)
     except ValueError as ve:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail=str(ve)
-                        ) from ve
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve)
+        ) from ve
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="An unexpected error occurred while updating the question"
-                        ) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred while updating the question: {str(e)}",
+        ) from e
+
 
 @router.delete("/questions/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_question(
-    request: Request,
-    question_id: int,
-    db: Session = Depends(get_db)
+    request: Request, question_id: int, db: Session = Depends(get_db)
 ):
     """
     Delete a specific question.
@@ -278,7 +348,7 @@ async def delete_question(
         None
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 401 Unauthorized: If the user is not authenticated.
             - 404 Not Found: If the question with the given ID does not exist.
             - 500 Internal Server Error: If an unexpected error occurs during the deletion.
@@ -289,11 +359,14 @@ async def delete_question(
     try:
         success = delete_question_from_db(db, question_id)
         if not success:
-            raise HTTPException(status_code=404, detail=f"Question with ID {question_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Question with ID {question_id} not found"
+            )
         return None
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="An unexpected error occurred while deleting the question"
-                        ) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while deleting the question",
+        ) from e

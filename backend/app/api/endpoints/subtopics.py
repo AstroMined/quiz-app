@@ -25,24 +25,27 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_subtopics import (create_subtopic_in_db,
-                                             delete_subtopic_from_db,
-                                             read_subtopic_from_db,
-                                             read_subtopics_from_db,
-                                             update_subtopic_in_db)
+from backend.app.crud.crud_subtopics import (
+    create_subtopic_in_db,
+    delete_subtopic_from_db,
+    read_subtopic_from_db,
+    read_subtopics_from_db,
+    update_subtopic_in_db,
+)
 from backend.app.db.session import get_db
-from backend.app.schemas.subtopics import (SubtopicCreateSchema,
-                                           SubtopicSchema,
-                                           SubtopicUpdateSchema)
+from backend.app.schemas.subtopics import (
+    SubtopicCreateSchema,
+    SubtopicSchema,
+    SubtopicUpdateSchema,
+)
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 
 router = APIRouter()
 
+
 @router.post("/subtopics/", response_model=SubtopicSchema, status_code=201)
 def post_subtopic(
-    request: Request,
-    subtopic: SubtopicCreateSchema,
-    db: Session = Depends(get_db)
+    request: Request, subtopic: SubtopicCreateSchema, db: Session = Depends(get_db)
 ):
     """
     Create a new subtopic.
@@ -68,12 +71,10 @@ def post_subtopic(
     created_subtopic = create_subtopic_in_db(db=db, subtopic_data=subtopic_data)
     return SubtopicSchema.model_validate(created_subtopic)
 
+
 @router.get("/subtopics/", response_model=List[SubtopicSchema])
 def get_subtopics(
-    request: Request,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
+    request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     """
     Retrieve a list of subtopics.
@@ -98,12 +99,9 @@ def get_subtopics(
     subtopics = read_subtopics_from_db(db, skip=skip, limit=limit)
     return [SubtopicSchema.model_validate(s) for s in subtopics]
 
+
 @router.get("/subtopics/{subtopic_id}", response_model=SubtopicSchema)
-def get_subtopic(
-    request: Request,
-    subtopic_id: int,
-    db: Session = Depends(get_db)
-):
+def get_subtopic(request: Request, subtopic_id: int, db: Session = Depends(get_db)):
     """
     Retrieve a specific subtopic by ID.
 
@@ -128,12 +126,13 @@ def get_subtopic(
         raise HTTPException(status_code=404, detail="Subtopic not found")
     return SubtopicSchema.model_validate(db_subtopic)
 
+
 @router.put("/subtopics/{subtopic_id}", response_model=SubtopicSchema)
 def put_subtopic(
     request: Request,
     subtopic_id: int,
     subtopic: SubtopicUpdateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Update a specific subtopic.
@@ -161,12 +160,9 @@ def put_subtopic(
         raise HTTPException(status_code=404, detail="Subtopic not found")
     return SubtopicSchema.model_validate(db_subtopic)
 
+
 @router.delete("/subtopics/{subtopic_id}", status_code=204)
-def delete_subtopic(
-    request: Request,
-    subtopic_id: int,
-    db: Session = Depends(get_db)
-):
+def delete_subtopic(request: Request, subtopic_id: int, db: Session = Depends(get_db)):
     """
     Delete a specific subtopic.
 

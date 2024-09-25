@@ -8,35 +8,56 @@ from pydantic import BaseModel, Field, field_validator
 class DisciplineBaseSchema(BaseModel):
     name: str = Field(..., max_length=100, description="Name of the discipline")
 
-    @field_validator('name')
+    @field_validator("name")
     @classmethod
     def name_must_not_be_empty(cls, v: str) -> str:
         if not v.strip():
-            raise ValueError('Discipline name cannot be empty or whitespace')
+            raise ValueError("Discipline name cannot be empty or whitespace")
         return v
 
+
 class DisciplineCreateSchema(DisciplineBaseSchema):
-    domain_ids: List[int] = Field(..., min_items=1, description="List of domain IDs associated with this discipline")
-    subject_ids: Optional[List[int]] = Field(None, description="List of subject IDs associated with this discipline")
+    domain_ids: List[int] = Field(
+        ...,
+        min_items=1,
+        description="List of domain IDs associated with this discipline",
+    )
+    subject_ids: Optional[List[int]] = Field(
+        None, description="List of subject IDs associated with this discipline"
+    )
+
 
 class DisciplineUpdateSchema(BaseModel):
-    name: Optional[str] = Field(None, max_length=100, description="Name of the discipline")
-    domain_ids: Optional[List[int]] = Field(None, min_items=1, description="List of domain IDs associated with this discipline")
-    subject_ids: Optional[List[int]] = Field(None, description="List of subject IDs associated with this discipline")
+    name: Optional[str] = Field(
+        None, max_length=100, description="Name of the discipline"
+    )
+    domain_ids: Optional[List[int]] = Field(
+        None,
+        min_items=1,
+        description="List of domain IDs associated with this discipline",
+    )
+    subject_ids: Optional[List[int]] = Field(
+        None, description="List of subject IDs associated with this discipline"
+    )
 
-    @field_validator('name')
+    @field_validator("name")
     @classmethod
     def name_must_not_be_empty(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and not v.strip():
-            raise ValueError('Discipline name cannot be empty or whitespace')
+            raise ValueError("Discipline name cannot be empty or whitespace")
         return v
+
 
 class DisciplineSchema(DisciplineBaseSchema):
     id: int
-    domains: Optional[List[dict]] = Field(None, description="List of domains associated with this discipline")
-    subjects: Optional[List[dict]] = Field(None, description="List of subjects associated with this discipline")
+    domains: Optional[List[dict]] = Field(
+        None, description="List of domains associated with this discipline"
+    )
+    subjects: Optional[List[dict]] = Field(
+        None, description="List of subjects associated with this discipline"
+    )
 
-    @field_validator('domains', 'subjects', mode='before')
+    @field_validator("domains", "subjects", mode="before")
     @classmethod
     def convert_to_dict(cls, v):
         if v is None:

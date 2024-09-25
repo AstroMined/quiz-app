@@ -14,7 +14,11 @@ class AnswerChoiceModel(Base):
     is_correct = Column(Boolean, nullable=False)
     explanation = Column(String(10000))
 
-    questions = relationship("QuestionModel", secondary="question_to_answer_association", back_populates="answer_choices")
+    questions = relationship(
+        "QuestionModel",
+        secondary="question_to_answer_association",
+        back_populates="answer_choices",
+    )
     user_responses = relationship("UserResponseModel", back_populates="answer_choice")
 
     def __repr__(self):

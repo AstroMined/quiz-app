@@ -7,13 +7,11 @@ from backend.app.schemas.time_period import TimePeriodSchema
 
 
 def test_time_period_schema_valid():
-    data = {
-        "id": 1,
-        "name": "daily"
-    }
+    data = {"id": 1, "name": "daily"}
     schema = TimePeriodSchema(**data)
     assert schema.id == 1
     assert schema.name == "daily"
+
 
 def test_time_period_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
@@ -28,16 +26,17 @@ def test_time_period_schema_validation():
         TimePeriodSchema(id=1, name="invalid")
     assert "Name must be one of: daily, weekly, monthly, yearly" in str(exc_info.value)
 
+
 def test_time_period_schema_from_attributes(db_session):
     from backend.app.models.time_period import TimePeriodModel
-    
+
     time_periods = [
         TimePeriodModel.daily(),
         TimePeriodModel.weekly(),
         TimePeriodModel.monthly(),
-        TimePeriodModel.yearly()
+        TimePeriodModel.yearly(),
     ]
-    
+
     for model in time_periods:
         db_session.add(model)
     db_session.commit()
@@ -46,6 +45,7 @@ def test_time_period_schema_from_attributes(db_session):
         schema = TimePeriodSchema.model_validate(model)
         assert schema.id == model.id
         assert schema.name == model.name
+
 
 def test_time_period_schema_predefined_values():
     daily = TimePeriodSchema(id=1, name="daily")
@@ -64,11 +64,16 @@ def test_time_period_schema_predefined_values():
     assert yearly.id == 365
     assert yearly.name == "yearly"
 
+
 def test_time_period_schema_invalid_combinations():
     with pytest.raises(ValidationError) as exc_info:
         TimePeriodSchema(id=7, name="daily")
-    assert "Invalid combination of id and name. For id 7, name should be weekly" in str(exc_info.value)
+    assert "Invalid combination of id and name. For id 7, name should be weekly" in str(
+        exc_info.value
+    )
 
     with pytest.raises(ValidationError) as exc_info:
         TimePeriodSchema(id=1, name="weekly")
-    assert "Invalid combination of id and name. For id 1, name should be daily" in str(exc_info.value)
+    assert "Invalid combination of id and name. For id 1, name should be daily" in str(
+        exc_info.value
+    )

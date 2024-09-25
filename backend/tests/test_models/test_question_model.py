@@ -13,8 +13,7 @@ from backend.app.services.validation_service import validate_foreign_keys
 
 def test_question_model_creation(db_session):
     question = QuestionModel(
-        text="What is the capital of France?",
-        difficulty=DifficultyLevel.EASY
+        text="What is the capital of France?", difficulty=DifficultyLevel.EASY
     )
     db_session.add(question)
     db_session.commit()
@@ -23,10 +22,16 @@ def test_question_model_creation(db_session):
     assert question.text == "What is the capital of France?"
     assert question.difficulty == DifficultyLevel.EASY
 
-def test_question_model_relationships(db_session, test_model_subject, test_model_topic, test_model_subtopic, test_model_concept):
+
+def test_question_model_relationships(
+    db_session,
+    test_model_subject,
+    test_model_topic,
+    test_model_subtopic,
+    test_model_concept,
+):
     question = QuestionModel(
-        text="What is the capital of France?",
-        difficulty=DifficultyLevel.EASY
+        text="What is the capital of France?", difficulty=DifficultyLevel.EASY
     )
     question.subjects.append(test_model_subject)
     question.topics.append(test_model_topic)
@@ -40,14 +45,22 @@ def test_question_model_relationships(db_session, test_model_subject, test_model
     assert test_model_subtopic in question.subtopics
     assert test_model_concept in question.concepts
 
-def test_question_multiple_relationships(db_session, test_model_subject, test_model_topic, test_model_subtopic, test_model_concept):
+
+def test_question_multiple_relationships(
+    db_session,
+    test_model_subject,
+    test_model_topic,
+    test_model_subtopic,
+    test_model_concept,
+):
     question = QuestionModel(
-        text="What is the capital of France?",
-        difficulty=DifficultyLevel.EASY
+        text="What is the capital of France?", difficulty=DifficultyLevel.EASY
     )
     question.subjects.extend([test_model_subject, SubjectModel(name="Another Subject")])
     question.topics.extend([test_model_topic, TopicModel(name="Another Topic")])
-    question.subtopics.extend([test_model_subtopic, SubtopicModel(name="Another Subtopic")])
+    question.subtopics.extend(
+        [test_model_subtopic, SubtopicModel(name="Another Subtopic")]
+    )
     question.concepts.extend([test_model_concept, ConceptModel(name="Another Concept")])
     db_session.add(question)
     db_session.commit()
@@ -57,10 +70,10 @@ def test_question_multiple_relationships(db_session, test_model_subject, test_mo
     assert len(question.subtopics) == 2
     assert len(question.concepts) == 2
 
+
 def test_question_tag_relationship(db_session, test_model_tag):
     question = QuestionModel(
-        text="What is the capital of France?",
-        difficulty=DifficultyLevel.EASY
+        text="What is the capital of France?", difficulty=DifficultyLevel.EASY
     )
     question.question_tags.append(test_model_tag)
     db_session.add(question)
@@ -69,20 +82,18 @@ def test_question_tag_relationship(db_session, test_model_tag):
     assert test_model_tag in question.question_tags
     assert question in test_model_tag.questions
 
+
 def test_answer_choice_relationship(db_session):
     # Create the question first
     question = QuestionModel(
-        text="What is the capital of France?",
-        difficulty=DifficultyLevel.EASY
+        text="What is the capital of France?", difficulty=DifficultyLevel.EASY
     )
     db_session.add(question)
     db_session.flush()  # Flush to get the question ID
 
     # Create the answer choice
     answer_choice = AnswerChoiceModel(
-        text="Paris", 
-        is_correct=True,
-        explanation="Paris is the capital of France"
+        text="Paris", is_correct=True, explanation="Paris is the capital of France"
     )
     db_session.add(answer_choice)
     db_session.flush()  # Flush to get the answer choice ID
@@ -97,7 +108,9 @@ def test_answer_choice_relationship(db_session):
 
     # Assert the relationships
     assert answer_choice in question.answer_choices
-    assert question in answer_choice.questions  # Note: This is now 'questions' (plural) due to the many-to-many relationship
+    assert (
+        question in answer_choice.questions
+    )  # Note: This is now 'questions' (plural) due to the many-to-many relationship
 
     # Additional assertions to verify the relationship
     assert len(question.answer_choices) == 1
@@ -105,10 +118,10 @@ def test_answer_choice_relationship(db_session):
     assert question.answer_choices[0].text == "Paris"
     assert answer_choice.questions[0].text == "What is the capital of France?"
 
+
 def test_model_question_set_relationship(db_session, test_model_question_set):
     question = QuestionModel(
-        text="What is the capital of France?",
-        difficulty=DifficultyLevel.EASY
+        text="What is the capital of France?", difficulty=DifficultyLevel.EASY
     )
     question.question_sets.append(test_model_question_set)
     db_session.add(question)
@@ -117,10 +130,10 @@ def test_model_question_set_relationship(db_session, test_model_question_set):
     assert test_model_question_set in question.question_sets
     assert question in test_model_question_set.questions
 
+
 def test_user_response_relationship(db_session, test_model_user):
     question = QuestionModel(
-        text="What is the capital of France?",
-        difficulty=DifficultyLevel.EASY
+        text="What is the capital of France?", difficulty=DifficultyLevel.EASY
     )
     db_session.add(question)
     db_session.commit()
@@ -129,7 +142,7 @@ def test_user_response_relationship(db_session, test_model_user):
         user_id=test_model_user.id,
         question_id=question.id,
         answer_choice_id=1,  # Assuming an answer choice with id 1 exists
-        is_correct=True
+        is_correct=True,
     )
     db_session.add(user_response)
     db_session.commit()
@@ -137,10 +150,10 @@ def test_user_response_relationship(db_session, test_model_user):
     assert user_response in question.user_responses
     assert question == user_response.question
 
+
 def test_question_model_repr(db_session):
     question = QuestionModel(
-        text="What is the capital of France?",
-        difficulty=DifficultyLevel.EASY
+        text="What is the capital of France?", difficulty=DifficultyLevel.EASY
     )
     db_session.add(question)
     db_session.commit()
@@ -148,61 +161,92 @@ def test_question_model_repr(db_session):
     expected_repr = f"<QuestionModel(id={question.id}, text='What is the capital of France?...', difficulty='DifficultyLevel.EASY')>"
     assert repr(question) == expected_repr
 
-def test_question_model_with_answers(db_session, test_model_subject, test_model_topic, test_model_subtopic):
-    question = QuestionModel(text="What is the capital of France?", difficulty=DifficultyLevel.EASY, 
-                             subjects=[test_model_subject], topics=[test_model_topic], subtopics=[test_model_subtopic])
-    
+
+def test_question_model_with_answers(
+    db_session, test_model_subject, test_model_topic, test_model_subtopic
+):
+    question = QuestionModel(
+        text="What is the capital of France?",
+        difficulty=DifficultyLevel.EASY,
+        subjects=[test_model_subject],
+        topics=[test_model_topic],
+        subtopics=[test_model_subtopic],
+    )
+
     db_session.add(question)
     db_session.commit()
     db_session.refresh(question)
-    
-    answer = AnswerChoiceModel(text="Paris", is_correct=True, explanation="Paris is the capital and largest city of France.")
-    
+
+    answer = AnswerChoiceModel(
+        text="Paris",
+        is_correct=True,
+        explanation="Paris is the capital and largest city of France.",
+    )
+
     db_session.add(answer)
     db_session.commit()
     db_session.refresh(answer)
-    
+
     # Associate the answer with the question
     question.answer_choices.append(answer)
     db_session.commit()
-    
+
     validate_foreign_keys(QuestionModel, db_session.connection(), question)
     validate_foreign_keys(AnswerChoiceModel, db_session.connection(), answer)
-    
+
     assert question.id is not None
     assert answer.id is not None
     assert answer in question.answer_choices
 
-def test_question_deletion_removes_association_to_answers(db_session, test_model_subject, test_model_topic, test_model_subtopic):
-    question = QuestionModel(text="What is the capital of France?", difficulty=DifficultyLevel.EASY, 
-                             subjects=[test_model_subject], topics=[test_model_topic], subtopics=[test_model_subtopic])
-    
+
+def test_question_deletion_removes_association_to_answers(
+    db_session, test_model_subject, test_model_topic, test_model_subtopic
+):
+    question = QuestionModel(
+        text="What is the capital of France?",
+        difficulty=DifficultyLevel.EASY,
+        subjects=[test_model_subject],
+        topics=[test_model_topic],
+        subtopics=[test_model_subtopic],
+    )
+
     db_session.add(question)
     db_session.commit()
     db_session.refresh(question)
-    
-    answer = AnswerChoiceModel(text="Paris", is_correct=True, explanation="Paris is the capital and largest city of France.")
-    
+
+    answer = AnswerChoiceModel(
+        text="Paris",
+        is_correct=True,
+        explanation="Paris is the capital and largest city of France.",
+    )
+
     db_session.add(answer)
     db_session.commit()
     db_session.refresh(answer)
-    
+
     # Associate the answer with the question
     question.answer_choices.append(answer)
     db_session.commit()
-    
+
     validate_foreign_keys(QuestionModel, db_session.connection(), question)
     validate_foreign_keys(AnswerChoiceModel, db_session.connection(), answer)
-    
+
     # Store the answer ID for later checking
     answer_id = answer.id
-    
+
     db_session.delete(question)
-    
+
     db_session.commit()
-    
+
     # Check that the answer still exists
-    assert db_session.query(AnswerChoiceModel).filter_by(id=answer_id).first() is not None
-    
+    assert (
+        db_session.query(AnswerChoiceModel).filter_by(id=answer_id).first() is not None
+    )
+
     # Check that the association between the question and answer is removed
-    assert db_session.query(QuestionToAnswerAssociation).filter_by(answer_choice_id=answer_id).first() is None
+    assert (
+        db_session.query(QuestionToAnswerAssociation)
+        .filter_by(answer_choice_id=answer_id)
+        .first()
+        is None
+    )

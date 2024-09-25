@@ -3,16 +3,19 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.app.schemas.topics import (TopicBaseSchema, TopicCreateSchema,
-                                        TopicSchema, TopicUpdateSchema)
+from backend.app.schemas.topics import (
+    TopicBaseSchema,
+    TopicCreateSchema,
+    TopicSchema,
+    TopicUpdateSchema,
+)
 
 
 def test_topic_base_schema_valid():
-    data = {
-        "name": "Algebra"
-    }
+    data = {"name": "Algebra"}
     schema = TopicBaseSchema(**data)
     assert schema.name == "Algebra"
+
 
 def test_topic_base_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
@@ -23,27 +26,26 @@ def test_topic_base_schema_validation():
         TopicBaseSchema(name="a" * 101)
     assert "String should have at most 100 characters" in str(exc_info.value)
 
+
 def test_topic_create_schema():
-    data = {
-        "name": "Calculus",
-        "subject_ids": [1, 2],
-        "subtopic_ids": [3, 4, 5]
-    }
+    data = {"name": "Calculus", "subject_ids": [1, 2], "subtopic_ids": [3, 4, 5]}
     schema = TopicCreateSchema(**data)
     assert schema.name == "Calculus"
     assert schema.subject_ids == [1, 2]
     assert schema.subtopic_ids == [3, 4, 5]
+
 
 def test_topic_create_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
         TopicCreateSchema(name="Calculus", subject_ids=[])
     assert "List should have at least 1 item after validation" in str(exc_info.value)
 
+
 def test_topic_update_schema():
     data = {
         "name": "Updated Calculus",
         "subject_ids": [2, 3],
-        "subtopic_ids": [4, 5, 6]
+        "subtopic_ids": [4, 5, 6],
     }
     schema = TopicUpdateSchema(**data)
     assert schema.name == "Updated Calculus"
@@ -57,13 +59,18 @@ def test_topic_update_schema():
     assert partial_schema.subject_ids is None
     assert partial_schema.subtopic_ids is None
 
+
 def test_topic_schema():
     data = {
         "id": 1,
         "name": "Complete Topic",
         "subjects": [{"id": 1, "name": "Subject 1"}, {"id": 2, "name": "Subject 2"}],
-        "subtopics": [{"id": 3, "name": "Subtopic 1"}, {"id": 4, "name": "Subtopic 2"}, {"id": 5, "name": "Subtopic 3"}],
-        "questions": [{"id": 6, "name": "Question 1"}, {"id": 7, "name": "Question 2"}]
+        "subtopics": [
+            {"id": 3, "name": "Subtopic 1"},
+            {"id": 4, "name": "Subtopic 2"},
+            {"id": 5, "name": "Subtopic 3"},
+        ],
+        "questions": [{"id": 6, "name": "Question 1"}, {"id": 7, "name": "Question 2"}],
     }
     schema = TopicSchema(**data)
     assert schema.id == 1
@@ -78,6 +85,7 @@ def test_topic_schema():
     assert schema.subtopics[2]["id"] == 5
     assert schema.questions[0]["id"] == 6
     assert schema.questions[1]["id"] == 7
+
 
 def test_topic_schema_from_attributes(db_session, test_model_topic):
     schema = TopicSchema.model_validate(test_model_topic)

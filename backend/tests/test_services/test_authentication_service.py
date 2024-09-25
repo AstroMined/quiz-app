@@ -1,14 +1,24 @@
 # filename: backend/tests/test_services/test_authentication_service.py
 
 import pytest
-from backend.app.services.authentication_service import authenticate_user, revoke_all_user_tokens
-from backend.app.models.users import UserModel
+
 from backend.app.core.security import get_password_hash
+from backend.app.models.users import UserModel
+from backend.app.services.authentication_service import (
+    authenticate_user,
+    revoke_all_user_tokens,
+)
+
 
 def test_authenticate_user(db_session):
     # Create a test user
     hashed_password = get_password_hash("testpassword")
-    user = UserModel(username="testuser", email="testuser@example.com", hashed_password=hashed_password, is_active=True)
+    user = UserModel(
+        username="testuser",
+        email="testuser@example.com",
+        hashed_password=hashed_password,
+        is_active=True,
+    )
     db_session.add(user)
     db_session.commit()
 
@@ -27,6 +37,7 @@ def test_authenticate_user(db_session):
     user.is_active = False
     db_session.commit()
     assert authenticate_user(db_session, "testuser", "testpassword") is False
+
 
 def test_revoke_all_user_tokens(db_session):
     # Create a test user

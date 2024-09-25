@@ -15,15 +15,22 @@ class RoleModel(Base):
     name = Column(String(50), unique=True, nullable=False, index=True)
     description = Column(String(200))
     default = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     # Relationships
     users = relationship("UserModel", back_populates="role")
     permissions = relationship(
         "PermissionModel",
         secondary=RoleToPermissionAssociation.__tablename__,
-        back_populates="roles"
+        back_populates="roles",
     )
 
     def __repr__(self):

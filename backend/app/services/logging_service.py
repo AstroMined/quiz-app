@@ -8,11 +8,30 @@ from logging.handlers import RotatingFileHandler
 from sqlalchemy.inspection import inspect
 
 
-def sqlalchemy_obj_to_dict(obj):
-    """
-    Convert a SQLAlchemy model instance to a dictionary.
-    """
-    return {c.key: getattr(obj, c.key) for c in inspect(obj).mapper.column_attrs}
+def sqlalchemy_obj_to_dict(obj, include_relationships=False):
+    if obj is None:
+        return None
+
+    data = {}
+    for c in inspect(obj).mapper.column_attrs:
+        data[c.key] = getattr(obj, c.key)
+
+    if include_relationships:
+        for r in inspect(obj).mapper.relationships:
+            related_obj = getattr(obj, r.key)
+            if related_obj is not None:
+                if isinstance(related_obj, list):
+                    data[r.key] = [
+                        sqlalchemy_obj_to_dict(item, include_relationships=False)
+                        for item in related_obj
+                    ]
+                else:
+                    data[r.key] = sqlalchemy_obj_to_dict(
+                        related_obj, include_relationships=False
+                    )
+
+    return data
+
 
 class UTCFormatter(logging.Formatter):
     def formatTime(self, record, datefmt=None):
@@ -31,13 +50,14 @@ class UTCFormatter(logging.Formatter):
         record.lineno = record.lineno
         return super().format(record)
 
+
 def setup_logging(disable_logging=False, disable_cli_logging=False):
     logger_setup = logging.getLogger("backend")
 
     if disable_logging:
         logger_setup.disabled = True
         return logger_setup
-    
+
     logger_setup.setLevel(logging.DEBUG)
 
     # File Handler
@@ -45,10 +65,14 @@ def setup_logging(disable_logging=False, disable_cli_logging=False):
     if not disable_logging:
         handler = RotatingFileHandler(log_file, maxBytes=10485760, backupCount=10)
     else:
-        handler = logging.NullHandler()  # Redirect logs to /dev/null if logging is disabled
+        handler = (
+            logging.NullHandler()
+        )  # Redirect logs to /dev/null if logging is disabled
 
     handler.setLevel(logging.DEBUG)
-    formatter = UTCFormatter("%(asctime)s - %(name)s - %(levelname)s - %(relativepath)s - %(funcname)s - line %(lineno)d - %(message)s")
+    formatter = UTCFormatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(relativepath)s - %(funcname)s - line %(lineno)d - %(message)s"
+    )
     handler.setFormatter(formatter)
     logger_setup.addHandler(handler)
 
@@ -60,6 +84,7 @@ def setup_logging(disable_logging=False, disable_cli_logging=False):
         logger_setup.addHandler(cli_handler)
 
     return logger_setup
+
 
 # Example usage:
 logger = setup_logging(disable_logging=False, disable_cli_logging=True)

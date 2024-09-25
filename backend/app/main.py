@@ -18,22 +18,23 @@ from backend.app.api.endpoints import questions as questions_router
 from backend.app.api.endpoints import register as register_router
 from backend.app.api.endpoints import subjects as subjects_router
 from backend.app.api.endpoints import subtopics as subtopics_router
+from backend.app.api.endpoints import time_periods as time_periods_router
 from backend.app.api.endpoints import topics as topics_router
 from backend.app.api.endpoints import user_responses as user_responses_router
 from backend.app.api.endpoints import users as users_router
-from backend.app.api.endpoints import time_periods as time_periods_router
+from backend.app.crud.crud_time_period import init_time_periods_in_db
 from backend.app.db.session import get_db
-from backend.app.middleware.authorization_middleware import \
-    AuthorizationMiddleware
+from backend.app.middleware.authorization_middleware import AuthorizationMiddleware
 from backend.app.middleware.blacklist_middleware import BlacklistMiddleware
 from backend.app.middleware.cors_middleware import add_cors_middleware
 from backend.app.services.permission_generator_service import (
-    ensure_permissions_in_db, generate_permissions)
-from backend.app.services.validation_service import \
-    register_validation_listeners
-from backend.app.crud.crud_time_period import init_time_periods_in_db
+    ensure_permissions_in_db,
+    generate_permissions,
+)
+from backend.app.services.validation_service import register_validation_listeners
 
 app = FastAPI()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,6 +48,7 @@ async def lifespan(app: FastAPI):
     yield
     # Anything after the yield runs when the application shuts down
     app.state.db.close()
+
 
 app.router.lifespan_context = lifespan
 
@@ -73,6 +75,7 @@ app.include_router(users_router.router, tags=["User Management"])
 app.include_router(topics_router.router, tags=["Topics"])
 app.include_router(subtopics_router.router, tags=["Subtopics"])
 app.include_router(time_periods_router.router, tags=["Time Periods"])
+
 
 @app.get("/")
 def read_root():

@@ -23,27 +23,31 @@ which is handled by the check_auth_status and get_current_user_or_error function
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_subjects import (create_subject_in_db,
-                                            delete_subject_from_db,
-                                            read_subject_from_db,
-                                            read_subjects_from_db,
-                                            update_subject_in_db)
+from backend.app.crud.crud_subjects import (
+    create_subject_in_db,
+    delete_subject_from_db,
+    read_subject_from_db,
+    read_subjects_from_db,
+    update_subject_in_db,
+)
 from backend.app.db.session import get_db
-from backend.app.schemas.subjects import (SubjectCreateSchema, SubjectSchema,
-                                          SubjectUpdateSchema)
+from backend.app.schemas.subjects import (
+    SubjectCreateSchema,
+    SubjectSchema,
+    SubjectUpdateSchema,
+)
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 from backend.app.services.logging_service import logger
 
 router = APIRouter()
 
+
 @router.post("/subjects/", response_model=SubjectSchema, status_code=201)
 def post_subject(
-    request: Request,
-    subject: SubjectCreateSchema,
-    db: Session = Depends(get_db)
+    request: Request, subject: SubjectCreateSchema, db: Session = Depends(get_db)
 ):
     """
     Create a new subject.
@@ -69,18 +73,18 @@ def post_subject(
     try:
         created_subject = create_subject_in_db(db=db, subject_data=subject_data)
     except IntegrityError:
-        raise HTTPException(status_code=400, detail="Subject with this name already exists")
+        raise HTTPException(
+            status_code=400, detail="Subject with this name already exists"
+        )
     except HTTPException as e:
         # Re-raise the HTTPException from create_subject_in_db
         raise e
     return SubjectSchema.model_validate(created_subject)
 
+
 @router.get("/subjects/", response_model=List[SubjectSchema])
 def get_subjects(
-    request: Request,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
+    request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     """
     Retrieve a list of subjects.
@@ -105,12 +109,9 @@ def get_subjects(
     subjects = read_subjects_from_db(db, skip=skip, limit=limit)
     return [SubjectSchema.model_validate(s) for s in subjects]
 
+
 @router.get("/subjects/{subject_id}", response_model=SubjectSchema)
-def get_subject(
-    request: Request,
-    subject_id: int,
-    db: Session = Depends(get_db)
-):
+def get_subject(request: Request, subject_id: int, db: Session = Depends(get_db)):
     """
     Retrieve a specific subject by ID.
 
@@ -135,12 +136,13 @@ def get_subject(
         raise HTTPException(status_code=404, detail="Subject not found")
     return SubjectSchema.model_validate(db_subject)
 
+
 @router.put("/subjects/{subject_id}", response_model=SubjectSchema)
 def put_subject(
     request: Request,
     subject_id: int,
     subject: SubjectUpdateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Update a specific subject.
@@ -175,16 +177,13 @@ def put_subject(
     except Exception as e:
         logger.error(f"Unexpected error updating subject {subject_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred")
-    
+
     logger.debug(f"Successfully updated subject {subject_id}")
     return SubjectSchema.model_validate(db_subject)
 
+
 @router.delete("/subjects/{subject_id}", status_code=204)
-def delete_subject(
-    request: Request,
-    subject_id: int,
-    db: Session = Depends(get_db)
-):
+def delete_subject(request: Request, subject_id: int, db: Session = Depends(get_db)):
     """
     Delete a specific subject.
 

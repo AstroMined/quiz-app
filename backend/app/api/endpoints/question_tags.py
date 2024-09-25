@@ -22,29 +22,37 @@ which is handled by the check_auth_status and get_current_user_or_error function
 
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_question_tags import (create_question_tag_in_db,
-                                                 delete_question_tag_from_db,
-                                                 read_question_tag_from_db,
-                                                 read_question_tags_from_db,
-                                                 update_question_tag_in_db)
+from backend.app.crud.crud_question_tags import (
+    create_question_tag_in_db,
+    delete_question_tag_from_db,
+    read_question_tag_from_db,
+    read_question_tags_from_db,
+    update_question_tag_in_db,
+)
 from backend.app.db.session import get_db
-from backend.app.schemas.question_tags import (QuestionTagCreateSchema,
-                                               QuestionTagSchema,
-                                               QuestionTagUpdateSchema)
+from backend.app.schemas.question_tags import (
+    QuestionTagCreateSchema,
+    QuestionTagSchema,
+    QuestionTagUpdateSchema,
+)
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
-
 
 router = APIRouter()
 
-@router.post("/question-tags/", response_model=QuestionTagSchema, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/question-tags/",
+    response_model=QuestionTagSchema,
+    status_code=status.HTTP_201_CREATED,
+)
 def post_question_tag(
     request: Request,
     question_tag: QuestionTagCreateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Create a new question tag.
@@ -69,7 +77,9 @@ def post_question_tag(
     question_tag_data = question_tag.model_dump()
 
     try:
-        created_tag = create_question_tag_in_db(db=db, question_tag_data=question_tag_data)
+        created_tag = create_question_tag_in_db(
+            db=db, question_tag_data=question_tag_data
+        )
     except IntegrityError as exc:
         db.rollback()  # Rollback the session to avoid transaction issues
         raise HTTPException(status_code=400, detail="Tag already exists") from exc
@@ -81,10 +91,7 @@ def post_question_tag(
 
 @router.get("/question-tags/", response_model=List[QuestionTagSchema])
 def get_question_tags(
-    request: Request,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
+    request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     """
     Retrieve a list of question tags.
@@ -109,12 +116,9 @@ def get_question_tags(
     question_tags = read_question_tags_from_db(db, skip=skip, limit=limit)
     return [QuestionTagSchema.model_validate(tag) for tag in question_tags]
 
+
 @router.get("/question-tags/{tag_id}", response_model=QuestionTagSchema)
-def get_question_tag(
-    request: Request,
-    tag_id: int,
-    db: Session = Depends(get_db)
-):
+def get_question_tag(request: Request, tag_id: int, db: Session = Depends(get_db)):
     """
     Retrieve a specific question tag by ID.
 
@@ -139,12 +143,13 @@ def get_question_tag(
         raise HTTPException(status_code=404, detail="Question tag not found")
     return QuestionTagSchema.model_validate(db_question_tag)
 
+
 @router.put("/question-tags/{tag_id}", response_model=QuestionTagSchema)
 def put_question_tag(
     request: Request,
     tag_id: int,
     question_tag: QuestionTagUpdateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Update a specific question tag.
@@ -172,12 +177,9 @@ def put_question_tag(
         raise HTTPException(status_code=404, detail="Question tag not found")
     return QuestionTagSchema.model_validate(updated_tag)
 
+
 @router.delete("/question-tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_question_tag(
-    request: Request,
-    tag_id: int,
-    db: Session = Depends(get_db)
-):
+def delete_question_tag(request: Request, tag_id: int, db: Session = Depends(get_db)):
     """
     Delete a specific question tag.
 

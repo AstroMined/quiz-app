@@ -22,28 +22,38 @@ which is handled by the check_auth_status and get_current_user_or_error function
 
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_answer_choices import (create_answer_choice_in_db,
-                                                  delete_answer_choice_from_db,
-                                                  read_answer_choice_from_db,
-                                                  read_answer_choices_from_db,
-                                                  update_answer_choice_in_db)
+from backend.app.crud.crud_answer_choices import (
+    create_answer_choice_in_db,
+    delete_answer_choice_from_db,
+    read_answer_choice_from_db,
+    read_answer_choices_from_db,
+    update_answer_choice_in_db,
+)
 from backend.app.db.session import get_db
-from backend.app.schemas.answer_choices import (AnswerChoiceCreateSchema,
-                                                AnswerChoiceSchema, DetailedAnswerChoiceSchema,
-                                                AnswerChoiceUpdateSchema)
+from backend.app.schemas.answer_choices import (
+    AnswerChoiceCreateSchema,
+    AnswerChoiceSchema,
+    AnswerChoiceUpdateSchema,
+    DetailedAnswerChoiceSchema,
+)
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 from backend.app.services.logging_service import logger
 
 router = APIRouter()
 
-@router.post("/answer-choices/", response_model=AnswerChoiceSchema, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/answer-choices/",
+    response_model=AnswerChoiceSchema,
+    status_code=status.HTTP_201_CREATED,
+)
 def post_answer_choice(
     request: Request,
     answer_choice: AnswerChoiceCreateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Create a new answer choice.
@@ -69,30 +79,37 @@ def post_answer_choice(
     logger.debug("Validated answer choice in API endpoint: %s", validated_answer_choice)
     answer_choice_data = validated_answer_choice.model_dump()
     logger.debug("Answer choice data in API endpoint: %s", answer_choice_data)
-    created_answer_choice = create_answer_choice_in_db(db=db, answer_choice_data=answer_choice_data)
+    created_answer_choice = create_answer_choice_in_db(
+        db=db, answer_choice_data=answer_choice_data
+    )
     logger.debug("Created answer choice in API endpoint: %s", created_answer_choice)
     return AnswerChoiceSchema.model_validate(created_answer_choice)
 
-@router.post("/answer-choices/with-question", response_model=DetailedAnswerChoiceSchema, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/answer-choices/with-question",
+    response_model=DetailedAnswerChoiceSchema,
+    status_code=status.HTTP_201_CREATED,
+)
 def post_answer_choice_with_question(
     request: Request,
     answer_choice: AnswerChoiceCreateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     check_auth_status(request)
     get_current_user_or_error(request)
 
     validated_answer_choice = AnswerChoiceCreateSchema(**answer_choice.model_dump())
     answer_choice_data = validated_answer_choice.model_dump()
-    created_answer_choice = create_answer_choice_in_db(db=db, answer_choice_data=answer_choice_data)
+    created_answer_choice = create_answer_choice_in_db(
+        db=db, answer_choice_data=answer_choice_data
+    )
     return DetailedAnswerChoiceSchema.model_validate(created_answer_choice)
+
 
 @router.get("/answer-choices/", response_model=List[AnswerChoiceSchema])
 def get_answer_choices(
-    request: Request,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
+    request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     """
     Retrieve a list of answer choices.
@@ -117,11 +134,10 @@ def get_answer_choices(
     answer_choices = read_answer_choices_from_db(db, skip=skip, limit=limit)
     return [AnswerChoiceSchema.model_validate(ac) for ac in answer_choices]
 
+
 @router.get("/answer-choices/{answer_choice_id}", response_model=AnswerChoiceSchema)
 def get_answer_choice(
-    request: Request,
-    answer_choice_id: int,
-    db: Session = Depends(get_db)
+    request: Request, answer_choice_id: int, db: Session = Depends(get_db)
 ):
     """
     Retrieve a specific answer choice by ID.
@@ -144,15 +160,19 @@ def get_answer_choice(
 
     db_answer_choice = read_answer_choice_from_db(db, answer_choice_id=answer_choice_id)
     if db_answer_choice is None:
-        raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Answer choice with ID {answer_choice_id} not found",
+        )
     return AnswerChoiceSchema.model_validate(db_answer_choice)
+
 
 @router.put("/answer-choices/{answer_choice_id}", response_model=AnswerChoiceSchema)
 def put_answer_choice(
     request: Request,
     answer_choice_id: int,
     answer_choice: AnswerChoiceUpdateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Update a specific answer choice.
@@ -176,18 +196,24 @@ def put_answer_choice(
 
     validated_answer_choice = AnswerChoiceUpdateSchema(**answer_choice.model_dump())
     answer_choice_data = validated_answer_choice.model_dump()
-    updated_answer_choice = update_answer_choice_in_db(db, answer_choice_id, answer_choice_data)
-    
+    updated_answer_choice = update_answer_choice_in_db(
+        db, answer_choice_id, answer_choice_data
+    )
+
     if updated_answer_choice is None:
-        raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
-    
+        raise HTTPException(
+            status_code=404,
+            detail=f"Answer choice with ID {answer_choice_id} not found",
+        )
+
     return AnswerChoiceSchema.model_validate(updated_answer_choice)
 
-@router.delete("/answer-choices/{answer_choice_id}", status_code=status.HTTP_204_NO_CONTENT)
+
+@router.delete(
+    "/answer-choices/{answer_choice_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_answer_choice(
-    request: Request,
-    answer_choice_id: int,
-    db: Session = Depends(get_db)
+    request: Request, answer_choice_id: int, db: Session = Depends(get_db)
 ):
     """
     Delete a specific answer choice.
@@ -210,5 +236,8 @@ def delete_answer_choice(
 
     success = delete_answer_choice_from_db(db, answer_choice_id)
     if not success:
-        raise HTTPException(status_code=404, detail=f"Answer choice with ID {answer_choice_id} not found")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Answer choice with ID {answer_choice_id} not found",
+        )
     return None

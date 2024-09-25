@@ -15,6 +15,7 @@ def test_concept_creation(db_session):
     assert concept.id is not None
     assert concept.name == "Pythagorean Theorem"
 
+
 def test_concept_subtopic_relationship(db_session):
     concept = ConceptModel(name="Binomial Theorem")
     subtopic = SubtopicModel(name="Algebraic Theorems")
@@ -24,6 +25,7 @@ def test_concept_subtopic_relationship(db_session):
 
     assert subtopic in concept.subtopics
     assert concept in subtopic.concepts
+
 
 def test_concept_questions_relationship(db_session, test_model_questions):
     concept = ConceptModel(name="Logarithms")
@@ -35,6 +37,7 @@ def test_concept_questions_relationship(db_session, test_model_questions):
     assert test_model_questions[0] in concept.questions
     assert test_model_questions[1] in concept.questions
 
+
 def test_concept_required_fields(db_session):
     # Test missing name
     with pytest.raises(IntegrityError):
@@ -42,6 +45,7 @@ def test_concept_required_fields(db_session):
         db_session.add(concept)
         db_session.commit()
     db_session.rollback()
+
 
 def test_concept_repr(db_session):
     concept = ConceptModel(name="Quadratic Formula")

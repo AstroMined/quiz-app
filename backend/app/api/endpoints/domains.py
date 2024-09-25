@@ -25,23 +25,27 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from backend.app.crud.crud_domains import (create_domain_in_db,
-                                           delete_domain_from_db,
-                                           read_domain_from_db,
-                                           read_domains_from_db,
-                                           update_domain_in_db)
+from backend.app.crud.crud_domains import (
+    create_domain_in_db,
+    delete_domain_from_db,
+    read_domain_from_db,
+    read_domains_from_db,
+    update_domain_in_db,
+)
 from backend.app.db.session import get_db
-from backend.app.schemas.domains import (DomainCreateSchema, DomainSchema,
-                                         DomainUpdateSchema)
+from backend.app.schemas.domains import (
+    DomainCreateSchema,
+    DomainSchema,
+    DomainUpdateSchema,
+)
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
 
 router = APIRouter()
 
+
 @router.post("/domains/", response_model=DomainSchema, status_code=201)
 def post_domain(
-    request: Request,
-    domain: DomainCreateSchema,
-    db: Session = Depends(get_db)
+    request: Request, domain: DomainCreateSchema, db: Session = Depends(get_db)
 ):
     """
     Create a new domain.
@@ -68,12 +72,10 @@ def post_domain(
     created_domain = create_domain_in_db(db=db, domain_data=domain_data)
     return DomainSchema.model_validate(created_domain)
 
+
 @router.get("/domains/", response_model=List[DomainSchema])
 def get_domains(
-    request: Request,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
+    request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     """
     Retrieve a list of domains.
@@ -98,12 +100,9 @@ def get_domains(
     domains = read_domains_from_db(db, skip=skip, limit=limit)
     return [DomainSchema.model_validate(d) for d in domains]
 
+
 @router.get("/domains/{domain_id}", response_model=DomainSchema)
-def get_domain(
-    request: Request,
-    domain_id: int,
-    db: Session = Depends(get_db)
-):
+def get_domain(request: Request, domain_id: int, db: Session = Depends(get_db)):
     """
     Retrieve a specific domain by ID.
 
@@ -128,12 +127,13 @@ def get_domain(
         raise HTTPException(status_code=404, detail="Domain not found")
     return DomainSchema.model_validate(db_domain)
 
+
 @router.put("/domains/{domain_id}", response_model=DomainSchema)
 def put_domain(
     request: Request,
     domain_id: int,
     domain: DomainUpdateSchema,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Update a specific domain.
@@ -162,12 +162,9 @@ def put_domain(
         raise HTTPException(status_code=404, detail="Domain not found")
     return DomainSchema.model_validate(updated_domain)
 
+
 @router.delete("/domains/{domain_id}", status_code=204)
-def delete_domain(
-    request: Request,
-    domain_id: int,
-    db: Session = Depends(get_db)
-):
+def delete_domain(request: Request, domain_id: int, db: Session = Depends(get_db)):
     """
     Delete a specific domain.
 

@@ -14,14 +14,21 @@ class PermissionModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(String(200))
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     # Relationships
     roles = relationship(
         "RoleModel",
         secondary=RoleToPermissionAssociation.__tablename__,
-        back_populates="permissions"
+        back_populates="permissions",
     )
 
     def __repr__(self):

@@ -3,17 +3,19 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.app.schemas.subjects import (SubjectBaseSchema,
-                                          SubjectCreateSchema, SubjectSchema,
-                                          SubjectUpdateSchema)
+from backend.app.schemas.subjects import (
+    SubjectBaseSchema,
+    SubjectCreateSchema,
+    SubjectSchema,
+    SubjectUpdateSchema,
+)
 
 
 def test_subject_base_schema_valid():
-    data = {
-        "name": "Mathematics"
-    }
+    data = {"name": "Mathematics"}
     schema = SubjectBaseSchema(**data)
     assert schema.name == "Mathematics"
+
 
 def test_subject_base_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
@@ -24,28 +26,23 @@ def test_subject_base_schema_validation():
         SubjectBaseSchema(name="a" * 101)
     assert "String should have at most 100 characters" in str(exc_info.value)
 
+
 def test_subject_create_schema():
-    data = {
-        "name": "Physics",
-        "discipline_ids": [1, 2],
-        "topic_ids": [3, 4, 5]
-    }
+    data = {"name": "Physics", "discipline_ids": [1, 2], "topic_ids": [3, 4, 5]}
     schema = SubjectCreateSchema(**data)
     assert schema.name == "Physics"
     assert schema.discipline_ids == [1, 2]
     assert schema.topic_ids == [3, 4, 5]
+
 
 def test_subject_create_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
         SubjectCreateSchema(name="Physics", discipline_ids=[])
     assert "List should have at least 1 item after validation" in str(exc_info.value)
 
+
 def test_subject_update_schema():
-    data = {
-        "name": "Updated Physics",
-        "discipline_ids": [2, 3],
-        "topic_ids": [4, 5, 6]
-    }
+    data = {"name": "Updated Physics", "discipline_ids": [2, 3], "topic_ids": [4, 5, 6]}
     schema = SubjectUpdateSchema(**data)
     assert schema.name == "Updated Physics"
     assert schema.discipline_ids == [2, 3]
@@ -58,13 +55,21 @@ def test_subject_update_schema():
     assert partial_schema.discipline_ids is None
     assert partial_schema.topic_ids is None
 
+
 def test_subject_schema():
     data = {
         "id": 1,
         "name": "Complete Subject",
-        "disciplines": [{"id": 1, "name": "Discipline 1"}, {"id": 2, "name": "Discipline 2"}],
-        "topics": [{"id": 3, "name": "Topic 1"}, {"id": 4, "name": "Topic 2"}, {"id": 5, "name": "Topic 3"}],
-        "questions": [{"id": 6, "name": "Question 1"}, {"id": 7, "name": "Question 2"}]
+        "disciplines": [
+            {"id": 1, "name": "Discipline 1"},
+            {"id": 2, "name": "Discipline 2"},
+        ],
+        "topics": [
+            {"id": 3, "name": "Topic 1"},
+            {"id": 4, "name": "Topic 2"},
+            {"id": 5, "name": "Topic 3"},
+        ],
+        "questions": [{"id": 6, "name": "Question 1"}, {"id": 7, "name": "Question 2"}],
     }
     schema = SubjectSchema(**data)
     assert schema.id == 1
@@ -79,6 +84,7 @@ def test_subject_schema():
     assert schema.topics[2]["id"] == 5
     assert schema.questions[0]["id"] == 6
     assert schema.questions[1]["id"] == 7
+
 
 def test_subject_schema_from_attributes(db_session, test_model_subject):
     schema = SubjectSchema.model_validate(test_model_subject)

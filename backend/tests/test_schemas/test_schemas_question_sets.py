@@ -3,22 +3,25 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.app.schemas.question_sets import (QuestionSetBaseSchema,
-                                               QuestionSetCreateSchema,
-                                               QuestionSetSchema,
-                                               QuestionSetUpdateSchema)
+from backend.app.schemas.question_sets import (
+    QuestionSetBaseSchema,
+    QuestionSetCreateSchema,
+    QuestionSetSchema,
+    QuestionSetUpdateSchema,
+)
 
 
 def test_question_set_base_schema_valid():
     data = {
         "name": "Math Quiz Set",
         "description": "A set of math questions",
-        "is_public": True
+        "is_public": True,
     }
     schema = QuestionSetBaseSchema(**data)
     assert schema.name == "Math Quiz Set"
     assert schema.description == "A set of math questions"
     assert schema.is_public is True
+
 
 def test_question_set_base_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
@@ -30,8 +33,14 @@ def test_question_set_base_schema_validation():
     assert "String should have at most 200 characters" in str(exc_info.value)
 
     with pytest.raises(ValidationError) as exc_info:
-        QuestionSetBaseSchema(name="Invalid@Set", description="Invalid set", is_public=True)
-    assert "Question set name can only contain alphanumeric characters, hyphens, underscores, and spaces" in str(exc_info.value)
+        QuestionSetBaseSchema(
+            name="Invalid@Set", description="Invalid set", is_public=True
+        )
+    assert (
+        "Question set name can only contain alphanumeric characters, hyphens, underscores, and spaces"
+        in str(exc_info.value)
+    )
+
 
 def test_question_set_create_schema(test_model_user):
     data = {
@@ -40,7 +49,7 @@ def test_question_set_create_schema(test_model_user):
         "is_public": False,
         "creator_id": test_model_user.id,
         "question_ids": [1, 2, 3],
-        "group_ids": [1, 2]
+        "group_ids": [1, 2],
     }
     schema = QuestionSetCreateSchema(**data)
     assert schema.name == "Science Quiz Set"
@@ -50,13 +59,14 @@ def test_question_set_create_schema(test_model_user):
     assert schema.question_ids == [1, 2, 3]
     assert schema.group_ids == [1, 2]
 
+
 def test_question_set_update_schema():
     data = {
         "name": "Updated Quiz Set",
         "description": "This set has been updated",
         "is_public": True,
         "question_ids": [4, 5, 6],
-        "group_ids": [3, 4]
+        "group_ids": [3, 4],
     }
     schema = QuestionSetUpdateSchema(**data)
     assert schema.name == "Updated Quiz Set"
@@ -74,6 +84,7 @@ def test_question_set_update_schema():
     assert partial_schema.question_ids is None
     assert partial_schema.group_ids is None
 
+
 def test_question_set_schema():
     data = {
         "id": 1,
@@ -82,7 +93,7 @@ def test_question_set_schema():
         "is_public": True,
         "creator_id": 1,
         "questions": [{"id": 1, "name": "Question 1"}, {"id": 2, "name": "Question 2"}],
-        "groups": [{"id": 1, "name": "Group 1"}, {"id": 2, "name": "Group 2"}]
+        "groups": [{"id": 1, "name": "Group 1"}, {"id": 2, "name": "Group 2"}],
     }
     schema = QuestionSetSchema(**data)
     assert schema.id == 1
@@ -94,6 +105,7 @@ def test_question_set_schema():
     assert len(schema.groups) == 2
     assert schema.questions[0]["id"] == 1
     assert schema.groups[0]["id"] == 1
+
 
 def test_question_set_schema_from_attributes(test_model_question_set):
     schema = QuestionSetSchema.model_validate(test_model_question_set)

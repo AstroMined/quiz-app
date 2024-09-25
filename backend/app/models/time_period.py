@@ -2,8 +2,8 @@
 
 from sqlalchemy import Column, Integer, String
 
-from backend.app.db.base import Base
 from backend.app.core.config import TimePeriod
+from backend.app.db.base import Base
 
 
 class TimePeriodModel(Base):

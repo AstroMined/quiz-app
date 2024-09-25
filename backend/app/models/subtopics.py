@@ -12,9 +12,21 @@ class SubtopicModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True)
 
-    topics = relationship("TopicModel", secondary="topic_to_subtopic_association", back_populates="subtopics")
-    concepts = relationship("ConceptModel", secondary="subtopic_to_concept_association", back_populates="subtopics")
-    questions = relationship("QuestionModel", secondary="question_to_subtopic_association", back_populates="subtopics")
+    topics = relationship(
+        "TopicModel",
+        secondary="topic_to_subtopic_association",
+        back_populates="subtopics",
+    )
+    concepts = relationship(
+        "ConceptModel",
+        secondary="subtopic_to_concept_association",
+        back_populates="subtopics",
+    )
+    questions = relationship(
+        "QuestionModel",
+        secondary="question_to_subtopic_association",
+        back_populates="subtopics",
+    )
 
     def __repr__(self):
         return f"<Subtopic(id={self.id}, name='{self.name}')>"

@@ -1,6 +1,6 @@
 # filename: backend/app/models/users.py
 
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -21,11 +21,21 @@ class UserModel(Base):
 
     # Relationships
     role = relationship("RoleModel", back_populates="users")
-    responses = relationship("UserResponseModel", back_populates="user", cascade="all, delete-orphan")
-    groups = relationship("GroupModel", secondary="user_to_group_association", back_populates="users")
-    leaderboards = relationship("LeaderboardModel", back_populates="user", cascade="all, delete-orphan")
-    created_groups = relationship("GroupModel", back_populates="creator", cascade="all, delete-orphan")
-    created_question_sets = relationship("QuestionSetModel", back_populates="creator", cascade="all, delete-orphan")
+    responses = relationship(
+        "UserResponseModel", back_populates="user", cascade="all, delete-orphan"
+    )
+    groups = relationship(
+        "GroupModel", secondary="user_to_group_association", back_populates="users"
+    )
+    leaderboards = relationship(
+        "LeaderboardModel", back_populates="user", cascade="all, delete-orphan"
+    )
+    created_groups = relationship(
+        "GroupModel", back_populates="creator", cascade="all, delete-orphan"
+    )
+    created_question_sets = relationship(
+        "QuestionSetModel", back_populates="creator", cascade="all, delete-orphan"
+    )
     created_questions = relationship("QuestionModel", back_populates="creator")
 
     def __repr__(self):

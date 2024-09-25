@@ -21,14 +21,15 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
+from backend.app.core.config import DifficultyLevel
 from backend.app.crud.crud_filters import read_filtered_questions_from_db
 from backend.app.db.session import get_db
 from backend.app.schemas.filters import FilterParamsSchema
 from backend.app.schemas.questions import QuestionSchema
 from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
-from backend.app.core.config import DifficultyLevel
 
 router = APIRouter()
+
 
 async def forbid_extra_params(request: Request):
     """
@@ -42,11 +43,22 @@ async def forbid_extra_params(request: Request):
     Raises:
         HTTPException: If unexpected parameters are found in the request.
     """
-    allowed_params = {'subject', 'topic', 'subtopic', 'difficulty', 'question_tags', 'skip', 'limit'}
+    allowed_params = {
+        "subject",
+        "topic",
+        "subtopic",
+        "difficulty",
+        "question_tags",
+        "skip",
+        "limit",
+    }
     actual_params = set(request.query_params.keys())
     extra_params = actual_params - allowed_params
     if extra_params:
-        raise HTTPException(status_code=422, detail=f"Unexpected parameters provided: {extra_params}")
+        raise HTTPException(
+            status_code=422, detail=f"Unexpected parameters provided: {extra_params}"
+        )
+
 
 @router.get("/questions/filter", response_model=List[QuestionSchema], status_code=200)
 async def filter_questions(
@@ -58,7 +70,7 @@ async def filter_questions(
     question_tags: Optional[List[str]] = Query(None),
     db: Session = Depends(get_db),
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
 ):
     """
     Retrieve a list of filtered questions.
@@ -88,28 +100,27 @@ async def filter_questions(
     get_current_user_or_error(request)
 
     await forbid_extra_params(request)
-    
+
     # Convert difficulty string to DifficultyLevel enum
     difficulty_enum = None
     if difficulty:
         try:
             difficulty_enum = DifficultyLevel[difficulty.upper()]
         except KeyError:
-            raise HTTPException(status_code=400, detail=f"Invalid difficulty level: {difficulty}")
-    
+            raise HTTPException(
+                status_code=400, detail=f"Invalid difficulty level: {difficulty}"
+            )
+
     filters = FilterParamsSchema(
         subject=subject,
         topic=topic,
         subtopic=subtopic,
         difficulty=difficulty_enum,
-        question_tags=question_tags
+        question_tags=question_tags,
     )
-    
+
     questions = read_filtered_questions_from_db(
-        db=db,
-        filters=filters.model_dump(),
-        skip=skip,
-        limit=limit
+        db=db, filters=filters.model_dump(), skip=skip, limit=limit
     )
-    
+
     return [QuestionSchema.model_validate(q) for q in questions] if questions else []

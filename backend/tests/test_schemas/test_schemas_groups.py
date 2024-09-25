@@ -3,18 +3,20 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.app.schemas.groups import (GroupBaseSchema, GroupCreateSchema,
-                                        GroupSchema, GroupUpdateSchema)
+from backend.app.schemas.groups import (
+    GroupBaseSchema,
+    GroupCreateSchema,
+    GroupSchema,
+    GroupUpdateSchema,
+)
 
 
 def test_group_base_schema_valid():
-    data = {
-        "name": "Test Group",
-        "description": "This is a test group"
-    }
+    data = {"name": "Test Group", "description": "This is a test group"}
     schema = GroupBaseSchema(**data)
     assert schema.name == "Test Group"
     assert schema.description == "This is a test group"
+
 
 def test_group_base_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
@@ -27,24 +29,26 @@ def test_group_base_schema_validation():
 
     with pytest.raises(ValidationError) as exc_info:
         GroupBaseSchema(name="Invalid@Group", description="Invalid group")
-    assert "Group name can only contain alphanumeric characters, hyphens, underscores, and spaces" in str(exc_info.value)
+    assert (
+        "Group name can only contain alphanumeric characters, hyphens, underscores, and spaces"
+        in str(exc_info.value)
+    )
+
 
 def test_group_create_schema(test_model_user):
     data = {
         "name": "New Group",
         "description": "This is a new group",
-        "creator_id": test_model_user.id
+        "creator_id": test_model_user.id,
     }
     schema = GroupCreateSchema(**data)
     assert schema.name == "New Group"
     assert schema.description == "This is a new group"
     assert schema.creator_id == test_model_user.id
 
+
 def test_group_update_schema():
-    data = {
-        "name": "Updated Group",
-        "description": "This group has been updated"
-    }
+    data = {"name": "Updated Group", "description": "This group has been updated"}
     schema = GroupUpdateSchema(**data)
     assert schema.name == "Updated Group"
     assert schema.description == "This group has been updated"
@@ -55,6 +59,7 @@ def test_group_update_schema():
     assert partial_schema.name == "Partially Updated Group"
     assert partial_schema.description is None
 
+
 def test_group_schema(test_model_user):
     data = {
         "id": 1,
@@ -62,7 +67,11 @@ def test_group_schema(test_model_user):
         "description": "This is a complete group",
         "creator_id": test_model_user.id,
         "users": [{"id": test_model_user.id, "name": "Test User"}],
-        "question_sets": [{"id": 1, "name": "Question Set 1"}, {"id": 2, "name": "Question Set 2"}, {"id": 3, "name": "Question Set 3"}]
+        "question_sets": [
+            {"id": 1, "name": "Question Set 1"},
+            {"id": 2, "name": "Question Set 2"},
+            {"id": 3, "name": "Question Set 3"},
+        ],
     }
     schema = GroupSchema(**data)
     assert schema.id == 1
@@ -73,6 +82,7 @@ def test_group_schema(test_model_user):
     assert schema.users[0]["id"] == test_model_user.id
     assert len(schema.question_sets) == 3
     assert [qs["id"] for qs in schema.question_sets] == [1, 2, 3]
+
 
 def test_group_schema_from_attributes(test_model_group):
     schema = GroupSchema.model_validate(test_model_group)

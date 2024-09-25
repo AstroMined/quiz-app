@@ -16,6 +16,7 @@ def test_topic_creation(db_session):
     assert topic.id is not None
     assert topic.name == "Algebra"
 
+
 def test_topic_subject_relationship(db_session):
     topic = TopicModel(name="Geometry")
     subject = SubjectModel(name="Mathematics")
@@ -25,6 +26,7 @@ def test_topic_subject_relationship(db_session):
 
     assert subject in topic.subjects
     assert topic in subject.topics
+
 
 def test_topic_subtopics_relationship(db_session):
     topic = TopicModel(name="Calculus")
@@ -36,6 +38,7 @@ def test_topic_subtopics_relationship(db_session):
     assert subtopic in topic.subtopics
     assert topic in subtopic.topics
 
+
 def test_topic_questions_relationship(db_session, test_model_questions):
     topic = TopicModel(name="Statistics")
     topic.questions.extend(test_model_questions[:2])
@@ -46,6 +49,7 @@ def test_topic_questions_relationship(db_session, test_model_questions):
     assert test_model_questions[0] in topic.questions
     assert test_model_questions[1] in topic.questions
 
+
 def test_topic_required_fields(db_session):
     # Test missing name
     with pytest.raises(IntegrityError):
@@ -53,6 +57,7 @@ def test_topic_required_fields(db_session):
         db_session.add(topic)
         db_session.commit()
     db_session.rollback()
+
 
 def test_topic_repr(db_session):
     topic = TopicModel(name="Trigonometry")

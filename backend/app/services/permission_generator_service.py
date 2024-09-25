@@ -19,12 +19,15 @@ def generate_permissions(app: FastAPI):
         if hasattr(route, "methods"):
             for method in route.methods:
                 if method in method_map:
-                    path = route.path.replace("/", "_").replace("{", "").replace("}", "")
+                    path = (
+                        route.path.replace("/", "_").replace("{", "").replace("}", "")
+                    )
                     if path not in settings_core.UNPROTECTED_ENDPOINTS:
                         permission = f"{method_map[method]}_{path}"
                         permissions.add(permission)
 
     return permissions
+
 
 def ensure_permissions_in_db(db, permissions):
     existing_permissions = set(p.name for p in db.query(PermissionModel).all())

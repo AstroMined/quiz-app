@@ -12,7 +12,11 @@ class DomainModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
 
-    disciplines = relationship("DisciplineModel", secondary="domain_to_discipline_association", back_populates="domains")
+    disciplines = relationship(
+        "DisciplineModel",
+        secondary="domain_to_discipline_association",
+        back_populates="domains",
+    )
 
     def __repr__(self):
         return f"<Domain(id={self.id}, name='{self.name}')>"

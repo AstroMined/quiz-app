@@ -3,35 +3,40 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.app.schemas.concepts import (ConceptBaseSchema,
-                                          ConceptCreateSchema, ConceptSchema,
-                                          ConceptUpdateSchema)
+from backend.app.schemas.concepts import (
+    ConceptBaseSchema,
+    ConceptCreateSchema,
+    ConceptSchema,
+    ConceptUpdateSchema,
+)
 
 
 def test_concept_base_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
         ConceptBaseSchema(name="")
     assert "Concept name cannot be empty or whitespace" in str(exc_info.value)
-    
+
     with pytest.raises(ValidationError) as exc_info:
         ConceptBaseSchema(name="a" * 101)
     assert "String should have at most 100 characters" in str(exc_info.value)
-    
+
     valid_concept = ConceptBaseSchema(name="Valid Concept")
     assert valid_concept.name == "Valid Concept"
+
 
 def test_concept_create_schema():
     with pytest.raises(ValidationError) as exc_info:
         ConceptCreateSchema(name="Valid Concept", subtopic_ids=[])
     assert "List should have at least 1 item after validation" in str(exc_info.value)
-    
+
     with pytest.raises(ValidationError) as exc_info:
         ConceptCreateSchema(name="Valid Concept", subtopic_ids=[1, 1])
     assert "Subtopic IDs must be unique" in str(exc_info.value)
-    
+
     valid_concept = ConceptCreateSchema(name="Valid Concept", subtopic_ids=[1, 2, 3])
     assert valid_concept.name == "Valid Concept"
     assert valid_concept.subtopic_ids == [1, 2, 3]
+
 
 def test_concept_update_schema():
     valid_update = ConceptUpdateSchema(name="Updated Concept", subtopic_ids=[1, 2, 3])
@@ -47,8 +52,14 @@ def test_concept_update_schema():
     assert "Concept name cannot be empty or whitespace" in str(exc_info.value)
     assert "Subtopic IDs must be unique" in str(exc_info.value)
 
+
 def test_concept_schema():
-    concept = ConceptSchema(id=1, name="Test Concept", subtopics=[{"id": 1, "name": "Subtopic 1"}, {"id": 2, "name": "Subtopic 2"}], questions=[{"id": 3, "name": "Question 1"}, {"id": 4, "name": "Question 2"}])
+    concept = ConceptSchema(
+        id=1,
+        name="Test Concept",
+        subtopics=[{"id": 1, "name": "Subtopic 1"}, {"id": 2, "name": "Subtopic 2"}],
+        questions=[{"id": 3, "name": "Question 1"}, {"id": 4, "name": "Question 2"}],
+    )
     assert concept.id == 1
     assert concept.name == "Test Concept"
     assert len(concept.subtopics) == 2
@@ -61,6 +72,7 @@ def test_concept_schema():
     assert concept.subtopics[1]["name"] == "Subtopic 2"
     assert concept.questions[0]["name"] == "Question 1"
     assert concept.questions[1]["name"] == "Question 2"
+
 
 def test_concept_schema_from_attributes(test_model_concept):
     schema = ConceptSchema.model_validate(test_model_concept)

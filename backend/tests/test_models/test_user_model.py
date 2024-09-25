@@ -19,7 +19,7 @@ def test_user_model_creation(db_session, test_model_permissions):
         username="testuser",
         email="testuser@example.com",
         hashed_password="hashed_password",
-        role_id=role.id
+        role_id=role.id,
     )
     db_session.add(user)
     db_session.commit()
@@ -32,6 +32,7 @@ def test_user_model_creation(db_session, test_model_permissions):
     assert user.is_admin == False
     assert user.role.name == "user"
 
+
 def test_user_model_unique_constraints(db_session):
     # Create a role first
     role = RoleModel(name="user", description="Regular user")
@@ -42,7 +43,7 @@ def test_user_model_unique_constraints(db_session):
         username="testuser",
         email="testuser@example.com",
         hashed_password="hashed_password",
-        role_id=role.id
+        role_id=role.id,
     )
     db_session.add(user1)
     db_session.commit()
@@ -53,7 +54,7 @@ def test_user_model_unique_constraints(db_session):
             username="testuser",
             email="testuser2@example.com",
             hashed_password="hashed_password",
-            role_id=role.id
+            role_id=role.id,
         )
         db_session.add(user2)
         db_session.commit()
@@ -66,12 +67,15 @@ def test_user_model_unique_constraints(db_session):
             username="testuser3",
             email="testuser@example.com",
             hashed_password="hashed_password",
-            role_id=role.id
+            role_id=role.id,
         )
         db_session.add(user3)
         db_session.commit()
 
-def test_user_model_relationships(db_session, test_model_group, test_model_question_set):
+
+def test_user_model_relationships(
+    db_session, test_model_group, test_model_question_set
+):
     # Create a role first
     role = RoleModel(name="user", description="Regular user")
     db_session.add(role)
@@ -81,7 +85,7 @@ def test_user_model_relationships(db_session, test_model_group, test_model_quest
         username="testuser",
         email="testuser@example.com",
         hashed_password="hashed_password",
-        role_id=role.id
+        role_id=role.id,
     )
     db_session.add(user)
     db_session.commit()
@@ -103,6 +107,7 @@ def test_user_model_relationships(db_session, test_model_group, test_model_quest
     db_session.commit()
     assert created_question_set in user.created_question_sets
 
+
 def test_user_model_repr(db_session):
     # Create a role first
     role = RoleModel(name="user", description="Regular user")
@@ -113,9 +118,12 @@ def test_user_model_repr(db_session):
         username="testuser",
         email="testuser@example.com",
         hashed_password="hashed_password",
-        role_id=role.id
+        role_id=role.id,
     )
     db_session.add(user)
     db_session.commit()
 
-    assert repr(user) == f"<User(id={user.id}, username='testuser', email='testuser@example.com', role_id='1')>"
+    assert (
+        repr(user)
+        == f"<User(id={user.id}, username='testuser', email='testuser@example.com', role_id='1')>"
+    )

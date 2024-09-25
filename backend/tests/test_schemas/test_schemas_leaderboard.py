@@ -3,37 +3,32 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.app.schemas.leaderboard import (LeaderboardBaseSchema,
-                                             LeaderboardCreateSchema,
-                                             LeaderboardSchema,
-                                             LeaderboardUpdateSchema,
-                                             TimePeriodSchema)
+from backend.app.schemas.leaderboard import (
+    LeaderboardBaseSchema,
+    LeaderboardCreateSchema,
+    LeaderboardSchema,
+    LeaderboardUpdateSchema,
+    TimePeriodSchema,
+)
 
 
 def test_leaderboard_base_schema_valid():
-    data = {
-        "user_id": 1,
-        "score": 100,
-        "time_period_id": 1
-    }
+    data = {"user_id": 1, "score": 100, "time_period_id": 1}
     schema = LeaderboardBaseSchema(**data)
     assert schema.user_id == 1
     assert schema.score == 100
     assert schema.time_period_id == 1
     assert schema.group_id is None
 
+
 def test_leaderboard_base_schema_with_group():
-    data = {
-        "user_id": 1,
-        "score": 100,
-        "time_period_id": 1,
-        "group_id": 5
-    }
+    data = {"user_id": 1, "score": 100, "time_period_id": 1, "group_id": 5}
     schema = LeaderboardBaseSchema(**data)
     assert schema.user_id == 1
     assert schema.score == 100
     assert schema.time_period_id == 1
     assert schema.group_id == 5
+
 
 def test_leaderboard_base_schema_validation():
     with pytest.raises(ValidationError) as exc_info:
@@ -44,25 +39,21 @@ def test_leaderboard_base_schema_validation():
         LeaderboardBaseSchema(user_id=1, score=-1, time_period_id=1)
     assert "Input should be greater than or equal to 0" in str(exc_info.value)
 
+
 def test_leaderboard_create_schema():
-    data = {
-        "user_id": 1,
-        "score": 100,
-        "time_period_id": 1,
-        "group_id": 5
-    }
+    data = {"user_id": 1, "score": 100, "time_period_id": 1, "group_id": 5}
     schema = LeaderboardCreateSchema(**data)
     assert schema.user_id == 1
     assert schema.score == 100
     assert schema.time_period_id == 1
     assert schema.group_id == 5
 
+
 def test_leaderboard_update_schema():
-    data = {
-        "score": 150
-    }
+    data = {"score": 150}
     schema = LeaderboardUpdateSchema(**data)
     assert schema.score == 150
+
 
 def test_leaderboard_schema():
     time_period = TimePeriodSchema(id=1, name="daily")
@@ -72,7 +63,7 @@ def test_leaderboard_schema():
         "score": 100,
         "time_period": time_period,
         "time_period_id": time_period.id,
-        "group_id": 5
+        "group_id": 5,
     }
     schema = LeaderboardSchema(**data)
     assert schema.id == 1
@@ -80,6 +71,7 @@ def test_leaderboard_schema():
     assert schema.score == 100
     assert schema.time_period == time_period
     assert schema.group_id == 5
+
 
 def test_leaderboard_schema_from_attributes(db_session, test_model_user):
     from backend.app.models.leaderboard import LeaderboardModel
@@ -93,7 +85,7 @@ def test_leaderboard_schema_from_attributes(db_session, test_model_user):
         user_id=test_model_user.id,
         score=100,
         time_period_id=time_period.id,
-        group_id=None
+        group_id=None,
     )
     db_session.add(leaderboard_entry)
     db_session.commit()
@@ -107,11 +99,9 @@ def test_leaderboard_schema_from_attributes(db_session, test_model_user):
     assert schema.time_period.name == "daily"
     assert schema.group_id is None
 
+
 def test_time_period_schema():
-    data = {
-        "id": 1,
-        "name": "daily"
-    }
+    data = {"id": 1, "name": "daily"}
     schema = TimePeriodSchema(**data)
     assert schema.id == 1
     assert schema.name == "daily"
