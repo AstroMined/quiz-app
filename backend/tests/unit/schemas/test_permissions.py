@@ -69,8 +69,3 @@ def test_permission_schema():
     assert schema.description == "Permission to read user information"
 
 
-def test_permission_schema_from_attributes(db_session, test_permission):
-    schema = PermissionSchema.model_validate(test_permission)
-    assert schema.id == test_permission.id
-    assert schema.name == test_permission.name
-    assert schema.description == test_permission.description

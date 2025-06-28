@@ -57,7 +57,3 @@ def test_question_tag_schema():
     assert schema.tag == "biology"
 
 
-def test_question_tag_schema_from_attributes(db_session, test_model_tag):
-    schema = QuestionTagSchema.model_validate(test_model_tag)
-    assert schema.id == test_model_tag.id
-    assert schema.tag == test_model_tag.tag.lower()

@@ -68,3 +68,11 @@ def test_question_tag_repr(db_session):
 
     expected_repr = f"<QuestionTagModel(id={tag.id}, tag='biology')>"
     assert repr(tag) == expected_repr
+
+
+def test_question_tag_schema_from_attributes(db_session, test_model_tag):
+    from backend.app.schemas.question_tags import QuestionTagSchema
+    
+    schema = QuestionTagSchema.model_validate(test_model_tag)
+    assert schema.id == test_model_tag.id
+    assert schema.tag == test_model_tag.tag.lower()
