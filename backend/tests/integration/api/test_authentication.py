@@ -71,7 +71,7 @@ def test_protected_endpoint_with_expired_token(client, test_model_user, monkeypa
     response = client.get("/users/me", headers=headers)
     logger.debug("Response: %s", response.json())
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert "Token has expired" in response.json()["detail"]
+    assert "Token has been revoked" in response.json()["detail"]
 
 
 @pytest.mark.parametrize(
