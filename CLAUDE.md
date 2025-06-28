@@ -299,6 +299,11 @@ When completing a coding session, follow this procedure based on the current bra
    - Create a commit with a structured message following the format below
    - DO NOT update version numbers or CHANGELOG.md in feature branches
 
+3. **Push Changes to Remote**
+   - Push the feature branch to the remote repository using `git push`
+   - If this is the first push for a new branch, use `git push -u origin branch-name`
+   - For existing branches, use `git push` to update the remote with your commits
+
 ### Commit Message Structure for Feature Branches
 
 ```markdown
@@ -313,7 +318,7 @@ When completing a coding session, follow this procedure based on the current bra
 
 Types: `[Add]`, `[Fix]`, `[Update]`, `[Refactor]`, `[Remove]`, etc.
 
-Example commit command for feature branches:
+Example workflow for feature branches:
 
 ```bash
 # Include all modified files
@@ -325,6 +330,9 @@ git commit -m "[Add] Question Management: Implement question model and validatio
 - Added CRUD operations for question management
 
 Implements the foundation for quiz question handling"
+
+# Push to remote repository
+git push  # or git push -u origin feature-branch-name for first push
 ```
 
 ### For Dev Branch Merges
