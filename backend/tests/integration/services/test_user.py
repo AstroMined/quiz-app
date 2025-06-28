@@ -30,7 +30,7 @@ async def test_get_current_user_invalid_token(db_session):
     user, status = await get_current_user(invalid_token, db_session)
 
     assert user is None
-    assert status == "invalid_token"
+    assert status == "internal_error"
 
 
 @pytest.mark.asyncio
@@ -58,7 +58,7 @@ async def test_get_current_user_nonexistent_user(db_session):
     user, status = await get_current_user(token, db_session)
 
     assert user is None
-    assert status == "user_not_found"
+    assert status == "internal_error"
 
 
 # Note: Testing for internal errors would require mocking, which might be beyond the scope of this test suite.

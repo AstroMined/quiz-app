@@ -39,6 +39,7 @@ class SettingsCore(BaseSettings):
     UNPROTECTED_ENDPOINTS: List[str]
     CORS_ORIGINS: List[str]
     ENVIRONMENT: str
+    ALGORITHM: str = "HS256"  # JWT algorithm, default to HS256
     SENTRY_DSN: str = ""  # Optional, empty string as default
 
     class Config:

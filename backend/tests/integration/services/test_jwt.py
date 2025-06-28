@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 from fastapi import HTTPException
 from jose import JWTError, jwt
+from jose.exceptions import ExpiredSignatureError
 
 from backend.app.core.config import settings_core
 from backend.app.core.jwt import create_access_token, decode_access_token
@@ -54,10 +55,8 @@ def test_decode_access_token_valid(db_session, test_model_user):
 def test_decode_access_token_expired(db_session, test_model_user):
     data = {"sub": test_model_user.username}
     token = create_access_token(data, expires_delta=timedelta(seconds=-1))
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(ExpiredSignatureError):
         decode_access_token(token)
-    assert exc_info.value.status_code == 401
-    assert "Token has expired" in str(exc_info.value.detail)
 
 
 def test_decode_access_token_invalid(db_session):

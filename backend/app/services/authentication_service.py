@@ -36,4 +36,6 @@ def revoke_all_user_tokens(db: Session, user_id: int):
     Returns:
         None
     """
-    revoke_all_tokens_for_user(db, user_id)
+    # For service layer, we pass empty list since we don't track active tokens
+    # In production, this would need to retrieve actual active tokens
+    revoke_all_tokens_for_user(db, user_id, [])

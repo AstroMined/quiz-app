@@ -14,7 +14,12 @@ from backend.app.models.users import UserModel
 
 
 def get_user_permissions(db: Session, user: UserModel) -> List[str]:
-    role = db.query(RoleModel).filter(RoleModel.name == user.role).first()
+    # Use the role relationship or fetch by role_id if not loaded
+    if user.role:
+        role = user.role
+    else:
+        role = db.query(RoleModel).filter(RoleModel.id == user.role_id).first()
+    
     if role:
         return [permission.name for permission in role.permissions]
     return []

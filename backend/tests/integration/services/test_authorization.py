@@ -22,7 +22,10 @@ def test_get_user_permissions(db_session):
 
     # Create a user with the test role
     user = UserModel(
-        username="testuser", email="testuser@example.com", role="Test Role"
+        username="testuser", 
+        email="testuser@example.com", 
+        hashed_password="hashed_password_123",
+        role_id=role.id
     )
     db_session.add(user)
     db_session.commit()

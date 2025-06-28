@@ -68,6 +68,7 @@ def leaderboard_to_schema(leaderboard_model):
         id=leaderboard_model.id,
         user_id=leaderboard_model.user_id,
         score=leaderboard_model.score,
+        time_period_id=leaderboard_model.time_period_id,
         time_period=time_period_to_schema(leaderboard_model.time_period),
         group_id=leaderboard_model.group_id,
     )

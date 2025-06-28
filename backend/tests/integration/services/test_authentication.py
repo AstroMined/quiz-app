@@ -10,7 +10,7 @@ from backend.app.services.authentication_service import (
 )
 
 
-def test_authenticate_user(db_session):
+def test_authenticate_user(db_session, test_model_role):
     # Create a test user
     hashed_password = get_password_hash("testpassword")
     user = UserModel(
@@ -18,6 +18,7 @@ def test_authenticate_user(db_session):
         email="testuser@example.com",
         hashed_password=hashed_password,
         is_active=True,
+        role_id=test_model_role.id,
     )
     db_session.add(user)
     db_session.commit()
@@ -39,9 +40,15 @@ def test_authenticate_user(db_session):
     assert authenticate_user(db_session, "testuser", "testpassword") is False
 
 
-def test_revoke_all_user_tokens(db_session):
+def test_revoke_all_user_tokens(db_session, test_model_role):
     # Create a test user
-    user = UserModel(username="testuser", email="testuser@example.com")
+    hashed_password = get_password_hash("testpassword")
+    user = UserModel(
+        username="testuser",
+        email="testuser@example.com",
+        hashed_password=hashed_password,
+        role_id=test_model_role.id,
+    )
     db_session.add(user)
     db_session.commit()
 
