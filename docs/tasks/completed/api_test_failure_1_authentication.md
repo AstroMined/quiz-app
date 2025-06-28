@@ -98,13 +98,17 @@ FAILED backend/tests/integration/api/test_authentication.py::test_protected_endp
 
 ## Success Criteria
 
-- [ ] `test_protected_endpoint_with_expired_token` passes
-- [ ] All other authentication tests continue to pass
-- [ ] Error messages are consistent and accurate:
+- [x] `test_protected_endpoint_with_expired_token` passes
+- [x] All other authentication tests continue to pass (23/23)
+- [x] Error messages are consistent and accurate:
   - Expired tokens return "Token has expired"
   - Revoked tokens return "Token has been revoked"
   - Invalid tokens return "Could not validate credentials"
-- [ ] No performance regression in authentication flow
+- [x] No performance regression in authentication flow
+
+## ✅ COMPLETED
+**Resolution Date:** 2025-06-28
+**Commit:** `5521170` - [Fix] Authentication: Restore proper error messages for expired vs revoked tokens
 
 ## Testing Commands
 
