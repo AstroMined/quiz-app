@@ -103,31 +103,35 @@ def read_revoked_token_from_db(db: Session, token: str) -> RevokedTokenModel:
 
 def is_token_revoked(db: Session, token: str) -> bool:
     """
-    Check if a token is revoked or invalid.
+    Check if a token is revoked (but NOT expired).
 
     This function decodes the token, checks its validity, and verifies if it's in the 
     revoked tokens table or if it was issued before the user's token blacklist date.
+    
+    Note: This function does NOT handle token expiration - expired tokens should be
+    handled separately to provide appropriate error messages.
 
     Args:
         db (Session): The database session.
         token (str): The full token string to check.
 
     Returns:
-        bool: True if the token is revoked or invalid, False otherwise.
+        bool: True if the token is revoked, False otherwise.
 
     Raises:
-        ExpiredSignatureError: If the token has expired (caught and treated as revoked).
+        ExpiredSignatureError: If the token has expired (not caught - let caller handle).
 
     Usage example:
-        if is_token_revoked(db, "full_token_string"):
-            print("Token is revoked or invalid")
-        else:
-            print("Token is valid")
+        try:
+            if is_token_revoked(db, "full_token_string"):
+                print("Token is revoked")
+            else:
+                print("Token is valid and not revoked")
+        except ExpiredSignatureError:
+            print("Token has expired")
     """
-    try:
-        decoded_token = decode_access_token(token)
-    except ExpiredSignatureError:
-        return True  # Consider expired tokens as revoked
+    # Let ExpiredSignatureError bubble up - don't catch it here
+    decoded_token = decode_access_token(token)
 
     jti = decoded_token.get("jti")
     username = decoded_token.get("sub")

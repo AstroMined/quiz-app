@@ -3,6 +3,7 @@
 from fastapi import HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+from jose import ExpiredSignatureError
 
 from backend.app.core.config import settings_core
 from backend.app.core.jwt import decode_access_token
@@ -33,10 +34,16 @@ class BlacklistMiddleware(BaseHTTPMiddleware):
                     )
 
                 db = next(get_db())
-                if is_token_revoked(db, token):
-                    logger.warning("BlacklistMiddleware: Token has been revoked")
+                try:
+                    if is_token_revoked(db, token):
+                        logger.warning("BlacklistMiddleware: Token has been revoked")
+                        raise HTTPException(
+                            status_code=401, detail="Token has been revoked"
+                        )
+                except ExpiredSignatureError:
+                    logger.warning("BlacklistMiddleware: Token has expired")
                     raise HTTPException(
-                        status_code=401, detail="Token has been revoked"
+                        status_code=401, detail="Token has expired"
                     )
 
                 logger.debug("BlacklistMiddleware: Token is valid")
