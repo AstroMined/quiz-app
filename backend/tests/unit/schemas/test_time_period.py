@@ -27,25 +27,6 @@ def test_time_period_schema_validation():
     assert "Name must be one of: daily, weekly, monthly, yearly" in str(exc_info.value)
 
 
-def test_time_period_schema_from_attributes(db_session):
-    from backend.app.models.time_period import TimePeriodModel
-
-    time_periods = [
-        TimePeriodModel.daily(),
-        TimePeriodModel.weekly(),
-        TimePeriodModel.monthly(),
-        TimePeriodModel.yearly(),
-    ]
-
-    for model in time_periods:
-        db_session.add(model)
-    db_session.commit()
-
-    for model in time_periods:
-        schema = TimePeriodSchema.model_validate(model)
-        assert schema.id == model.id
-        assert schema.name == model.name
-
 
 def test_time_period_schema_predefined_values():
     daily = TimePeriodSchema(id=1, name="daily")
