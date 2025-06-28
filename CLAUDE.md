@@ -249,16 +249,6 @@ Include dependency information to catch breaking changes:
 - **Consistent Style**: Follow the established documentation patterns across modules
 - **Error-Free**: Documentation should not contain broken links or non-existent references
 
-### Audit History
-
-A comprehensive documentation audit was completed on 2025-05-31, achieving:
-- 100% coverage across all 54 applicable directories
-- 96% accuracy rate (52/54 files accurate, 2 fixed)
-- Verification of all critical architectural components
-- Elimination of aspirational content in favor of implementation-based guidance
-
-Refer to `docs/CLAUDE_MD_AUDIT.md` for complete audit details and quality benchmarks.
-
 ## Project Memories
 
 - **CRITICAL: Use UV for ALL Python commands**. Always use `uv run` prefix for Python commands (e.g., `uv run pytest`, `uv run python`, etc.). No need to manually activate virtual environments.
