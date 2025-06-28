@@ -23,7 +23,7 @@ def test_generate_permissions():
         pass
 
     # Add an unprotected endpoint
-    settings_core.UNPROTECTED_ENDPOINTS = ["_test"]
+    settings_core.UNPROTECTED_ENDPOINTS = ["test"]
 
     permissions = generate_permissions(app)
 
@@ -52,5 +52,100 @@ def test_ensure_permissions_in_db(db_session):
     assert db_session.query(PermissionModel).count() == len(new_permissions)
 
 
-# You might need to add more tests depending on the complexity of your FastAPI routes
-# and any edge cases in your permission generation logic
+def test_permission_generation_patterns():
+    """Test permission generation for various route patterns."""
+    app = FastAPI()
+
+    @app.get("/simple")
+    def simple_route():
+        pass
+
+    @app.post("/nested/path")
+    def nested_route():
+        pass
+
+    @app.put("/with/{param}")
+    def parameterized_route():
+        pass
+
+    @app.delete("/api/v1/users")
+    def api_route():
+        pass
+
+    @app.get("/")
+    def root_route():
+        pass
+
+    permissions = generate_permissions(app)
+
+    # Test expected permission formats
+    assert "read_simple" in permissions
+    assert "create_nested_path" in permissions
+    assert "update_with_param" in permissions
+    assert "delete_api_v1_users" in permissions
+    assert "read_" in permissions  # Root path case
+
+    # Ensure no double underscores
+    for permission in permissions:
+        assert "__" not in permission, f"Permission '{permission}' contains double underscores"
+
+
+def test_permission_edge_cases():
+    """Test permission generation for edge cases and special characters."""
+    app = FastAPI()
+
+    @app.get("/path-with-dashes")
+    def dash_route():
+        pass
+
+    @app.post("/path.with.dots")
+    def dot_route():
+        pass
+
+    @app.put("/multiple/{param1}/{param2}")
+    def multi_param_route():
+        pass
+
+    @app.delete("/trailing/slash/")
+    def trailing_slash_route():
+        pass
+
+    permissions = generate_permissions(app)
+
+    # Test that special characters are handled
+    expected_permissions = [
+        "read_path-with-dashes",
+        "create_path.with.dots", 
+        "update_multiple_param1_param2",
+        "delete_trailing_slash"  # Trailing slash gets stripped
+    ]
+
+    for expected in expected_permissions:
+        assert expected in permissions, f"Expected permission '{expected}' not found"
+
+    # Ensure no double underscores in any permission
+    for permission in permissions:
+        assert "__" not in permission, f"Permission '{permission}' contains double underscores"
+
+
+def test_unprotected_endpoints_exclusion():
+    """Test that unprotected endpoints are properly excluded."""
+    app = FastAPI()
+
+    @app.get("/public")
+    def public_route():
+        pass
+
+    @app.post("/private")
+    def private_route():
+        pass
+
+    # Configure unprotected endpoints
+    settings_core.UNPROTECTED_ENDPOINTS = ["public", "docs", "openapi.json"]
+
+    permissions = generate_permissions(app)
+
+    # Public endpoint should be excluded
+    assert "read_public" not in permissions
+    # Private endpoint should be included
+    assert "create_private" in permissions

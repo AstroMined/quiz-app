@@ -72,7 +72,7 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
                 required_permission = (
                     db.query(PermissionModel)
                     .filter(
-                        PermissionModel.name == f"{crud_verb}_{route.replace('/', '_')}"
+                        PermissionModel.name == f"{crud_verb}_{route.strip('/').replace('/', '_')}"
                     )
                     .first()
                 )

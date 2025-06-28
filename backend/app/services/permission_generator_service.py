@@ -20,7 +20,7 @@ def generate_permissions(app: FastAPI):
             for method in route.methods:
                 if method in method_map:
                     path = (
-                        route.path.replace("/", "_").replace("{", "").replace("}", "")
+                        route.path.strip("/").replace("/", "_").replace("{", "").replace("}", "")
                     )
                     if path not in settings_core.UNPROTECTED_ENDPOINTS:
                         permission = f"{method_map[method]}_{path}"
