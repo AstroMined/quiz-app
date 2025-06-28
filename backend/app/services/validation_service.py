@@ -38,18 +38,34 @@ def validate_foreign_keys(mapper, connection, target):
 
 
 def validate_single_foreign_key(target, relationship, db):
-    foreign_key = relationship.key
-    foreign_key_value = getattr(target, foreign_key)
-
+    # Get the actual foreign key column name, not the relationship name
+    foreign_key_columns = list(relationship.local_columns)
+    if not foreign_key_columns:
+        return
+    
+    # Get the first foreign key column (most relationships have only one)
+    fk_column = foreign_key_columns[0]
+    fk_column_name = fk_column.key
+    foreign_key_value = getattr(target, fk_column_name, None)
+    
     if foreign_key_value is not None:
         try:
+            # If the value is already a model instance, extract its ID
             if isinstance(foreign_key_value, Base):
-                foreign_key_value = inspect(foreign_key_value).identity[0]
+                identity = inspect(foreign_key_value).identity
+                if identity is None:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Invalid {fk_column_name}: Object has no identity"
+                    )
+                foreign_key_value = identity[0]
         except Exception as e:
             raise HTTPException(
-                status_code=400, detail="Invalid foreign key value"
+                status_code=400, 
+                detail=f"Invalid {fk_column_name}: {str(e)}"
             ) from e
 
+        # Validate that the foreign key value exists in the related table
         related_class = relationship.entity.class_
         related_object = (
             db.query(related_class)
@@ -58,57 +74,93 @@ def validate_single_foreign_key(target, relationship, db):
         )
 
         if not related_object:
-            raise HTTPException(status_code=400, detail=f"Invalid {foreign_key}")
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid {fk_column_name}: {foreign_key_value}"
+            )
 
 
 def validate_multiple_foreign_keys(target, relationship, db):
     foreign_key = relationship.key
-    foreign_key_values = getattr(target, foreign_key)
+    foreign_key_values = getattr(target, foreign_key, [])
 
     if foreign_key_values:
-        for foreign_key_value in foreign_key_values:
+        related_class = relationship.mapper.class_
+        
+        for i, foreign_key_value in enumerate(foreign_key_values):
             try:
+                # For many-to-many relationships, objects may be new and not yet persisted
+                # Only validate if we can extract a meaningful ID
                 if isinstance(foreign_key_value, Base):
-                    state = instance_state(foreign_key_value)
-                    if state.key is None:
-                        continue
-                    foreign_key_value = state.key[1][
-                        0
-                    ]  # Get the first primary key value
+                    # Check if the object has a committed ID
+                    if hasattr(foreign_key_value, 'id') and foreign_key_value.id is not None:
+                        fk_id = foreign_key_value.id
+                    else:
+                        # Try to get identity from SQLAlchemy state
+                        state = instance_state(foreign_key_value)
+                        if state.key is None:
+                            # Object has no identity - could be new in the same transaction
+                            # Skip validation for objects that are part of the current session
+                            # but don't have IDs yet (they'll be validated by database constraints)
+                            continue
+                        fk_id = state.key[1][0]  # Get the first primary key value
+                else:
+                    # Assume it's already an ID value
+                    fk_id = foreign_key_value
 
-                related_class = relationship.mapper.class_
-                related_object = (
-                    db.query(related_class)
-                    .filter(related_class.id == foreign_key_value)
-                    .first()
-                )
-
-                if not related_object:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid {foreign_key}: {foreign_key_value}",
+                # Only validate if we have a valid ID
+                if fk_id is not None:
+                    # Validate that the foreign key exists in the database
+                    related_object = (
+                        db.query(related_class)
+                        .filter(related_class.id == fk_id)
+                        .first()
                     )
+
+                    if not related_object:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Invalid {foreign_key}[{i}]: {fk_id}",
+                        )
+            except HTTPException:
+                # Re-raise HTTPExceptions as-is
+                raise
             except Exception as e:
                 raise HTTPException(
-                    status_code=400, detail=f"Error validating {foreign_key}: {str(e)}"
+                    status_code=400, 
+                    detail=f"Error validating {foreign_key}[{i}]: {str(e)}"
                 ) from e
 
 
 def validate_direct_foreign_keys(target, db):
-    target_contents = sqlalchemy_obj_to_dict(target)
-
-    # Iterate through each attribute in the target object
-    for attribute, value in target_contents.items():
-        if isinstance(value, int):  # Assuming foreign keys are integers
-            related_class = find_related_class(attribute)
-            if related_class:
-                related_object = (
-                    db.query(related_class).filter(related_class.id == value).first()
-                )
-                if not related_object:
-                    raise HTTPException(
-                        status_code=400, detail=f"Invalid {attribute}: {value}"
+    # Use SQLAlchemy introspection to find foreign key constraints
+    table = target.__table__
+    
+    for fk_constraint in table.foreign_key_constraints:
+        for fk_column in fk_constraint.columns:
+            fk_value = getattr(target, fk_column.key, None)
+            
+            if fk_value is not None:
+                # Get the referenced table and column
+                referenced_table = fk_constraint.referred_table
+                referenced_column = list(fk_constraint.elements)[0].column
+                
+                # Find the corresponding model class for the referenced table
+                related_class = find_related_class_by_table(referenced_table.name)
+                
+                if related_class:
+                    # Check if the foreign key value exists in the referenced table
+                    related_object = (
+                        db.query(related_class)
+                        .filter(getattr(related_class, referenced_column.key) == fk_value)
+                        .first()
                     )
+                    
+                    if not related_object:
+                        raise HTTPException(
+                            status_code=400, 
+                            detail=f"Invalid {fk_column.key}: {fk_value}"
+                        )
 
 
 def find_related_class(attribute_name):
@@ -142,6 +194,37 @@ def find_related_class(attribute_name):
     }
 
     return related_classes.get(attribute_name)
+
+
+def find_related_class_by_table(table_name):
+    """
+    Maps table names to their corresponding SQLAlchemy model classes.
+    Used by validate_direct_foreign_keys for dynamic foreign key validation.
+
+    Args:
+        table_name (str): The name of the database table.
+
+    Returns:
+        type: The corresponding SQLAlchemy model class, or None if no mapping is found.
+    """
+    table_to_class = {
+        "questions": QuestionModel,
+        "groups": GroupModel,
+        "users": UserModel,
+        "permissions": PermissionModel,
+        "roles": RoleModel,
+        "subjects": SubjectModel,
+        "topics": TopicModel,
+        "subtopics": SubtopicModel,
+        "question_tags": QuestionTagModel,
+        "leaderboard": LeaderboardModel,
+        "user_responses": UserResponseModel,
+        "answer_choices": AnswerChoiceModel,
+        "question_sets": QuestionSetModel,
+        "revoked_tokens": RevokedTokenModel,
+    }
+
+    return table_to_class.get(table_name)
 
 
 def register_validation_listeners():
