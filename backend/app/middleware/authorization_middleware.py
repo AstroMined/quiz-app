@@ -9,7 +9,7 @@ from backend.app.core.config import settings_core
 from backend.app.db.session import get_db
 from backend.app.models.permissions import PermissionModel
 from backend.app.services.authorization_service import has_permission
-from backend.app.services.user_service import get_current_user, oauth2_scheme
+from backend.app.services.user_service import get_current_user_with_db, oauth2_scheme
 
 
 class AuthorizationMiddleware(BaseHTTPMiddleware):
@@ -19,6 +19,10 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
         "PUT": "update",
         "DELETE": "delete",
     }
+
+    def __init__(self, app, get_db_func=None):
+        super().__init__(app)
+        self.get_db_func = get_db_func or get_db
 
     async def dispatch(self, request: Request, call_next):
         request.state.auth_status = {"is_authorized": True, "error": None}
@@ -38,7 +42,8 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
             )
 
         try:
-            db = next(get_db())
+            # Use injected database function (supports test overrides)
+            db = next(self.get_db_func())
 
             # Check if the token has been invalidated by the BlacklistMiddleware
             if (
@@ -51,7 +56,8 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
                     content={"detail": f"Authentication failed: {error}"},
                 )
 
-            current_user, user_status = await get_current_user(token, db)
+            # Pass database session to user service
+            current_user, user_status = await get_current_user_with_db(token, db)
 
             if user_status != "valid":
                 request.state.auth_status = {
@@ -100,4 +106,5 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
                 status_code=500, content={"detail": "Internal server error"}
             )
         finally:
-            db.close()
+            if 'db' in locals():
+                db.close()

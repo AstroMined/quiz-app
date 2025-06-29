@@ -52,8 +52,8 @@ async def lifespan(app: FastAPI):
 
 app.router.lifespan_context = lifespan
 
-app.add_middleware(AuthorizationMiddleware)
-app.add_middleware(BlacklistMiddleware)
+app.add_middleware(AuthorizationMiddleware, get_db_func=get_db)
+app.add_middleware(BlacklistMiddleware, get_db_func=get_db)
 add_cors_middleware(app)
 
 # Use the aliased name for the router

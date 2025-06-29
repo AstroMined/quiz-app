@@ -13,6 +13,10 @@ from backend.app.services.logging_service import logger
 
 
 class BlacklistMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, get_db_func=None):
+        super().__init__(app)
+        self.get_db_func = get_db_func or get_db
+
     async def dispatch(self, request: Request, call_next):
         logger.debug(f"BlacklistMiddleware: Processing request to {request.url.path}")
 
@@ -33,7 +37,8 @@ class BlacklistMiddleware(BaseHTTPMiddleware):
                         status_code=401, detail="Invalid authentication scheme"
                     )
 
-                db = next(get_db())
+                # Use injected database function (supports test overrides)
+                db = next(self.get_db_func())
                 try:
                     if is_token_revoked(db, token):
                         logger.warning("BlacklistMiddleware: Token has been revoked")
@@ -45,6 +50,8 @@ class BlacklistMiddleware(BaseHTTPMiddleware):
                     raise HTTPException(
                         status_code=401, detail="Token has expired"
                     )
+                finally:
+                    db.close()
 
                 logger.debug("BlacklistMiddleware: Token is valid")
             except HTTPException as e:

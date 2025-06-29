@@ -17,6 +17,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
+    """Get current user using FastAPI dependency injection."""
+    return await get_current_user_with_db(token, db)
+
+
+async def get_current_user_with_db(token: str, db: Session):
+    """Get current user using provided database session."""
     try:
         payload = decode_access_token(token, db)
         username: str = payload.get("sub")

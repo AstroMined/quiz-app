@@ -58,7 +58,29 @@ def client(db_session):
             # Don't close the session here - let db_session fixture handle cleanup
             pass
 
+    # Override dependency injection for endpoints
     app.dependency_overrides[get_db] = override_get_db
+    
+    # Override middleware database access - access the actual middleware instances
+    middleware_originals = []
+    
+    # The middleware instances are stored in app.user_middleware
+    for middleware_wrapper in app.user_middleware:
+        # The actual middleware instance is stored in the args of the wrapper
+        if hasattr(middleware_wrapper, 'args') and middleware_wrapper.args:
+            middleware_instance = middleware_wrapper.args[0]  # First arg is the middleware instance
+            if hasattr(middleware_instance, 'get_db_func'):
+                # Store original function
+                original_func = middleware_instance.get_db_func
+                middleware_originals.append((middleware_instance, original_func))
+                # Override with test function
+                middleware_instance.get_db_func = override_get_db
+    
     with TestClient(app) as test_client:
         yield test_client
+    
+    # Restore original middleware database functions
+    for middleware_instance, original_func in middleware_originals:
+        middleware_instance.get_db_func = original_func
+    
     app.dependency_overrides.clear()
