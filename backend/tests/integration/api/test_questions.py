@@ -101,7 +101,7 @@ def test_update_question(
         "concept_ids": [test_model_concept.id],
     }
 
-    response = logged_in_client.put(
+    response = logged_in_client.patch(
         f"/questions/{test_model_questions[0].id}", json=update_data
     )
     assert response.status_code == 200
@@ -167,7 +167,7 @@ def test_update_nonexistent_question(
         "subtopic_ids": [test_model_subtopic.id],
         "concept_ids": [test_model_concept.id],
     }
-    response = logged_in_client.put("/questions/99999", json=update_data)
+    response = logged_in_client.patch("/questions/99999", json=update_data)
     assert response.status_code == 404
 
 
@@ -222,7 +222,7 @@ def test_create_question_with_invalid_answers(
 
 def test_update_question_invalid_data(logged_in_client, test_model_questions):
     invalid_update_data = {"text": "", "difficulty": "INVALID_DIFFICULTY"}  # Empty text
-    response = logged_in_client.put(
+    response = logged_in_client.patch(
         f"/questions/{test_model_questions[0].id}", json=invalid_update_data
     )
     assert response.status_code == 422
@@ -271,7 +271,7 @@ def test_update_question_no_changes(logged_in_client, test_model_questions):
         "subtopic_ids": [subtopic.id for subtopic in current_question.subtopics],
         "concept_ids": [concept.id for concept in current_question.concepts],
     }
-    response = logged_in_client.put(
+    response = logged_in_client.patch(
         f"/questions/{current_question.id}", json=update_data
     )
     assert response.status_code == 200
@@ -309,7 +309,7 @@ def test_create_question_with_answers_invalid_data(logged_in_client):
 
 def test_update_question_not_found(logged_in_client):
     update_data = {"text": "Updated question text", "subtopic_ids": [1]}
-    response = logged_in_client.put("/questions/99999", json=update_data)
+    response = logged_in_client.patch("/questions/99999", json=update_data)
     assert response.status_code == 404
 
 
@@ -342,7 +342,7 @@ def test_update_question_unauthorized(client, test_model_questions):
         "subtopic_ids": [test_model_questions[0].subtopics[0].id],
     }
     with pytest.raises(HTTPException) as exc:
-        client.put(f"/questions/{test_model_questions[0].id}", json=update_data)
+        client.patch(f"/questions/{test_model_questions[0].id}", json=update_data)
     assert exc.value.status_code == 401
     assert exc.value.detail == "Not authenticated"
 
