@@ -1,4 +1,4 @@
-# Test Performance Phase 2: Fixture Optimization
+# Test Performance Phase 2.5: Fixture Optimization
 
 ## Overview
 Optimize complex fixture creation and data setup patterns to reduce test setup overhead and improve reusability.
@@ -163,5 +163,7 @@ def test_specific_data(module_specific_data):
 
 ## Dependencies
 
-**Requires**: Phase 1 completion (fast database operations)
+**Requires**: Phases 2.1-2.4 completion (JWT architecture fix and transaction-based test isolation)
 **Enables**: Phase 3 parallel execution (reduced fixture creation overhead)
+
+**Note**: This phase was originally Phase 2, but has been moved to Phase 2.5 after the discovery that JWT architecture issues must be resolved first to enable transaction-based test isolation.
