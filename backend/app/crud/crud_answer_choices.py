@@ -82,7 +82,7 @@ def create_answer_choice_in_db(
     )
 
     if has_question_ids:
-        # Don't commit here, let the caller handle the commit
+        # Don't commit here, let the caller handle associations and commit
         return db_answer_choice
 
     # If there are no question_ids, we can commit immediately

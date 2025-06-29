@@ -23,25 +23,23 @@ which is handled by the check_auth_status and get_current_user_or_error function
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import (APIRouter, Depends, HTTPException, Request, Response,
+                     status)
 from sqlalchemy.orm import Session
 
 from backend.app.crud.crud_answer_choices import read_answer_choice_from_db
 from backend.app.crud.crud_questions import read_question_from_db
-from backend.app.crud.crud_user_responses import (
-    create_user_response_in_db,
-    delete_user_response_from_db,
-    read_user_response_from_db,
-    read_user_responses_from_db,
-    update_user_response_in_db,
-)
+from backend.app.crud.crud_user_responses import (create_user_response_in_db,
+                                                  delete_user_response_from_db,
+                                                  read_user_response_from_db,
+                                                  read_user_responses_from_db,
+                                                  update_user_response_in_db)
 from backend.app.db.session import get_db
-from backend.app.schemas.user_responses import (
-    UserResponseCreateSchema,
-    UserResponseSchema,
-    UserResponseUpdateSchema,
-)
-from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
+from backend.app.schemas.user_responses import (UserResponseCreateSchema,
+                                                UserResponseSchema,
+                                                UserResponseUpdateSchema)
+from backend.app.services.auth_utils import (check_auth_status,
+                                             get_current_user_or_error)
 
 router = APIRouter()
 
@@ -184,12 +182,20 @@ def get_user_responses(
     check_auth_status(request)
     get_current_user_or_error(request)
 
+    # Build filters dictionary to match CRUD function signature
+    filters = {}
+    if user_id is not None:
+        filters["user_id"] = user_id
+    if question_id is not None:
+        filters["question_id"] = question_id
+    if start_time is not None:
+        filters["start_time"] = start_time
+    if end_time is not None:
+        filters["end_time"] = end_time
+
     user_responses = read_user_responses_from_db(
         db,
-        user_id=user_id,
-        question_id=question_id,
-        start_time=start_time,
-        end_time=end_time,
+        filters=filters,
         skip=skip,
         limit=limit,
     )

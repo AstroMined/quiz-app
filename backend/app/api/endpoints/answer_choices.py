@@ -26,20 +26,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from backend.app.crud.crud_answer_choices import (
-    create_answer_choice_in_db,
-    delete_answer_choice_from_db,
-    read_answer_choice_from_db,
-    read_answer_choices_from_db,
-    update_answer_choice_in_db,
-)
+    create_answer_choice_in_db, create_question_to_answer_association_in_db,
+    delete_answer_choice_from_db, read_answer_choice_from_db,
+    read_answer_choices_from_db, update_answer_choice_in_db)
 from backend.app.db.session import get_db
-from backend.app.schemas.answer_choices import (
-    AnswerChoiceCreateSchema,
-    AnswerChoiceSchema,
-    AnswerChoiceUpdateSchema,
-    DetailedAnswerChoiceSchema,
-)
-from backend.app.services.auth_utils import check_auth_status, get_current_user_or_error
+from backend.app.schemas.answer_choices import (AnswerChoiceCreateSchema,
+                                                AnswerChoiceSchema,
+                                                AnswerChoiceUpdateSchema,
+                                                DetailedAnswerChoiceSchema)
+from backend.app.services.auth_utils import (check_auth_status,
+                                             get_current_user_or_error)
 from backend.app.services.logging_service import logger
 
 router = APIRouter()
@@ -104,6 +100,18 @@ def post_answer_choice_with_question(
     created_answer_choice = create_answer_choice_in_db(
         db=db, answer_choice_data=answer_choice_data
     )
+
+    # Handle question associations if question_ids were provided
+    if "question_ids" in answer_choice_data and answer_choice_data["question_ids"]:
+        for question_id in answer_choice_data["question_ids"]:
+            create_question_to_answer_association_in_db(
+                db, question_id, created_answer_choice.id
+            )
+
+        # Commit all changes including associations
+        db.commit()
+        db.refresh(created_answer_choice)
+
     return DetailedAnswerChoiceSchema.model_validate(created_answer_choice)
 
 
