@@ -1,7 +1,7 @@
 """Version information for the Quiz App."""
 
-__version__ = "0.1.0"
-__version_info__ = (0, 1, 0)
+__version__ = "0.1.1"
+__version_info__ = (0, 1, 1)
 
 # Build information
 PYTHON_VERSION = "3.12.10"

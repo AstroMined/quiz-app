@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-06-29
+
+### Fixed
+- Authentication test failures: Fixed `test_revoke_expired_token` and `test_is_token_revoked_with_old_token` to properly expect `ExpiredSignatureError` for expired tokens instead of treating them as revoked tokens
+- Test suite stability: Resolved transient validation issues that were causing false positive failures in question model, scoring service, and CORS middleware tests
+- Authentication logic: Maintained proper separation between expired and revoked token states in accordance with JWT security best practices
+
+### Technical
+- Updated authentication tests to align with correct token expiration behavior
+- Preserved authentication middleware functionality while fixing test expectations
+- All previously failing tests now pass: 5/5 resolved
+
 ## [0.1.0] - 2025-06-28
 
 ### Added

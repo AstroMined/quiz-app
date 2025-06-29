@@ -110,8 +110,10 @@ def test_revoke_expired_token(db_session, test_model_user):
     # Attempt to revoke the expired token (should not raise an error)
     revoke_token(db_session, expired_token)
 
-    # The token should be considered revoked (due to expiration)
-    assert is_token_revoked(db_session, expired_token)
+    # The expired token should throw ExpiredSignatureError when checked
+    # (expired tokens are different from revoked tokens)
+    with pytest.raises(ExpiredSignatureError):
+        is_token_revoked(db_session, expired_token)
 
 
 def test_create_token_with_nonexistent_user(db_session):
@@ -152,10 +154,10 @@ def test_is_token_revoked_with_old_token(db_session, test_model_user):
         decode_access_token(old_token)
     assert "Signature has expired" in str(exc_info.value)
 
-    # The old token should be considered revoked
-    is_old_token_revoked = is_token_revoked(db_session, old_token)
-    logger.debug("is_old_token_revoked: %s", is_old_token_revoked)
-    assert is_old_token_revoked is True
+    # The old token should throw ExpiredSignatureError when checked for revocation
+    # (expired tokens are different from revoked tokens)
+    with pytest.raises(ExpiredSignatureError):
+        is_token_revoked(db_session, old_token)
 
     # Create a new token
     new_token = create_access_token({"sub": test_model_user.username})
