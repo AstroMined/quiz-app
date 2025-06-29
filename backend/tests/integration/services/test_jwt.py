@@ -15,7 +15,7 @@ from backend.app.models.users import UserModel
 
 def test_create_access_token(db_session, test_model_user):
     data = {"sub": test_model_user.username}
-    token = create_access_token(data)
+    token = create_access_token(data, db_session)
     assert token is not None
 
     payload = jwt.decode(token, settings_core.SECRET_KEY, algorithms=["HS256"])
@@ -28,7 +28,7 @@ def test_create_access_token(db_session, test_model_user):
 def test_create_access_token_with_expiration(db_session, test_model_user):
     data = {"sub": test_model_user.username}
     expires_delta = timedelta(minutes=30)
-    token = create_access_token(data, expires_delta)
+    token = create_access_token(data, db_session, expires_delta)
     assert token is not None
 
     payload = jwt.decode(token, settings_core.SECRET_KEY, algorithms=["HS256"])
@@ -42,41 +42,41 @@ def test_create_access_token_with_expiration(db_session, test_model_user):
 def test_create_access_token_user_not_found(db_session):
     data = {"sub": "nonexistent_user"}
     with pytest.raises(ValueError, match="User not found"):
-        create_access_token(data)
+        create_access_token(data, db_session)
 
 
 def test_decode_access_token_valid(db_session, test_model_user):
     data = {"sub": test_model_user.username}
-    token = create_access_token(data)
-    payload = decode_access_token(token)
+    token = create_access_token(data, db_session)
+    payload = decode_access_token(token, db_session)
     assert payload["sub"] == test_model_user.username
 
 
 def test_decode_access_token_expired(db_session, test_model_user):
     data = {"sub": test_model_user.username}
-    token = create_access_token(data, expires_delta=timedelta(seconds=-1))
+    token = create_access_token(data, db_session, expires_delta=timedelta(seconds=-1))
     with pytest.raises(ExpiredSignatureError):
-        decode_access_token(token)
+        decode_access_token(token, db_session)
 
 
 def test_decode_access_token_invalid(db_session):
     invalid_token = "invalid_token"
     with pytest.raises(HTTPException) as exc_info:
-        decode_access_token(invalid_token)
+        decode_access_token(invalid_token, db_session)
     assert exc_info.value.status_code == 401
     assert "Could not validate credentials" in str(exc_info.value.detail)
 
 
 def test_decode_access_token_user_not_found(db_session, test_model_user):
     data = {"sub": test_model_user.username}
-    token = create_access_token(data)
+    token = create_access_token(data, db_session)
 
     # Delete the user from the database
     db_session.delete(test_model_user)
     db_session.commit()
 
     with pytest.raises(HTTPException) as exc_info:
-        decode_access_token(token)
+        decode_access_token(token, db_session)
     assert exc_info.value.status_code == 401
     assert "User not found" in str(exc_info.value.detail)
 
@@ -90,7 +90,7 @@ def test_decode_access_token_revoked(db_session, test_model_user):
     db_session.commit()
 
     # Create a token
-    token = create_access_token(data)
+    token = create_access_token(data, db_session)
 
     # Wait for the blacklist date to pass
     import time
@@ -99,15 +99,15 @@ def test_decode_access_token_revoked(db_session, test_model_user):
 
     # Now try to decode the token
     with pytest.raises(HTTPException) as exc_info:
-        decode_access_token(token)
+        decode_access_token(token, db_session)
     assert exc_info.value.status_code == 401
     assert "Token has been revoked" in str(exc_info.value.detail)
 
 
 def test_create_access_token_unique_jti(db_session, test_model_user):
     data = {"sub": test_model_user.username}
-    token1 = create_access_token(data)
-    token2 = create_access_token(data)
+    token1 = create_access_token(data, db_session)
+    token2 = create_access_token(data, db_session)
 
     payload1 = jwt.decode(token1, settings_core.SECRET_KEY, algorithms=["HS256"])
     payload2 = jwt.decode(token2, settings_core.SECRET_KEY, algorithms=["HS256"])
@@ -124,9 +124,9 @@ def test_decode_access_token_unexpected_exception(
     mock_jwt_decode.side_effect = Exception("Unexpected error")
 
     data = {"sub": test_model_user.username}
-    token = create_access_token(data)
+    token = create_access_token(data, db_session)
 
     with pytest.raises(HTTPException) as exc_info:
-        decode_access_token(token)
+        decode_access_token(token, db_session)
     assert exc_info.value.status_code == 500
     assert "Internal server error" in str(exc_info.value.detail)

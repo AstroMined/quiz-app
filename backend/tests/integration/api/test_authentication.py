@@ -58,13 +58,13 @@ def test_protected_endpoint_with_valid_token(logged_in_client):
     assert response.status_code == 200
 
 
-def test_protected_endpoint_with_expired_token(client, test_model_user, monkeypatch):
+def test_protected_endpoint_with_expired_token(client, test_model_user, monkeypatch, db_session):
     from backend.app.core.config import settings_core
 
     # Temporarily set ACCESS_TOKEN_EXPIRE_MINUTES to a very small value
     monkeypatch.setattr(settings_core, "ACCESS_TOKEN_EXPIRE_MINUTES", 0)
 
-    expired_token = create_access_token({"sub": test_model_user.username})
+    expired_token = create_access_token({"sub": test_model_user.username}, db_session)
     headers = {"Authorization": f"Bearer {expired_token}"}
     # Introduce a short delay to ensure token is expired
     time.sleep(1)
@@ -217,7 +217,7 @@ def test_logout_token_reuse(logged_in_client):
     assert "Token has been revoked" in second_response.json()["detail"]
 
 
-def test_login_with_remember_me(client, test_model_user):
+def test_login_with_remember_me(client, test_model_user, db_session):
     login_data = {
         "username": test_model_user.username,
         "password": "TestPassword123!",
@@ -229,7 +229,7 @@ def test_login_with_remember_me(client, test_model_user):
 
     # Check if the token has a longer expiration time
     token = response.json()["access_token"]
-    decoded_token = decode_access_token(token)
+    decoded_token = decode_access_token(token, db_session)
     assert (
         decoded_token["exp"] - decoded_token["iat"] > 29 * 24 * 60 * 60
     )  # More than 29 days
@@ -241,7 +241,7 @@ def test_login_with_remember_me(client, test_model_user):
     assert response.status_code == 200
 
 
-def test_login_without_remember_me(client, test_model_user):
+def test_login_without_remember_me(client, test_model_user, db_session):
     login_data = {
         "username": test_model_user.username,
         "password": "TestPassword123!",
@@ -253,7 +253,7 @@ def test_login_without_remember_me(client, test_model_user):
 
     # Check if the token has a standard expiration time
     token = response.json()["access_token"]
-    decoded_token = decode_access_token(token)
+    decoded_token = decode_access_token(token, db_session)
     assert (
         decoded_token["exp"] - decoded_token["iat"] <= 24 * 60 * 60
     )  # Less than or equal to 24 hours
@@ -349,7 +349,7 @@ def test_logout_all_sessions(logged_in_client, client, test_model_user, db_sessi
     ), "Expected 200 OK when using a new token after logout all"
 
     # Verify token contents
-    decoded_token = decode_access_token(new_token)
+    decoded_token = decode_access_token(new_token, db_session)
     assert (
         decoded_token["sub"] == test_model_user.username
     ), "New token should contain the correct username"

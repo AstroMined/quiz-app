@@ -96,6 +96,7 @@ async def login_endpoint(form_data: LoginFormSchema, db: Session = Depends(get_d
     expires_delta = timedelta(days=30) if form_data.remember_me else None
     access_token = create_access_token(
         data={"sub": user.username, "remember_me": form_data.remember_me},
+        db=db,
         expires_delta=expires_delta,
     )
     logger.debug(
@@ -136,7 +137,7 @@ async def logout_endpoint(
     check_auth_status(request)
 
     try:
-        decoded_token = decode_access_token(token)
+        decoded_token = decode_access_token(token, db)
         jti = decoded_token.get("jti")
         if not jti:
             raise ValueError("Token does not contain a JTI")
@@ -185,7 +186,7 @@ async def logout_all_sessions_endpoint(
     check_auth_status(request)
 
     try:
-        decoded_token = decode_access_token(token)
+        decoded_token = decode_access_token(token, db)
         username = decoded_token.get("sub")
         if not username:
             raise ValueError("Token does not contain a subject (username)")

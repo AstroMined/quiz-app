@@ -131,7 +131,7 @@ def is_token_revoked(db: Session, token: str) -> bool:
             print("Token has expired")
     """
     # Let ExpiredSignatureError bubble up - don't catch it here
-    decoded_token = decode_access_token(token)
+    decoded_token = decode_access_token(token, db)
 
     jti = decoded_token.get("jti")
     username = decoded_token.get("sub")
@@ -199,7 +199,7 @@ def revoke_all_tokens_for_user(db: Session, user_id: int, active_tokens: list):
 
     for token in active_tokens:
         try:
-            decoded_token = decode_access_token(token)
+            decoded_token = decode_access_token(token, db)
         except ExpiredSignatureError:
             continue  # Skip expired tokens
 
@@ -242,7 +242,7 @@ def revoke_token(db: Session, token: str):
         revoke_token(db, "full_token_string")
     """
     try:
-        decoded_token = decode_access_token(token)
+        decoded_token = decode_access_token(token, db)
     except ExpiredSignatureError:
         logger.info("Attempted to revoke an expired token")
         return  # Consider expired tokens as already revoked

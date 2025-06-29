@@ -7,9 +7,9 @@ from backend.app.services.logging_service import logger
 
 
 @pytest.fixture(scope="function")
-def test_token(test_model_user):
+def test_token(test_model_user, db_session):
     """Create an access token for the test user."""
-    access_token = create_access_token(data={"sub": test_model_user.username})
+    access_token = create_access_token(data={"sub": test_model_user.username}, db=db_session)
     return access_token
 
 

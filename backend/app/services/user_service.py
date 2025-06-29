@@ -18,7 +18,7 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
     try:
-        payload = decode_access_token(token)
+        payload = decode_access_token(token, db)
         username: str = payload.get("sub")
         if username is None:
             return None, "invalid_token"

@@ -8,10 +8,10 @@ from jose import ExpiredSignatureError, JWTError, jwt
 
 from backend.app.core.config import settings_core
 from backend.app.crud.crud_user import read_user_by_username_from_db
-from backend.app.db.session import get_db
+from sqlalchemy.orm import Session
 
 
-def create_access_token(data: dict, expires_delta: timedelta = None):
+def create_access_token(data: dict, db: Session, expires_delta: timedelta = None):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -20,7 +20,6 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
             minutes=settings_core.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
-    db = next(get_db())
     user = read_user_by_username_from_db(db, to_encode["sub"])
     if not user:
         raise ValueError("User not found")
@@ -36,7 +35,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 
-def decode_access_token(token: str):
+def decode_access_token(token: str, db: Session):
     try:
         payload = jwt.decode(
             token,
@@ -45,7 +44,6 @@ def decode_access_token(token: str):
             options={"verify_exp": True},
         )
 
-        db = next(get_db())
         user = read_user_by_username_from_db(db, payload["sub"])
         if not user:
             raise HTTPException(

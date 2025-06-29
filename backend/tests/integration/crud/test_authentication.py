@@ -48,7 +48,7 @@ def test_read_revoked_token_from_db(db_session, test_model_user):
 
 
 def test_is_token_revoked(db_session, test_model_user):
-    access_token = create_access_token({"sub": test_model_user.username})
+    access_token = create_access_token({"sub": test_model_user.username}, db_session)
 
     # Token should not be revoked initially
     assert not is_token_revoked(db_session, access_token)
@@ -62,8 +62,8 @@ def test_is_token_revoked(db_session, test_model_user):
 
 def test_revoke_all_tokens_for_user(db_session, test_model_user):
     # Create some active tokens for the user
-    token1 = create_access_token({"sub": test_model_user.username})
-    token2 = create_access_token({"sub": test_model_user.username})
+    token1 = create_access_token({"sub": test_model_user.username}, db_session)
+    token2 = create_access_token({"sub": test_model_user.username}, db_session)
 
     active_tokens = [token1, token2]
 
@@ -76,7 +76,7 @@ def test_revoke_all_tokens_for_user(db_session, test_model_user):
 
 
 def test_revoke_token(db_session, test_model_user):
-    access_token = create_access_token({"sub": test_model_user.username})
+    access_token = create_access_token({"sub": test_model_user.username}, db_session)
 
     # Token should not be revoked initially
     assert not is_token_revoked(db_session, access_token)
@@ -89,7 +89,7 @@ def test_revoke_token(db_session, test_model_user):
 
 
 def test_revoke_token_twice(db_session, test_model_user):
-    access_token = create_access_token({"sub": test_model_user.username})
+    access_token = create_access_token({"sub": test_model_user.username}, db_session)
 
     # Revoke the token
     revoke_token(db_session, access_token)
@@ -104,7 +104,7 @@ def test_revoke_token_twice(db_session, test_model_user):
 def test_revoke_expired_token(db_session, test_model_user):
     # Create an expired token
     expired_token = create_access_token(
-        {"sub": test_model_user.username}, expires_delta=timedelta(seconds=-1)
+        {"sub": test_model_user.username}, db_session, expires_delta=timedelta(seconds=-1)
     )
 
     # Attempt to revoke the expired token (should not raise an error)
@@ -118,7 +118,7 @@ def test_revoke_expired_token(db_session, test_model_user):
 
 def test_create_token_with_nonexistent_user(db_session):
     with pytest.raises(ValueError):
-        create_access_token({"sub": "nonexistent_user"})
+        create_access_token({"sub": "nonexistent_user"}, db_session)
 
 
 def test_is_token_revoked_with_invalid_token(db_session):
@@ -148,10 +148,10 @@ def test_revoke_all_tokens_for_user_with_no_active_tokens(db_session, test_model
 def test_is_token_revoked_with_old_token(db_session, test_model_user):
     # Create a token with expiration date in the past
     old_token = create_access_token(
-        {"sub": test_model_user.username}, expires_delta=timedelta(days=-7)
+        {"sub": test_model_user.username}, db_session, expires_delta=timedelta(days=-7)
     )
     with pytest.raises(ExpiredSignatureError) as exc_info:
-        decode_access_token(old_token)
+        decode_access_token(old_token, db_session)
     assert "Signature has expired" in str(exc_info.value)
 
     # The old token should throw ExpiredSignatureError when checked for revocation
@@ -160,7 +160,7 @@ def test_is_token_revoked_with_old_token(db_session, test_model_user):
         is_token_revoked(db_session, old_token)
 
     # Create a new token
-    new_token = create_access_token({"sub": test_model_user.username})
+    new_token = create_access_token({"sub": test_model_user.username}, db_session)
 
     # The new token should not be revoked
     assert not is_token_revoked(db_session, new_token)
