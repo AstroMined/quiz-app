@@ -247,14 +247,29 @@ def put_question_set(
     get_current_user_or_error(request)
 
     question_set_data = question_set.model_dump()
-    updated_question_set = update_question_set_in_db(
-        db, question_set_id, question_set_data
-    )
-    if updated_question_set is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Question set not found"
+    try:
+        updated_question_set = update_question_set_in_db(
+            db, question_set_id, question_set_data
         )
-    return QuestionSetSchema.model_validate(updated_question_set)
+        if updated_question_set is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Question set not found"
+            )
+        return QuestionSetSchema.model_validate(updated_question_set)
+    except ValueError as exc:
+        error_message = str(exc)
+        if "Question set with id" in error_message and "does not exist" in error_message:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Question set not found"
+            )
+        elif "Question with id" in error_message and "does not exist" in error_message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid question_id"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=error_message
+            )
 
 
 @router.delete("/question-sets/{question_set_id}", status_code=204)

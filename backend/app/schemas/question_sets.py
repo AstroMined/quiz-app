@@ -83,7 +83,15 @@ class QuestionSetSchema(QuestionSetBaseSchema):
             return []
         if isinstance(v, list) and all(isinstance(item, dict) for item in v):
             return v
-        return [{"id": item.id, "name": getattr(item, "name", None)} for item in v]
+        result = []
+        for item in v:
+            item_dict = {"id": item.id}
+            if hasattr(item, "name"):
+                item_dict["name"] = item.name
+            elif hasattr(item, "text"):
+                item_dict["text"] = item.text
+            result.append(item_dict)
+        return result
 
     class Config:
         from_attributes = True

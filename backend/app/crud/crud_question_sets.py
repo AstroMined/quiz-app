@@ -291,12 +291,12 @@ def update_question_set_in_db(
             if key not in ["question_ids", "group_ids"] and value is not None:
                 setattr(db_question_set, key, value)
 
-        if "question_ids" in question_set_data:
+        if "question_ids" in question_set_data and question_set_data["question_ids"] is not None:
             update_question_set_questions(
                 db, question_set_id, question_set_data["question_ids"]
             )
 
-        if "group_ids" in question_set_data:
+        if "group_ids" in question_set_data and question_set_data["group_ids"] is not None:
             update_question_set_groups(
                 db, question_set_id, question_set_data["group_ids"]
             )
