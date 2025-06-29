@@ -17,7 +17,6 @@ config_path = os.path.join(
     "pyproject.toml"
 )
 config = toml.load(config_path)
-# Use original file-based database for compatibility, but with optimizations
 SQLALCHEMY_TEST_DATABASE_URL = config["tool"]["app"]["database_url_test"]
 
 
@@ -49,16 +48,13 @@ def db_session():
 @pytest.fixture(scope="function")
 def client(db_session):
     """Provide a test client with database session override."""
-    from backend.app.db.session import get_db
-    
     def override_get_db():
         try:
             yield db_session
         finally:
-            # Don't close the session here - let db_session fixture handle cleanup
-            pass
+            db_session.close()
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[override_get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

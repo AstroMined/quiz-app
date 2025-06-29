@@ -269,7 +269,38 @@ Include dependency information to catch breaking changes:
   - A long-term fix should standardize all date handling to use timezone-aware datetimes with UTC
   - Consider adding SQLAlchemy type adapters to automatically convert between naive DB datetimes and timezone-aware application datetimes
 - Since this is a dev database, we don't need to fight with complex Alembic migrations. The dev DB can be destroyed and re-initialized as needed during development.
-- If you believe you've completed the assigned task file, don't forget to `git mv` the task file to the docs/tasks/completed/ directory
+
+## Task File Management Protocol
+
+When working with task files in `docs/tasks/`:
+
+### During Implementation
+
+1. **Update Original Task File**: Add implementation details, discoveries, and results directly to the original task file
+2. **Document Blockers**: If you discover architectural issues or dependencies, document them in the original file
+3. **Never Create Copies**: Don't create duplicate files with suffixes like `_COMPLETED` or `_DONE`
+
+### Task Completion Decision
+
+- **Move to Completed**: Only if the task is truly finished with all acceptance criteria met
+- **Keep in Active**: If significant work remains, update the task file with current status and remaining work
+- **Create New Task**: If you discover new work that should be tracked separately, create a focused new task file
+
+### Completion Process
+
+```bash
+# Update the original task file with results and learnings
+# Then move to completed directory
+git mv docs/tasks/task_name.md docs/tasks/completed/
+```
+
+### Documentation Anti-Patterns
+
+- ❌ Creating `task_name_COMPLETED.md` files
+- ❌ Duplicating task content across multiple files  
+- ❌ Moving incomplete tasks to completed directory
+- ❌ Leaving empty or placeholder task files
+
 - **USE CONTEXT7 REGULARLY**: When writing code that uses external packages (Pydantic, SQLAlchemy, FastAPI, etc.), use the Context7 service to check the latest documentation and best practices. This ensures we're always using current features and avoiding deprecated patterns. Especially valuable when implementing validators, schemas, or any package-specific functionality.
 
 ## CHANGELOG.md Update Guidelines
