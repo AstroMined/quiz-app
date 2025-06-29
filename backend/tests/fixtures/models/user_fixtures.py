@@ -16,6 +16,9 @@ from backend.app.services.permission_generator_service import (
 )
 from backend.app.main import app
 
+# Global cache for permission data initialization
+_session_permissions_initialized = False
+
 
 @pytest.fixture(scope="function")
 def test_permission(db_session):
@@ -28,36 +31,52 @@ def test_permission(db_session):
     return permission
 
 
+@pytest.fixture(scope="session")
+def session_permissions(test_engine):
+    """Create all model-based permissions once per test session."""
+    global _session_permissions_initialized
+    
+    if not _session_permissions_initialized:
+        from sqlalchemy.orm import sessionmaker
+        SessionLocal = sessionmaker(bind=test_engine)
+        session = SessionLocal()
+        try:
+            permissions = generate_permissions(app)
+            ensure_permissions_in_db(session, permissions)
+            session.commit()
+            _session_permissions_initialized = True
+        finally:
+            session.close()
+    
+    return True
+
+
 @pytest.fixture(scope="function")
-def test_model_permissions(db_session):
-    """Create all model-based permissions for the application."""
-    permissions = generate_permissions(app)
-    ensure_permissions_in_db(db_session, permissions)
+def test_model_permissions(db_session, session_permissions):
+    """Get all model-based permissions from the session-initialized data."""
     db_permissions = db_session.query(PermissionModel).all()
     return db_permissions
 
 
 @pytest.fixture(scope="function")
 def test_model_role(db_session, test_model_permissions):
-    """Create a test role with all permissions."""
+    """Create a test role with all permissions (will be rolled back after test)."""
     role = RoleModel(name="test_role", description="Test Role", default=False)
     role.permissions.extend(test_model_permissions)
     db_session.add(role)
-    db_session.commit()
-    db_session.refresh(role)
+    db_session.flush()  # Make available within transaction
     return role
 
 
 @pytest.fixture(scope="function")
 def test_model_default_role(db_session, test_model_permissions):
-    """Create a default test role with all permissions."""
+    """Create a default test role with all permissions (will be rolled back after test)."""
     role = RoleModel(
         name="test_default_role", description="Test Default Role", default=True
     )
     role.permissions.extend(test_model_permissions)
     db_session.add(role)
-    db_session.commit()
-    db_session.refresh(role)
+    db_session.flush()  # Make available within transaction
     return role
 
 
@@ -72,7 +91,7 @@ def test_random_username():
 
 @pytest.fixture(scope="function")
 def test_model_user(db_session, test_random_username, test_model_role):
-    """Create a test user with admin privileges."""
+    """Create a test user with admin privileges (will be rolled back after test)."""
     email = f"{test_random_username}@example.com"
     hashed_password = get_password_hash("TestPassword123!")
 
@@ -86,31 +105,29 @@ def test_model_user(db_session, test_random_username, test_model_role):
     )
 
     db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
+    db_session.flush()  # Make available within transaction
     return user
 
 
 @pytest.fixture(scope="function")
 def test_model_group(db_session, test_model_user):
-    """Create a test group."""
+    """Create a test group (will be rolled back after test)."""
     group = GroupModel(
         name="Test Group",
         description="This is a test group",
         creator_id=test_model_user.id,
     )
     db_session.add(group)
-    db_session.commit()
-    db_session.refresh(group)
+    db_session.flush()  # Make available within transaction
     return group
 
 
 @pytest.fixture(scope="function")
 def test_model_user_with_group(db_session, test_model_user, test_model_group):
-    """Create a test user associated with a group."""
+    """Create a test user associated with a group (will be rolled back after test)."""
     association = UserToGroupAssociation(
         user_id=test_model_user.id, group_id=test_model_group.id
     )
     db_session.add(association)
-    db_session.commit()
+    db_session.flush()  # Make available within transaction
     return test_model_user

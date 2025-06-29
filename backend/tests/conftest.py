@@ -2,10 +2,12 @@
 
 import os
 import sys
+import time
 
 import pytest
 
 from backend.app.services.logging_service import logger
+from backend.tests.helpers.performance import PerformanceTracker, categorize_test_name
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=missing-function-docstring
@@ -31,9 +33,27 @@ pytest_plugins = [
 ]
 
 
+@pytest.fixture(scope="session")
+def performance_tracker():
+    """Track test performance metrics across the session."""
+    return PerformanceTracker()
+
+
 @pytest.fixture(autouse=True)
-def log_test_name(request):
-    """Log the start and end of each test for debugging purposes."""
+def track_test_performance(request, performance_tracker):
+    """Automatically track performance for all tests."""
+    start_time = time.time()
     logger.debug("Running test: %s", request.node.nodeid)
     yield
-    logger.debug("Finished test: %s", request.node.nodeid)
+    end_time = time.time()
+    
+    test_duration = end_time - start_time
+    test_category = categorize_test_name(str(request.fspath))
+    
+    performance_tracker.record_test(
+        test_name=request.node.nodeid,
+        duration=test_duration,
+        category=test_category
+    )
+    
+    logger.debug("Finished test: %s (%.3fs, %s)", request.node.nodeid, test_duration, test_category)
