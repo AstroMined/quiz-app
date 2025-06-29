@@ -32,6 +32,7 @@ from backend.app.crud.crud_questions import (
     delete_question_from_db,
     read_question_from_db,
     read_questions_from_db,
+    read_full_question_from_db,
     replace_question_in_db,
     update_question_in_db,
 )
@@ -83,7 +84,9 @@ async def post_question(
         validated_question = QuestionCreateSchema(**question.model_dump())
         question_data = validated_question.model_dump()
         created_question = create_question_in_db(db=db, question_data=question_data)
-        return DetailedQuestionSchema.model_validate(created_question)
+        # Reload the question with all relationships for proper serialization
+        full_question = read_full_question_from_db(db=db, question_id=created_question.id)
+        return DetailedQuestionSchema.model_validate(full_question)
     except ValueError as ve:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve)
@@ -133,7 +136,9 @@ async def post_question_with_answers(
         validated_question = QuestionWithAnswersCreateSchema(**question.model_dump())
         question_data = validated_question.model_dump()
         created_question = create_question_in_db(db=db, question_data=question_data)
-        return DetailedQuestionSchema.model_validate(created_question)
+        # Reload the question with all relationships for proper serialization
+        full_question = read_full_question_from_db(db=db, question_id=created_question.id)
+        return DetailedQuestionSchema.model_validate(full_question)
     except ValueError as ve:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve)
@@ -174,7 +179,13 @@ async def get_questions(
 
     try:
         questions = read_questions_from_db(db, skip=skip, limit=limit)
-        return [DetailedQuestionSchema.model_validate(q) for q in questions]
+        # Load full question data for each question to ensure proper serialization
+        detailed_questions = []
+        for q in questions:
+            full_question = read_full_question_from_db(db=db, question_id=q.id)
+            if full_question:
+                detailed_questions.append(DetailedQuestionSchema.model_validate(full_question))
+        return detailed_questions
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -209,7 +220,7 @@ async def get_question(
     get_current_user_or_error(request)
 
     try:
-        db_question = read_question_from_db(db, question_id=question_id)
+        db_question = read_full_question_from_db(db, question_id=question_id)
         if db_question is None:
             raise HTTPException(
                 status_code=404, detail=f"Question with ID {question_id} not found"
@@ -263,7 +274,9 @@ async def put_question(
             raise HTTPException(
                 status_code=404, detail=f"Question with ID {question_id} not found"
             )
-        return DetailedQuestionSchema.model_validate(replaced_question)
+        # Reload the question with all relationships for proper serialization
+        full_question = read_full_question_from_db(db=db, question_id=replaced_question.id)
+        return DetailedQuestionSchema.model_validate(full_question)
     except ValueError as ve:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve)
@@ -316,7 +329,9 @@ async def patch_question(
             raise HTTPException(
                 status_code=404, detail=f"Question with ID {question_id} not found"
             )
-        return DetailedQuestionSchema.model_validate(updated_question)
+        # Reload the question with all relationships for proper serialization
+        full_question = read_full_question_from_db(db=db, question_id=updated_question.id)
+        return DetailedQuestionSchema.model_validate(full_question)
     except ValueError as ve:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve)

@@ -1,8 +1,8 @@
 # filename: backend/app/schemas/questions.py
 
-from typing import List, Optional
+from typing import List, Optional, Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, field_validator
 
 from backend.app.core.config import DifficultyLevel
 from backend.app.schemas.answer_choices import (
@@ -162,6 +162,26 @@ class DetailedQuestionSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @field_validator('subjects', 'topics', 'subtopics', 'concepts', 'question_tags', 'question_sets', mode='before')
+    @classmethod
+    def convert_sqlalchemy_objects_to_dicts(cls, value: Any) -> List[dict]:
+        """Convert SQLAlchemy objects to dictionaries for JSON serialization."""
+        if not value:
+            return []
+        
+        result = []
+        for item in value:
+            if hasattr(item, '__dict__'):
+                # Convert SQLAlchemy object to dict, excluding private attributes
+                item_dict = {k: v for k, v in item.__dict__.items() if not k.startswith('_')}
+                result.append(item_dict)
+            elif isinstance(item, dict):
+                result.append(item)
+            else:
+                # Fallback for other types
+                result.append({'id': getattr(item, 'id', None), 'name': getattr(item, 'name', str(item))})
+        return result
 
 
 class QuestionWithAnswersCreateSchema(QuestionCreateSchema):
