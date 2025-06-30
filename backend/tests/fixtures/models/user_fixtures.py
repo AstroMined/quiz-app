@@ -2,6 +2,7 @@
 
 import random
 import string
+import uuid
 import pytest
 
 from backend.app.core.security import get_password_hash
@@ -82,10 +83,9 @@ def test_model_default_role(db_session, test_model_permissions):
 
 @pytest.fixture(scope="function")
 def test_random_username():
-    """Generate a random username for testing."""
-    random_username = "test.user_" + "".join(
-        random.choices(string.ascii_letters + string.digits, k=5)
-    )
+    """Generate a truly unique username for testing using UUID."""
+    unique_id = str(uuid.uuid4())[:8]  # Use first 8 chars of UUID
+    random_username = f"test.user_{unique_id}"
     return random_username.lower()
 
 

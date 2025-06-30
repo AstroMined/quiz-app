@@ -34,17 +34,24 @@ def test_user_model_creation(db_session, test_model_permissions):
 
 
 def test_user_model_unique_constraints(db_session):
+    import uuid
+    
     # Create a role first
-    role = RoleModel(name="user", description="Regular user")
+    unique_role_name = f"user_{str(uuid.uuid4())[:8]}"
+    role = RoleModel(name=unique_role_name, description="Regular user")
     db_session.add(role)
     db_session.commit()
     
     # Store role ID to avoid accessing potentially detached object
     role_id = role.id
-
+    
+    # Test 1: Username uniqueness constraint
+    unique_id1 = str(uuid.uuid4())[:8]
+    base_username1 = f"testuser_{unique_id1}"
+    
     user1 = UserModel(
-        username="testuser",
-        email="testuser@example.com",
+        username=base_username1,
+        email=f"email1_{unique_id1}@example.com",
         hashed_password="hashed_password",
         role_id=role_id,
     )
@@ -54,28 +61,45 @@ def test_user_model_unique_constraints(db_session):
     # Try to create another user with the same username
     with pytest.raises(IntegrityError):
         user2 = UserModel(
-            username="testuser",
-            email="testuser2@example.com",
+            username=base_username1,  # Same username should fail
+            email=f"email2_{unique_id1}@example.com",
             hashed_password="hashed_password",
             role_id=role_id,
         )
         db_session.add(user2)
         db_session.commit()
 
+    # Clean up failed transaction and clear identity map to avoid conflicts
     db_session.rollback()
+    db_session.expunge_all()  # Clear all objects from the session identity map
+
+    # Test 2: Email uniqueness constraint  
+    unique_id2 = str(uuid.uuid4())[:8]
+    base_email2 = f"email_{unique_id2}@example.com"
+    
+    user3 = UserModel(
+        username=f"username1_{unique_id2}",
+        email=base_email2,
+        hashed_password="hashed_password",
+        role_id=role_id,
+    )
+    db_session.add(user3)
+    db_session.commit()
 
     # Try to create another user with the same email
     with pytest.raises(IntegrityError):
-        user3 = UserModel(
-            username="testuser3",
-            email="testuser@example.com",
+        user4 = UserModel(
+            username=f"username2_{unique_id2}",
+            email=base_email2,  # Same email should fail
             hashed_password="hashed_password",
             role_id=role_id,
         )
-        db_session.add(user3)
+        db_session.add(user4)
         db_session.commit()
     
-    db_session.rollback()  # Clean up failed transaction
+    # Clean up failed transaction and clear identity map
+    db_session.rollback()
+    db_session.expunge_all()  # Clear all objects from the session identity map
 
 
 def test_user_model_relationships(

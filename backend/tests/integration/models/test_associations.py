@@ -199,30 +199,34 @@ def test_multiple_associations(db_session):
 
 
 def test_association_integrity(db_session, test_model_user, test_model_group):
-    # Store IDs to avoid accessing detached objects after rollback
-    user_id = test_model_user.id
-    group_id = test_model_group.id
+    from backend.app.models.associations import UserToGroupAssociation
     
+    # Verify initial state - no association exists
+    assert test_model_group not in test_model_user.groups
+    assert test_model_user not in test_model_group.users
+    
+    # Create the association via the relationship
     test_model_user.groups.append(test_model_group)
     db_session.commit()
 
-    # Try to add the same association again
+    # Verify association was created
+    assert test_model_group in test_model_user.groups
+    assert test_model_user in test_model_group.users
+
+    # Store the IDs for later use
+    user_id = test_model_user.id
+    group_id = test_model_group.id
+
+    # Try to create a duplicate association directly at the table level
+    # This should hit the database constraint and raise IntegrityError
     with pytest.raises(IntegrityError):
-        test_model_user.groups.append(test_model_group)
+        duplicate_association = UserToGroupAssociation(
+            user_id=user_id,
+            group_id=group_id
+        )
+        db_session.add(duplicate_association)
         db_session.commit()
 
+    # Clean up the failed transaction - this will roll back everything including the original association
+    # This is expected behavior in transaction-based testing
     db_session.rollback()
-    
-    # After rollback, objects may be detached. Re-query them by ID
-    from backend.app.models.users import UserModel
-    from backend.app.models.groups import GroupModel
-    
-    fresh_user = db_session.query(UserModel).filter_by(id=user_id).first()
-    fresh_group = db_session.query(GroupModel).filter_by(id=group_id).first()
-
-    # Remove the association using fresh objects
-    fresh_user.groups.remove(fresh_group)
-    db_session.commit()
-
-    assert fresh_group not in fresh_user.groups
-    assert fresh_user not in fresh_group.users

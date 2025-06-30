@@ -357,9 +357,16 @@ def replace_question_in_db(
         return None
 
     try:
-        # Update simple fields
+        # Update simple fields with validation
         for key, value in replace_data.items():
             if key not in ASSOCIATED_FIELDS and key != "new_answer_choices":
+                # Validate enum fields before setting
+                if key == "difficulty" and value is not None:
+                    # Validate that the difficulty value is a valid enum value
+                    if value not in [level.value for level in DifficultyLevel]:
+                        error_msg = f"'{value}' is not among the defined enum values. Enum name: difficultylevel. Possible values: {', '.join([level.value for level in DifficultyLevel])}"
+                        logger.error(f"Invalid difficulty value: {value}")
+                        raise LookupError(error_msg)
                 setattr(db_question, key, value)
 
         # Flush changes to trigger any potential errors with simple fields
@@ -435,10 +442,17 @@ def update_question_in_db(
         existing_answer_choices = update_data.pop("answer_choice_ids", None)
         new_answer_choices = update_data.pop("new_answer_choices", None)
 
-        # Update simple fields
+        # Update simple fields with validation
         for key, value in update_data.items():
             if key not in ASSOCIATED_FIELDS:
                 if value is not None:
+                    # Validate enum fields before setting
+                    if key == "difficulty":
+                        # Validate that the difficulty value is a valid enum value
+                        if value not in [level.value for level in DifficultyLevel]:
+                            error_msg = f"'{value}' is not among the defined enum values. Enum name: difficultylevel. Possible values: {', '.join([level.value for level in DifficultyLevel])}"
+                            logger.error(f"Invalid difficulty value: {value}")
+                            raise LookupError(error_msg)
                     setattr(db_question, key, value)
 
         # Flush changes to trigger any potential errors with simple fields
