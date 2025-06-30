@@ -8,6 +8,7 @@ import pytest
 
 from backend.app.services.logging_service import logger
 from backend.tests.helpers.performance import PerformanceTracker, categorize_test_name
+from backend.tests.helpers.fixture_performance import get_fixture_performance_tracker
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=missing-function-docstring
@@ -21,6 +22,7 @@ os.environ["ENVIRONMENT"] = "test"
 # Register all fixture modules as pytest plugins
 pytest_plugins = [
     "backend.tests.fixtures.database.session_fixtures",
+    "backend.tests.fixtures.database.reference_data_fixtures",
     "backend.tests.fixtures.models.user_fixtures",
     "backend.tests.fixtures.models.content_fixtures", 
     "backend.tests.fixtures.models.quiz_fixtures",
@@ -30,6 +32,7 @@ pytest_plugins = [
     "backend.tests.fixtures.api.auth_fixtures",
     "backend.tests.fixtures.api.test_data_fixtures",
     "backend.tests.fixtures.integration.complex_data_fixtures",
+    "backend.tests.fixtures.integration.minimal_fixtures",
 ]
 
 
@@ -37,6 +40,12 @@ pytest_plugins = [
 def performance_tracker():
     """Track test performance metrics across the session."""
     return PerformanceTracker()
+
+
+@pytest.fixture(scope="session")
+def fixture_performance_tracker():
+    """Track fixture performance metrics across the session."""
+    return get_fixture_performance_tracker()
 
 
 @pytest.fixture(autouse=True)
@@ -57,3 +66,33 @@ def track_test_performance(request, performance_tracker):
     )
     
     logger.debug("Finished test: %s (%.3fs, %s)", request.node.nodeid, test_duration, test_category)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Report fixture performance at the end of the test session."""
+    fixture_tracker = get_fixture_performance_tracker()
+    summary = fixture_tracker.get_performance_summary()
+    
+    if summary:
+        logger.info("=== Fixture Performance Summary ===")
+        logger.info("Total fixture setups: %d", summary["total_fixture_setups"])
+        logger.info("Total setup time: %.3fs", summary["total_setup_time"])
+        logger.info("Average setup time: %.3fs", summary["average_setup_time"])
+        logger.info("Function-scoped: %d setups (%.3fs)", 
+                   summary["function_scoped_setups"], summary["function_scope_time"])
+        logger.info("Session-scoped: %d setups (%.3fs)", 
+                   summary["session_scoped_setups"], summary["session_scope_time"])
+        logger.info("Module-scoped: %d setups (%.3fs)", 
+                   summary["module_scoped_setups"], summary["module_scope_time"])
+        
+        # Report slowest fixtures
+        slowest = fixture_tracker.get_slowest_fixtures(5)
+        if slowest:
+            logger.info("=== Slowest Fixtures ===")
+            for fixture_stats in slowest:
+                logger.info("%s (%s): avg %.3fs, max %.3fs (%d setups)",
+                           fixture_stats["fixture_name"],
+                           fixture_stats["scope"],
+                           fixture_stats["average_setup_time"],
+                           fixture_stats["max_setup_time"],
+                           fixture_stats["setup_count"])
