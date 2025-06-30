@@ -38,12 +38,15 @@ def test_user_model_unique_constraints(db_session):
     role = RoleModel(name="user", description="Regular user")
     db_session.add(role)
     db_session.commit()
+    
+    # Store role ID to avoid accessing potentially detached object
+    role_id = role.id
 
     user1 = UserModel(
         username="testuser",
         email="testuser@example.com",
         hashed_password="hashed_password",
-        role_id=role.id,
+        role_id=role_id,
     )
     db_session.add(user1)
     db_session.commit()
@@ -54,7 +57,7 @@ def test_user_model_unique_constraints(db_session):
             username="testuser",
             email="testuser2@example.com",
             hashed_password="hashed_password",
-            role_id=role.id,
+            role_id=role_id,
         )
         db_session.add(user2)
         db_session.commit()
@@ -67,10 +70,12 @@ def test_user_model_unique_constraints(db_session):
             username="testuser3",
             email="testuser@example.com",
             hashed_password="hashed_password",
-            role_id=role.id,
+            role_id=role_id,
         )
         db_session.add(user3)
         db_session.commit()
+    
+    db_session.rollback()  # Clean up failed transaction
 
 
 def test_user_model_relationships(

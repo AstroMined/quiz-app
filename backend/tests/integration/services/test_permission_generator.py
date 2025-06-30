@@ -34,6 +34,10 @@ def test_generate_permissions():
 
 
 def test_ensure_permissions_in_db(db_session):
+    # Get initial permission count (may include reference data)
+    initial_permissions = set(p.name for p in db_session.query(PermissionModel).all())
+    initial_count = len(initial_permissions)
+    
     # Create some existing permissions
     existing_permission = PermissionModel(name="existing_permission")
     db_session.add(existing_permission)
@@ -44,12 +48,16 @@ def test_ensure_permissions_in_db(db_session):
 
     ensure_permissions_in_db(db_session, new_permissions)
 
-    # Check if all permissions are in the database
+    # Check if all our test permissions are in the database
     db_permissions = set(p.name for p in db_session.query(PermissionModel).all())
-    assert db_permissions == new_permissions
+    for permission in new_permissions:
+        assert permission in db_permissions, f"Permission '{permission}' not found in database"
 
-    # Check that no duplicate permissions were created
-    assert db_session.query(PermissionModel).count() == len(new_permissions)
+    # Check that the count increased by the right amount 
+    # We added "existing_permission" explicitly, then ensure_permissions_in_db added new_permission1 and new_permission2
+    expected_new_count = initial_count + 3  # existing_permission + new_permission1 + new_permission2
+    actual_count = db_session.query(PermissionModel).count()
+    assert actual_count == expected_new_count, f"Expected {expected_new_count} permissions, got {actual_count}"
 
 
 def test_permission_generation_patterns():

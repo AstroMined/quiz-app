@@ -437,23 +437,40 @@ def test_create_question_with_answer_choice_without_question_ids(
 
 def test_replace_question_with_invalid_data(db_session, test_schema_question):
     question = create_question_in_db(db_session, test_schema_question.model_dump())
-    question_data = sqlalchemy_obj_to_dict(question)
-    question_data["difficulty"] = "INVALID_DIFFICULTY"
-    question_data["text"] = "Replaced question text"
+    question_id = question.id
+    original_text = question.text
+    original_difficulty = question.difficulty
+    
+    question_data = {
+        "id": question_id,
+        "difficulty": "INVALID_DIFFICULTY",
+        "text": "Replaced question text"
+    }
 
     with pytest.raises(LookupError):  # We expect a LookupError to be raised
-        replace_question_in_db(db_session, question_data["id"], question_data)
+        replace_question_in_db(db_session, question_id, question_data)
 
-    # Verify that the original question remains unchanged
-    unchanged_question = read_question_from_db(db_session, question_data["id"])
-    assert unchanged_question.text == test_schema_question.text
-    assert unchanged_question.difficulty == test_schema_question.difficulty
+    # After an error with enum validation, the session may be in an inconsistent state
+    # Create a fresh session to verify the data integrity
+    from sqlalchemy.orm import sessionmaker
+    SessionLocal = sessionmaker(bind=db_session.bind.engine)
+    fresh_session = SessionLocal()
+    
+    try:
+        # Verify that the original question remains unchanged
+        unchanged_question = read_question_from_db(fresh_session, question_id)
+        assert unchanged_question is not None, "Question should still exist after failed replace"
+        assert unchanged_question.text == original_text
+        assert unchanged_question.difficulty == original_difficulty
+    finally:
+        fresh_session.close()
 
 
 def test_update_question_with_invalid_data(db_session, test_schema_question):
     question = create_question_in_db(db_session, test_schema_question.model_dump())
-    logger.debug("Question: %s", sqlalchemy_obj_to_dict(question))
-    assert question.difficulty == test_schema_question.difficulty
+    question_id = question.id
+    original_difficulty = question.difficulty
+    logger.debug("Question ID: %s, Original difficulty: %s", question_id, original_difficulty)
 
     # Attempt to update the question with invalid data
     invalid_update_data = {
@@ -463,10 +480,21 @@ def test_update_question_with_invalid_data(db_session, test_schema_question):
     with pytest.raises(LookupError):  # We expect a LookupError to be raised
         logger.debug("Attempting to update question with invalid data")
         updated_question = update_question_in_db(
-            db_session, question.id, invalid_update_data
+            db_session, question_id, invalid_update_data
         )
-        logger.debug("Updated Question: %s", sqlalchemy_obj_to_dict(updated_question))
+        if updated_question:
+            logger.debug("Updated Question: %s", sqlalchemy_obj_to_dict(updated_question))
 
-    # Verify that the original question remains unchanged
-    unchanged_question = read_question_from_db(db_session, question.id)
-    assert unchanged_question.difficulty == test_schema_question.difficulty
+    # After an error with enum validation, the session may be in an inconsistent state
+    # Create a fresh session to verify the data integrity
+    from sqlalchemy.orm import sessionmaker
+    SessionLocal = sessionmaker(bind=db_session.bind.engine)
+    fresh_session = SessionLocal()
+    
+    try:
+        # Verify that the original question remains unchanged
+        unchanged_question = read_question_from_db(fresh_session, question_id)
+        assert unchanged_question is not None, "Question should still exist after failed update"
+        assert unchanged_question.difficulty == original_difficulty
+    finally:
+        fresh_session.close()

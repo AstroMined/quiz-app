@@ -144,9 +144,15 @@ def test_create_multiple_permissions(db_session, test_schema_permission):
         db_session,
         {**test_schema_permission.model_dump(), "name": "another_permission"},
     )
+    
+    # Filter permissions to only include the ones we created in this test
+    # This excludes any reference data permissions that might exist
+    created_permission_names = {test_schema_permission.name, "another_permission"}
     permissions = read_permissions_from_db(db_session)
-    assert len(permissions) == 2
-    assert {p.id for p in permissions} == {permission1.id, permission2.id}
+    test_permissions = [p for p in permissions if p.name in created_permission_names]
+    
+    assert len(test_permissions) == 2
+    assert {p.id for p in test_permissions} == {permission1.id, permission2.id}
 
 
 def test_update_permission_name(db_session, test_schema_permission):
@@ -198,15 +204,19 @@ def test_create_role_to_permission_association_idempotent(
         db_session, test_schema_permission.model_dump()
     )
     role = create_role_in_db(db_session, test_schema_role.model_dump())
+    
+    # Store IDs to avoid accessing potentially detached objects
+    permission_id = permission.id
+    role_id = role.id
 
     first_association = create_role_to_permission_association_in_db(
-        db_session, role.id, permission.id
+        db_session, role_id, permission_id
     )
     assert first_association is True
     second_association = create_role_to_permission_association_in_db(
-        db_session, role.id, permission.id
+        db_session, role_id, permission_id
     )
     assert second_association is False
 
-    roles = read_roles_for_permission_from_db(db_session, permission.id)
+    roles = read_roles_for_permission_from_db(db_session, permission_id)
     assert len(roles) == 1

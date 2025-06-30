@@ -52,11 +52,16 @@ def test_user_response_relationships(
 def test_user_response_required_fields(
     db_session, test_model_user, test_model_questions, test_model_answer_choices
 ):
+    # Store IDs to avoid accessing potentially detached objects
+    user_id = test_model_user.id
+    question_id = test_model_questions[0].id
+    answer_choice_id = test_model_answer_choices[0].id
+    
     # Test missing user_id
     with pytest.raises(IntegrityError):
         user_response = UserResponseModel(
-            question_id=test_model_questions[0].id,
-            answer_choice_id=test_model_answer_choices[0].id,
+            question_id=question_id,
+            answer_choice_id=answer_choice_id,
             is_correct=True,
         )
         db_session.add(user_response)
@@ -66,8 +71,8 @@ def test_user_response_required_fields(
     # Test missing question_id
     with pytest.raises(IntegrityError):
         user_response = UserResponseModel(
-            user_id=test_model_user.id,
-            answer_choice_id=test_model_answer_choices[0].id,
+            user_id=user_id,
+            answer_choice_id=answer_choice_id,
             is_correct=True,
         )
         db_session.add(user_response)
@@ -77,8 +82,8 @@ def test_user_response_required_fields(
     # Test missing answer_choice_id
     with pytest.raises(IntegrityError):
         user_response = UserResponseModel(
-            user_id=test_model_user.id,
-            question_id=test_model_questions[0].id,
+            user_id=user_id,
+            question_id=question_id,
             is_correct=True,
         )
         db_session.add(user_response)

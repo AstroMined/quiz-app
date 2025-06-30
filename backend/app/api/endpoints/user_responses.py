@@ -103,13 +103,24 @@ def post_user_response(
     get_current_user_or_error(request)
 
     user_response_data = user_response.model_dump()
+    
+    # Validate user_id exists
+    from backend.app.crud.crud_user import read_user_from_db
+    user = read_user_from_db(db, user_response_data["user_id"])
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid user_id")
 
     try:
         is_correct = score_user_response(db, user_response_data)
         user_response_data["is_correct"] = is_correct
     except HTTPException as e:
-        # If scoring fails, we still create the response but set is_correct to None
-        user_response_data["is_correct"] = None
+        # Re-raise validation errors for invalid question_id or answer_choice_id
+        if e.status_code == 404:
+            if "Question not found" in str(e.detail):
+                raise HTTPException(status_code=400, detail="Invalid question_id")
+            elif "Answer choice not found" in str(e.detail):
+                raise HTTPException(status_code=400, detail="Invalid answer_choice_id")
+        raise e
 
     created_response = create_user_response_in_db(
         db=db, user_response_data=user_response_data

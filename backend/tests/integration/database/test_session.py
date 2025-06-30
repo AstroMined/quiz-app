@@ -13,7 +13,8 @@ def test_revoked_tokens_table_exists(db_session):
 
 def test_database_session_lifecycle(db_session):
     """Test the lifecycle of a database session."""
-    # Assuming 'db_session' is already using the correct test database ('backend/db/test.db') as configured in conftest.py
+    # With the new transaction-based architecture, db_session.bind is a Connection, not an Engine
+    # We need to access the engine through the connection
     assert (
-        db_session.bind.url.__to_string__() == "sqlite:///./backend/db/test.db"
-    ), "Not using the test database"
+        db_session.bind.engine.url.__to_string__() == "sqlite:///:memory:"
+    ), "Not using the in-memory test database"

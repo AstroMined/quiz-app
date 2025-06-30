@@ -199,6 +199,10 @@ def test_multiple_associations(db_session):
 
 
 def test_association_integrity(db_session, test_model_user, test_model_group):
+    # Store IDs to avoid accessing detached objects after rollback
+    user_id = test_model_user.id
+    group_id = test_model_group.id
+    
     test_model_user.groups.append(test_model_group)
     db_session.commit()
 
@@ -208,10 +212,17 @@ def test_association_integrity(db_session, test_model_user, test_model_group):
         db_session.commit()
 
     db_session.rollback()
+    
+    # After rollback, objects may be detached. Re-query them by ID
+    from backend.app.models.users import UserModel
+    from backend.app.models.groups import GroupModel
+    
+    fresh_user = db_session.query(UserModel).filter_by(id=user_id).first()
+    fresh_group = db_session.query(GroupModel).filter_by(id=group_id).first()
 
-    # Remove the association
-    test_model_user.groups.remove(test_model_group)
+    # Remove the association using fresh objects
+    fresh_user.groups.remove(fresh_group)
     db_session.commit()
 
-    assert test_model_group not in test_model_user.groups
-    assert test_model_user not in test_model_group.users
+    assert fresh_group not in fresh_user.groups
+    assert fresh_user not in fresh_group.users

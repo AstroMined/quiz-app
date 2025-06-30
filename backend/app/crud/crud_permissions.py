@@ -214,7 +214,7 @@ def create_role_to_permission_association_in_db(
         permission_id (int): The ID of the permission.
 
     Returns:
-        bool: True if the association was successfully created, False otherwise.
+        bool: True if the association was successfully created, False if it already exists.
 
     Raises:
         SQLAlchemyError: If there's an issue with the database operation.
@@ -223,8 +223,17 @@ def create_role_to_permission_association_in_db(
         if create_role_to_permission_association_in_db(db, 1, 2):
             print("Role-permission association created successfully")
         else:
-            print("Failed to create role-permission association")
+            print("Association already exists or failed to create")
     """
+    # Check if association already exists
+    existing_association = (
+        db.query(RoleToPermissionAssociation)
+        .filter_by(role_id=role_id, permission_id=permission_id)
+        .first()
+    )
+    if existing_association:
+        return False  # Association already exists
+    
     association = RoleToPermissionAssociation(
         role_id=role_id, permission_id=permission_id
     )
