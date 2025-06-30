@@ -105,8 +105,26 @@ class NoCloseSessionWrapper:
 
 @pytest.fixture(scope="function")
 def client(db_session, test_engine):
-    """Provide a test client with transaction-scoped database session override."""
+    """
+    Provide a test client with transaction-scoped database session override.
+    
+    CRITICAL FIX: This fixture creates a test-specific FastAPI application instance
+    to ensure that middleware (BlacklistMiddleware, AuthorizationMiddleware) use 
+    the same database session as the test endpoints. This prevents "User not found" 
+    errors that occurred when middleware and endpoints used different database sessions.
+    
+    The fix works by:
+    1. Creating a test-specific FastAPI app instead of using the main app
+    2. Copying all routes from the main app to the test app  
+    3. Adding middleware with explicit database session injection
+    4. Ensuring all components (endpoints + middleware) use the same test session
+    """
+    from fastapi import FastAPI
     from backend.app.db.session import get_db
+    from backend.app.middleware.blacklist_middleware import BlacklistMiddleware
+    from backend.app.middleware.authorization_middleware import AuthorizationMiddleware
+    from backend.app.middleware.cors_middleware import add_cors_middleware
+    from backend.app.services.logging_service import logger
     
     # Create a wrapper that ignores close() calls
     wrapped_session = NoCloseSessionWrapper(db_session)
@@ -120,36 +138,31 @@ def client(db_session, test_engine):
             # CRITICAL: Don't close the session here - it's transaction-scoped
             pass
     
-    def override_get_db_for_middleware():
-        """Override for middleware - returns the same wrapped session."""
-        # Debug: verify we're using the same session
-        from backend.app.services.logging_service import logger
-        logger.debug(f"Middleware using session: {wrapped_session}")
-        yield wrapped_session
+    def test_get_db_for_middleware():
+        """Provide the same session for middleware."""
+        return override_get_db()
 
     # Override dependency injection for endpoints
     app.dependency_overrides[get_db] = override_get_db
     
-    # Override middleware database access - access the actual middleware instances
-    middleware_originals = []
+    # Create a test-specific application with properly injected middleware
+    test_app = FastAPI()
     
-    # The middleware instances are stored in app.user_middleware
-    for middleware_wrapper in app.user_middleware:
-        # The actual middleware instance is stored in the args of the wrapper
-        if hasattr(middleware_wrapper, 'args') and middleware_wrapper.args:
-            middleware_instance = middleware_wrapper.args[0]  # First arg is the middleware instance
-            if hasattr(middleware_instance, 'get_db_func'):
-                # Store original function
-                original_func = middleware_instance.get_db_func
-                middleware_originals.append((middleware_instance, original_func))
-                # Override with test function that returns the same session
-                middleware_instance.get_db_func = override_get_db_for_middleware
+    # Add all the same routes as the main app
+    for route in app.routes:
+        test_app.routes.append(route)
     
-    with TestClient(app) as test_client:
+    # Add middleware with test database function
+    test_app.add_middleware(AuthorizationMiddleware, get_db_func=test_get_db_for_middleware)
+    test_app.add_middleware(BlacklistMiddleware, get_db_func=test_get_db_for_middleware)
+    add_cors_middleware(test_app)
+    
+    # Copy dependency overrides to test app
+    test_app.dependency_overrides = app.dependency_overrides.copy()
+    
+    logger.debug("Created test app with middleware using test database session")
+    
+    with TestClient(test_app) as test_client:
         yield test_client
-    
-    # Restore original middleware database functions
-    for middleware_instance, original_func in middleware_originals:
-        middleware_instance.get_db_func = original_func
     
     app.dependency_overrides.clear()

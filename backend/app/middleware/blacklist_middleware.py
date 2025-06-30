@@ -39,6 +39,7 @@ class BlacklistMiddleware(BaseHTTPMiddleware):
 
                 # Use injected database function (supports test overrides)
                 db = next(self.get_db_func())
+                logger.debug(f"BlacklistMiddleware: Using database session: {db}")
                 try:
                     if is_token_revoked(db, token):
                         logger.warning("BlacklistMiddleware: Token has been revoked")
@@ -50,6 +51,10 @@ class BlacklistMiddleware(BaseHTTPMiddleware):
                     raise HTTPException(
                         status_code=401, detail="Token has expired"
                     )
+                except HTTPException as middleware_http_exc:
+                    # Re-raise HTTP exceptions from is_token_revoked (like "User not found")
+                    logger.error(f"BlacklistMiddleware: Token validation failed - {middleware_http_exc.detail}")
+                    raise middleware_http_exc
                 finally:
                     db.close()
 
