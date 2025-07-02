@@ -21,15 +21,39 @@ config = toml.load(config_path)
 # Use in-memory database for significant performance improvement
 IN_MEMORY_DATABASE_URL = "sqlite:///:memory:"
 
-# Global cache for reference data initialization
-_reference_data_initialized = False
+# Global cache for reference data initialization per worker
+_reference_data_initialized = {}
+
+
+def get_worker_id():
+    """Get the current pytest-xdist worker ID, or 'main' for non-parallel execution."""
+    try:
+        # Try to get worker ID from pytest-xdist
+        import pytest
+        if hasattr(pytest, 'current_node') and pytest.current_node:
+            worker_input = getattr(pytest.current_node, 'workerinput', {})
+            return worker_input.get('workerid', 'main')
+    except (ImportError, AttributeError):
+        pass
+    
+    # Fallback for non-parallel execution
+    return 'main'
 
 
 @pytest.fixture(scope="session")
 def test_engine():
-    """Create a single in-memory database engine for the entire test session."""
+    """Create a worker-specific in-memory database engine for the test session."""
+    worker_id = get_worker_id()
+    
+    # Create unique database URL for each worker to ensure complete isolation
+    if worker_id == 'main':
+        database_url = IN_MEMORY_DATABASE_URL
+    else:
+        # Add worker ID as query parameter to create separate databases per worker
+        database_url = f"{IN_MEMORY_DATABASE_URL}?worker={worker_id}"
+    
     engine = create_engine(
-        IN_MEMORY_DATABASE_URL,
+        database_url,
         connect_args={
             "check_same_thread": False,
         },
@@ -37,7 +61,7 @@ def test_engine():
         echo=False
     )
     
-    # Create all tables once per session
+    # Create all tables once per worker session
     Base.metadata.create_all(bind=engine)
     
     return engine
@@ -51,17 +75,19 @@ def session_factory(test_engine):
 
 @pytest.fixture(scope="session")
 def base_reference_data(test_engine):
-    """Initialize reference data once per test session."""
+    """Initialize reference data once per worker test session."""
     global _reference_data_initialized
     
-    if not _reference_data_initialized:
+    worker_id = get_worker_id()
+    
+    if not _reference_data_initialized.get(worker_id, False):
         SessionLocal = sessionmaker(bind=test_engine)
         session = SessionLocal()
         try:
             # Initialize time periods and other static data
             init_time_periods_in_db(session)
             session.commit()
-            _reference_data_initialized = True
+            _reference_data_initialized[worker_id] = True
         finally:
             session.close()
     

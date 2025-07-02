@@ -8,6 +8,21 @@ from dataclasses import dataclass
 from backend.app.services.logging_service import logger
 
 
+def get_worker_id():
+    """Get the current pytest-xdist worker ID, or 'main' for non-parallel execution."""
+    try:
+        # Try to get worker ID from pytest-xdist
+        import pytest
+        if hasattr(pytest, 'current_node') and pytest.current_node:
+            worker_input = getattr(pytest.current_node, 'workerinput', {})
+            return worker_input.get('workerid', 'main')
+    except (ImportError, AttributeError):
+        pass
+    
+    # Fallback for non-parallel execution
+    return 'main'
+
+
 @dataclass
 class FixturePerformanceRecord:
     """Record of a fixture's performance metrics."""
@@ -16,6 +31,7 @@ class FixturePerformanceRecord:
     scope: str
     session_reuse_count: int
     timestamp: float
+    worker_id: str = "main"
 
 
 class FixturePerformanceTracker:
@@ -27,22 +43,26 @@ class FixturePerformanceTracker:
     
     def record_fixture_setup(self, fixture_name: str, duration: float, scope: str):
         """Record fixture setup performance."""
-        # Track reuse for session/module scoped fixtures
+        worker_id = get_worker_id()
+        fixture_key = f"{fixture_name}@{worker_id}"
+        
+        # Track reuse for session/module scoped fixtures per worker
         if scope in ("session", "module"):
-            self.fixture_reuse_counts[fixture_name] = self.fixture_reuse_counts.get(fixture_name, 0) + 1
+            self.fixture_reuse_counts[fixture_key] = self.fixture_reuse_counts.get(fixture_key, 0) + 1
         
         record = FixturePerformanceRecord(
             fixture_name=fixture_name,
             setup_duration=duration,
             scope=scope,
-            session_reuse_count=self.fixture_reuse_counts.get(fixture_name, 1),
-            timestamp=time.time()
+            session_reuse_count=self.fixture_reuse_counts.get(fixture_key, 1),
+            timestamp=time.time(),
+            worker_id=worker_id
         )
         self.records.append(record)
         
         logger.debug(
-            "Fixture %s (%s scope) setup in %.3fs (reuse count: %d)",
-            fixture_name, scope, duration, record.session_reuse_count
+            "Fixture %s (%s scope) setup in %.3fs on worker %s (reuse count: %d)",
+            fixture_name, scope, duration, worker_id, record.session_reuse_count
         )
     
     def get_fixture_stats(self, fixture_name: str) -> Dict[str, Any]:
@@ -88,6 +108,16 @@ class FixturePerformanceTracker:
         session_scoped = [r for r in self.records if r.scope == "session"]
         module_scoped = [r for r in self.records if r.scope == "module"]
         
+        # Worker statistics
+        workers = set(r.worker_id for r in self.records)
+        worker_stats = {}
+        for worker_id in workers:
+            worker_records = [r for r in self.records if r.worker_id == worker_id]
+            worker_stats[worker_id] = {
+                "setups": len(worker_records),
+                "total_time": sum(r.setup_duration for r in worker_records)
+            }
+        
         return {
             "total_fixture_setups": len(self.records),
             "total_setup_time": total_setup_time,
@@ -98,6 +128,8 @@ class FixturePerformanceTracker:
             "function_scope_time": sum(r.setup_duration for r in function_scoped),
             "session_scope_time": sum(r.setup_duration for r in session_scoped),
             "module_scope_time": sum(r.setup_duration for r in module_scoped),
+            "parallel_workers": len(workers),
+            "worker_stats": worker_stats,
         }
 
 

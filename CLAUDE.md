@@ -58,27 +58,37 @@ uv run python -m backend.app.main
 ### Testing
 
 ```bash
-# Run all tests with UV
+# Run all tests with UV (parallel execution for better performance)
+uv run pytest -n auto
+
+# Run tests with specific number of workers
+uv run pytest -n 4
+
+# Run tests in serial mode (if needed for debugging)
 uv run pytest
 
 # Run with coverage
 uv run pytest --cov=backend/
 
 # Run specific test categories (aspirational structure)
-uv run pytest backend/tests/unit/
-uv run pytest backend/tests/integration/
+uv run pytest backend/tests/unit/ -n auto
+uv run pytest backend/tests/integration/ -n auto
 
 # Run current test structure
-uv run pytest backend/tests/test_models/
-uv run pytest backend/tests/test_api/
-uv run pytest backend/tests/test_crud/
-uv run pytest backend/tests/test_schemas/
+uv run pytest backend/tests/test_models/ -n auto
+uv run pytest backend/tests/test_api/ -n auto
+uv run pytest backend/tests/test_crud/ -n auto
+uv run pytest backend/tests/test_schemas/ -n auto
 
 # Run single test file
 uv run pytest backend/tests/test_models/test_question_model.py
 
 # Run with verbose output
-uv run pytest -v
+uv run pytest -v -n auto
+
+# Performance comparison
+time uv run pytest -n 1  # Serial execution
+time uv run pytest -n auto  # Parallel execution
 ```
 
 ### Code Quality

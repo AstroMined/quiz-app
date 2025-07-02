@@ -354,118 +354,117 @@ def test_performance_of_transaction_isolation(db_session, test_model_role, perfo
     print(f"  Per operation: {duration/20:.4f}s")
 
 
-class TestRegressionSuite:
-    """Comprehensive regression testing for new architecture."""
+def test_authentication_endpoints_regression(client, test_model_user):
+    """Test all authentication endpoints work correctly after architecture changes."""
     
-    def test_authentication_endpoints_regression(self, client, test_model_user):
-        """Test all authentication endpoints work correctly after architecture changes."""
-        
-        # Test login
-        login_response = client.post("/login", json={
-            "username": test_model_user.username,
-            "password": "TestPassword123!"
-        })
-        assert login_response.status_code == 200
-        assert "access_token" in login_response.json()
-        
-        # Test login with invalid credentials
-        invalid_response = client.post("/login", json={
-            "username": "nonexistent",
-            "password": "wrong"
-        })
-        assert invalid_response.status_code in [401, 422]  # 422 for validation, 401 for auth
-        
-        # Test missing credentials
-        missing_response = client.post("/login", json={
-            "username": test_model_user.username
-            # Missing password
-        })
-        assert missing_response.status_code == 422  # Validation error
+    # Test login
+    login_response = client.post("/login", json={
+        "username": test_model_user.username,
+        "password": "TestPassword123!"
+    })
+    assert login_response.status_code == 200
+    assert "access_token" in login_response.json()
     
-    def test_crud_operations_regression(self, db_session, test_model_user, test_model_role):
-        """Test all CRUD operations work with new database architecture."""
-        
-        # User CRUD
-        original_count = db_session.query(UserModel).count()
-        
-        new_user = UserModel(
-            username="crud_test_user",
-            email="crud_test_user@example.com",
-            hashed_password=get_password_hash("TestPassword123!"),
-            is_active=True,
-            is_admin=False,
-            role_id=test_model_role.id,
-        )
-        db_session.add(new_user)
-        db_session.flush()
-        
-        # Read
-        found_user = db_session.query(UserModel).filter_by(username="crud_test_user").first()
-        assert found_user is not None
-        assert found_user.email == "crud_test_user@example.com"
-        
-        # Update
-        found_user.email = "updated_email@example.com"
-        db_session.flush()
-        
-        updated_user = db_session.query(UserModel).filter_by(username="crud_test_user").first()
-        assert updated_user.email == "updated_email@example.com"
-        
-        # Verify count increased by 1
-        assert db_session.query(UserModel).count() == original_count + 1
+    # Test login with invalid credentials
+    invalid_response = client.post("/login", json={
+        "username": "nonexistent",
+        "password": "wrong"
+    })
+    assert invalid_response.status_code in [401, 422]  # 422 for validation, 401 for auth
     
-    def test_complex_business_workflows_regression(self, db_session, test_model_user):
-        """Test end-to-end business workflows still work correctly."""
-        
-        # Create a complete quiz workflow
-        from backend.app.models.subjects import SubjectModel
-        from backend.app.models.questions import QuestionModel
-        from backend.app.core.config import DifficultyLevel
-        from backend.app.models.answer_choices import AnswerChoiceModel
-        
-        # Create subject
-        subject = SubjectModel(name="Regression Test Subject")
-        db_session.add(subject)
-        db_session.flush()
-        
-        # Create question
-        question = QuestionModel(
-            text="What is regression testing?",
-            difficulty=DifficultyLevel.MEDIUM,
-            creator_id=test_model_user.id
-        )
-        question.subjects.append(subject)
-        db_session.add(question)
-        db_session.flush()
-        
-        # Create answer choices
-        correct_answer = AnswerChoiceModel(
-            text="Testing to ensure new changes don't break existing functionality",
-            is_correct=True
-        )
-        
-        incorrect_answer = AnswerChoiceModel(
-            text="Testing only new features",
-            is_correct=False
-        )
-        
-        # Associate answer choices with question through the relationship
-        question.answer_choices.extend([correct_answer, incorrect_answer])
-        
-        db_session.add_all([correct_answer, incorrect_answer])
-        db_session.flush()
-        
-        # Verify the complete workflow
-        found_question = db_session.query(QuestionModel).filter_by(
-            text="What is regression testing?"
-        ).first()
-        assert found_question is not None
-        assert len(found_question.subjects) == 1
-        assert found_question.subjects[0].name == "Regression Test Subject"
-        
-        # Check answer choices through the relationship
-        assert len(found_question.answer_choices) == 2
-        
-        correct_answers = [ac for ac in found_question.answer_choices if ac.is_correct]
-        assert len(correct_answers) == 1
-        assert "ensure new changes don't break" in correct_answers[0].text
+    # Test missing credentials
+    missing_response = client.post("/login", json={
+        "username": test_model_user.username
+        # Missing password
+    })
+    assert missing_response.status_code == 422  # Validation error
+
+
+def test_crud_operations_regression(db_session, test_model_user, test_model_role):
+    """Test all CRUD operations work with new database architecture."""
+    
+    # User CRUD
+    original_count = db_session.query(UserModel).count()
+    
+    new_user = UserModel(
+        username="crud_test_user",
+        email="crud_test_user@example.com",
+        hashed_password=get_password_hash("TestPassword123!"),
+        is_active=True,
+        is_admin=False,
+        role_id=test_model_role.id,
+    )
+    db_session.add(new_user)
+    db_session.flush()
+    
+    # Read
+    found_user = db_session.query(UserModel).filter_by(username="crud_test_user").first()
+    assert found_user is not None
+    assert found_user.email == "crud_test_user@example.com"
+    
+    # Update
+    found_user.email = "updated_email@example.com"
+    db_session.flush()
+    
+    updated_user = db_session.query(UserModel).filter_by(username="crud_test_user").first()
+    assert updated_user.email == "updated_email@example.com"
+    
+    # Verify count increased by 1
+    assert db_session.query(UserModel).count() == original_count + 1
+
+
+def test_complex_business_workflows_regression(db_session, test_model_user):
+    """Test end-to-end business workflows still work correctly."""
+    
+    # Create a complete quiz workflow
+    from backend.app.models.subjects import SubjectModel
+    from backend.app.models.questions import QuestionModel
+    from backend.app.core.config import DifficultyLevel
+    from backend.app.models.answer_choices import AnswerChoiceModel
+    
+    # Create subject
+    subject = SubjectModel(name="Regression Test Subject")
+    db_session.add(subject)
+    db_session.flush()
+    
+    # Create question
+    question = QuestionModel(
+        text="What is regression testing?",
+        difficulty=DifficultyLevel.MEDIUM,
+        creator_id=test_model_user.id
+    )
+    question.subjects.append(subject)
+    db_session.add(question)
+    db_session.flush()
+    
+    # Create answer choices
+    correct_answer = AnswerChoiceModel(
+        text="Testing to ensure new changes don't break existing functionality",
+        is_correct=True
+    )
+    
+    incorrect_answer = AnswerChoiceModel(
+        text="Testing only new features",
+        is_correct=False
+    )
+    
+    # Associate answer choices with question through the relationship
+    question.answer_choices.extend([correct_answer, incorrect_answer])
+    
+    db_session.add_all([correct_answer, incorrect_answer])
+    db_session.flush()
+    
+    # Verify the complete workflow
+    found_question = db_session.query(QuestionModel).filter_by(
+        text="What is regression testing?"
+    ).first()
+    assert found_question is not None
+    assert len(found_question.subjects) == 1
+    assert found_question.subjects[0].name == "Regression Test Subject"
+    
+    # Check answer choices through the relationship
+    assert len(found_question.answer_choices) == 2
+    
+    correct_answers = [ac for ac in found_question.answer_choices if ac.is_correct]
+    assert len(correct_answers) == 1
+    assert "ensure new changes don't break" in correct_answers[0].text
