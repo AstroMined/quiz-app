@@ -62,12 +62,29 @@ ignored-argument-names="^current_user$"
 
 [tool.pytest.ini_options]
 python_files = ["test_*.py"]
-testpaths = [
-    "./backend/tests",
-]
-filterwarnings = [
-    "ignore::DeprecationWarning"
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+testpaths = ["./backend/tests"]
+norecursedirs = [
+    ".*", "build", "dist", "*.egg", "node_modules", 
+    ".tox", ".git", "__pycache__", "frontend"
 ]
 addopts = [
-    # "--durations=10",  # Show 10 slowest tests
+    "--strict-markers",
+    "--strict-config", 
+    "--tb=short",  # Shorter traceback format
+    "--disable-warnings",
+    "-q",  # Quiet mode for faster output
+    "--durations=10",  # Show 10 slowest tests
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests", 
+    "unit: marks tests as unit tests",
+    "api: marks tests as API integration tests",
 ]

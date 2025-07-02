@@ -52,20 +52,28 @@ def fixture_performance_tracker():
 def track_test_performance(request, performance_tracker):
     """Automatically track performance for all tests."""
     start_time = time.time()
-    logger.debug("Running test: %s", request.node.nodeid)
+    
+    # Only log in verbose mode to reduce I/O overhead
+    verbose = request.config.getoption("--verbose", 0) >= 2
+    if verbose:
+        logger.debug("Running test: %s", request.node.nodeid)
+    
     yield
     end_time = time.time()
     
     test_duration = end_time - start_time
     test_category = categorize_test_name(str(request.fspath))
     
+    # Always record performance metrics (essential for monitoring)
     performance_tracker.record_test(
         test_name=request.node.nodeid,
         duration=test_duration,
         category=test_category
     )
     
-    logger.debug("Finished test: %s (%.3fs, %s)", request.node.nodeid, test_duration, test_category)
+    # Only log completion in verbose mode
+    if verbose:
+        logger.debug("Finished test: %s (%.3fs, %s)", request.node.nodeid, test_duration, test_category)
 
 
 def pytest_sessionfinish(session, exitstatus):
