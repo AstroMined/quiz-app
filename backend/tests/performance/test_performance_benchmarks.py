@@ -8,6 +8,8 @@ from pathlib import Path
 from backend.tests.helpers.performance import PerformanceTracker
 from backend.app.core.jwt import create_access_token, decode_access_token
 
+pytestmark = pytest.mark.performance
+
 
 def test_jwt_performance_benchmark(db_session, test_model_user, performance_tracker):
     """Benchmark JWT operations with statistical analysis."""

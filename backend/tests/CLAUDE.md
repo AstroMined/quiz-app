@@ -2,36 +2,9 @@
 
 This directory contains tests for the Quiz Application backend. The test suite follows the "Real Objects Testing Philosophy," emphasizing integration testing with real components while maintaining proper layer isolation.
 
-## Directory Structure (Aspirational)
+## Directory Structure
 
-The following structure represents the intended organization for proper test categorization:
-
-```tree
-backend/tests/
-├── conftest.py             # Pytest configuration and shared fixtures
-├── fixtures/               # Test fixtures for creating test instances
-│   ├── models/             # SQLAlchemy model fixtures
-│   ├── crud/               # CRUD operation fixtures
-│   ├── api/                # API endpoint fixtures
-│   └── services/           # Service layer fixtures
-├── helpers/                # Helper modules for testing
-│   ├── factories/          # Factory functions for creating test data
-│   ├── assertions/         # Custom assertion helpers
-│   └── database/           # Database testing utilities
-├── unit/                   # Tests for single-component isolation
-│   ├── models/             # SQLAlchemy model tests (business logic only)
-│   ├── schemas/            # Pydantic schema validation tests
-│   ├── services/           # Service layer business logic tests
-│   └── utils/              # Utility function tests
-└── integration/            # Tests for cross-component interactions
-    ├── crud/               # Database operation integration tests
-    ├── api/                # API endpoint integration tests
-    └── workflows/          # End-to-end workflow tests
-```
-
-### Current Structure
-
-✅ **Fully Implemented**: The test suite now follows proper unit/integration separation:
+The test suite is organized into three main test categories for clear separation of concerns:
 
 ```tree
 backend/tests/
@@ -47,33 +20,58 @@ backend/tests/
 │   ├── assertions/         # Custom assertion helpers
 │   └── database/           # Database testing utilities
 ├── unit/                   # Tests for single-component isolation
-│   ├── models/             # SQLAlchemy model business logic tests
+│   ├── models/             # SQLAlchemy model tests (business logic only)
 │   ├── schemas/            # Pydantic schema validation tests
 │   ├── services/           # Service layer business logic tests
 │   └── utils/              # Utility function tests
-└── integration/            # Tests for cross-component interactions
-    ├── crud/               # Database operation integration tests
-    ├── api/                # API endpoint integration tests
-    ├── models/             # Model database interaction tests
-    ├── services/           # Service database integration tests
-    ├── database/           # Database session and connection tests
-    └── workflows/          # End-to-end workflow tests
+├── integration/            # Tests for cross-component interactions
+│   ├── crud/               # Database operation integration tests
+│   ├── api/                # API endpoint integration tests
+│   ├── models/             # Model database interaction tests
+│   ├── services/           # Service database integration tests
+│   ├── database/           # Database session and connection tests
+│   └── workflows/          # End-to-end workflow tests
+└── performance/            # Performance benchmarks and monitoring
+    ├── test_performance_benchmarks.py    # Performance benchmark tests
+    ├── test_performance_monitoring.py    # Performance monitoring tests
+    └── test_fixture_performance.py       # Fixture performance optimization tests
 ```
 
-## Test Types
+## Test Categories
 
-Quiz App follows proper test categorization with two main types of tests:
+The Quiz App test suite is organized into **three main test categories**, each with a distinct purpose and scope:
 
-### Unit Tests
+### 1. Unit Tests (`unit/`)
 
 Unit tests focus on a single component in isolation:
+
 
 - **Models**: Testing model properties, methods, and business logic (no database)
 - **Schemas**: Testing Pydantic schema validation and serialization
 - **Services**: Testing business logic methods without external dependencies
 - **Utils**: Testing utility functions
 
-Example unit test:
+### 2. Integration Tests (`integration/`)
+
+Integration tests focus on components that span multiple layers:
+
+- **CRUD Operations**: Testing database interactions with real database connections
+- **API Endpoints**: Testing full request/response cycles through FastAPI
+- **Services**: Testing business logic that integrates with databases and external systems
+- **Workflows**: Testing complete user workflows across multiple components
+
+### 3. Performance Tests (`performance/`)
+
+Performance tests focus on system performance measurement and optimization:
+
+- **Benchmarks**: Performance measurement tests with statistical analysis
+- **Monitoring**: Performance regression detection and baseline comparison
+- **Fixture Performance**: Testing and optimizing test fixture performance
+- **Load Testing**: Testing system behavior under various performance conditions
+
+## Test Examples
+
+### Unit Test Example:
 
 ```python
 def test_question_schema_validation():
@@ -96,16 +94,7 @@ def test_question_schema_validation():
         QuestionCreateSchema(text="", difficulty="Beginner")  # Empty text
 ```
 
-### Integration Tests
-
-Integration tests focus on components that span multiple layers:
-
-- **CRUD Operations**: Testing database interactions with real database connections
-- **API Endpoints**: Testing full request/response cycles through FastAPI
-- **Services**: Testing business logic that integrates with databases and external systems
-- **Workflows**: Testing complete user workflows across multiple components
-
-Example integration test:
+### Integration Test Example:
 
 ```python
 def test_create_question_with_answers(db_session, test_subject, test_user):
@@ -141,6 +130,41 @@ def test_create_question_with_answers(db_session, test_subject, test_user):
     assert question.difficulty == DifficultyLevel.EASY
     assert len(created_answers) == 3
     assert sum(1 for a in created_answers if a.is_correct) == 1
+```
+
+### Performance Test Example:
+
+```python
+def test_jwt_performance_benchmark(db_session, test_model_user, performance_tracker):
+    """Benchmark JWT operations with statistical analysis."""
+    iterations = 50
+    jwt_durations = []
+    
+    for i in range(iterations):
+        start_time = time.perf_counter()
+        
+        # Create and decode JWT token
+        token = create_access_token(
+            data={"sub": test_model_user.username}, 
+            db=db_session
+        )
+        payload = decode_access_token(token, db_session)
+        
+        end_time = time.perf_counter()
+        duration = end_time - start_time
+        jwt_durations.append(duration)
+        
+        # Record each iteration for statistical analysis
+        performance_tracker.record_test(
+            test_name=f"jwt_benchmark_iteration_{i}",
+            duration=duration,
+            category="jwt_benchmark"
+        )
+    
+    # Analyze results and assert performance targets
+    stats = performance_tracker.get_detailed_category_stats("jwt_benchmark")
+    assert stats["mean"] < 0.05, f"JWT mean time {stats['mean']:.4f}s exceeds target"
+    assert stats["percentile_95"] < 0.1, f"JWT P95 time exceeds target"
 ```
 
 ## Testing Philosophy

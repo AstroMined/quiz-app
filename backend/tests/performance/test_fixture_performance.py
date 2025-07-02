@@ -3,6 +3,8 @@
 import pytest
 from backend.tests.helpers.fixture_performance import get_fixture_performance_tracker
 
+pytestmark = pytest.mark.performance
+
 
 def test_minimal_fixture_performance(minimal_question_data):
     """Test that minimal fixtures are significantly faster than complex ones."""

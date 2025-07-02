@@ -70,15 +70,18 @@ uv run pytest
 # Run with coverage
 uv run pytest --cov=backend/
 
-# Run specific test categories (aspirational structure)
+# Run specific test categories
 uv run pytest backend/tests/unit/ -n auto
 uv run pytest backend/tests/integration/ -n auto
+uv run pytest backend/tests/performance/ -n auto
 
-# Run current test structure
-uv run pytest backend/tests/test_models/ -n auto
-uv run pytest backend/tests/test_api/ -n auto
-uv run pytest backend/tests/test_crud/ -n auto
-uv run pytest backend/tests/test_schemas/ -n auto
+# Run performance tests only (may take longer)
+uv run pytest backend/tests/performance/ -v
+
+# Run tests by marker
+uv run pytest -m unit -n auto
+uv run pytest -m integration -n auto
+uv run pytest -m performance
 
 # Run single test file
 uv run pytest backend/tests/test_models/test_question_model.py
@@ -151,16 +154,22 @@ alembic upgrade head
 - **Quiz Schemas**: `questions.py`, `answer_choices.py`, `question_sets.py` - Core quiz data validation
 - **Content Schemas**: `subjects.py`, `topics.py`, `concepts.py` - Content organization schemas
 
-### Testing Structure (Aspirational)
+### Testing Structure
 
 - **Unit Tests**: `backend/tests/unit/` - Single-component isolation testing
-  - `models/` - SQLAlchemy model tests
+  - `models/` - SQLAlchemy model tests (business logic only)
   - `schemas/` - Pydantic schema validation tests
+  - `services/` - Service layer business logic tests
   - `utils/` - Utility function tests
 - **Integration Tests**: `backend/tests/integration/` - Cross-component testing
   - `crud/` - Database operation tests
   - `api/` - API endpoint tests
-  - `services/` - Business logic tests
+  - `services/` - Service database integration tests
+  - `workflows/` - End-to-end workflow tests
+- **Performance Tests**: `backend/tests/performance/` - Performance benchmarks and monitoring
+  - `test_performance_benchmarks.py` - Performance measurement tests
+  - `test_performance_monitoring.py` - Performance regression detection
+  - `test_fixture_performance.py` - Fixture performance optimization
 - **Fixtures**: `backend/tests/fixtures/` - Reusable test data creation
 - **Helpers**: `backend/tests/helpers/` - Test utility functions
 

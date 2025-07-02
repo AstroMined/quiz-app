@@ -13,6 +13,8 @@ from backend.tests.helpers.performance_regression import (
 )
 from backend.app.core.jwt import create_access_token, decode_access_token
 
+pytestmark = pytest.mark.performance
+
 
 @pytest.fixture
 def temp_performance_dir():
