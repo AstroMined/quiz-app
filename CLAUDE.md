@@ -280,7 +280,11 @@ Include dependency information to catch breaking changes:
   - Consider adding SQLAlchemy type adapters to automatically convert between naive DB datetimes and timezone-aware application datetimes
 - Since this is a dev database, we don't need to fight with complex Alembic migrations. The dev DB can be destroyed and re-initialized as needed during development.
 
+- **USE CONTEXT7 REGULARLY**: When writing code that uses external packages (Pydantic, SQLAlchemy, FastAPI, etc.), use the Context7 service to check the latest documentation and best practices. This ensures we're always using current features and avoiding deprecated patterns. Especially valuable when implementing validators, schemas, or any package-specific functionality.
+
 ## Task File Management Protocol
+
+**CRITICAL**: Always check for completed tasks during end of session protocol. This is frequently missed!
 
 When working with task files in `docs/tasks/`:
 
@@ -290,28 +294,35 @@ When working with task files in `docs/tasks/`:
 2. **Document Blockers**: If you discover architectural issues or dependencies, document them in the original file
 3. **Never Create Copies**: Don't create duplicate files with suffixes like `_COMPLETED` or `_DONE`
 
-### Task Completion Decision
+### Task Completion Checklist
 
-- **Move to Completed**: Only if the task is truly finished with all acceptance criteria met
-- **Keep in Active**: If significant work remains, update the task file with current status and remaining work
-- **Create New Task**: If you discover new work that should be tracked separately, create a focused new task file
+Before ending any coding session, ask these questions:
+
+1. ✅ **Are all acceptance criteria in the task file met?**
+   - If YES → Move to completed directory
+   - If NO → Update task file with current status and remaining work
+
+2. ✅ **Did I verify all new tests are passing?**
+   - Required before marking any task complete
+
+3. ✅ **Did I document the implementation results in the task file?**
+   - Add performance results, design decisions, discovered issues
 
 ### Completion Process
 
 ```bash
-# Update the original task file with results and learnings
-# Then move to completed directory
+# First: Update the task file with final results and learnings
+# Then: Move to completed directory
 git mv docs/tasks/task_name.md docs/tasks/completed/
+# Include in your final commit
 ```
 
-### Documentation Anti-Patterns
+### Common Mistakes
 
-- ❌ Creating `task_name_COMPLETED.md` files
-- ❌ Duplicating task content across multiple files  
+- ❌ **Most Common**: Forgetting to move completed tasks to `docs/tasks/completed/`
+- ❌ Creating `task_name_COMPLETED.md` files instead of moving
 - ❌ Moving incomplete tasks to completed directory
-- ❌ Leaving empty or placeholder task files
-
-- **USE CONTEXT7 REGULARLY**: When writing code that uses external packages (Pydantic, SQLAlchemy, FastAPI, etc.), use the Context7 service to check the latest documentation and best practices. This ensures we're always using current features and avoiding deprecated patterns. Especially valuable when implementing validators, schemas, or any package-specific functionality.
+- ❌ Not documenting implementation results before moving
 
 ## CHANGELOG.md Update Guidelines
 
@@ -329,18 +340,24 @@ When completing a coding session, follow this procedure based on the current bra
 
 ### For Feature Branch Work (Most Common)
 
-1. **Review and Finalize Task**
+1. **Check Task Completion Status** ⚠️ **CRITICAL STEP - FREQUENTLY MISSED**
+   - Review the Task File Management Protocol checklist above
+   - If all acceptance criteria are met: Move task file to `docs/tasks/completed/`
+   - If work remains: Update task file with current status and remaining work
+   - Always include task file changes in your final commit
+
+2. **Review and Finalize Implementation**
    - Review any task documentation or requirements that were being worked on
    - Verify that all requirements and acceptance criteria have been met
    - Run tests to ensure new functionality works correctly
    - Document the current state and any remaining work
 
-2. **Stage Changes and Commit to Feature Branch**
-   - Stage all modified files using `git add`
+3. **Stage Changes and Commit to Feature Branch**
+   - Stage all modified files using `git add` (including task file moves/updates)
    - Create a commit with a structured message following the format below
    - DO NOT update version numbers or CHANGELOG.md in feature branches
 
-3. **Push Changes to Remote**
+4. **Push Changes to Remote**
    - Push the feature branch to the remote repository using `git push`
    - If this is the first push for a new branch, use `git push -u origin branch-name`
    - For existing branches, use `git push` to update the remote with your commits
