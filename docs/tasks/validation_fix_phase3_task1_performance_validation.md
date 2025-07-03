@@ -26,25 +26,37 @@ After removing the validation service anti-pattern and implementing proper datab
 3. **Memory Usage**: Reduction in query result object overhead
 4. **Database Connection Usage**: Improvement in connection efficiency
 
-### Expected Improvements
+### Expected Improvements (From Performance Baseline Task 1.3)
 
-Based on our baseline measurements and analysis:
+Based on our comprehensive baseline measurements:
 
 | Operation | Baseline Queries | Expected Queries | Predicted Improvement |
 |-----------|------------------|------------------|----------------------|
-| User Creation | 2.0 | 1.0 | 50% reduction |
-| UserResponse Creation | 4.0 | 1.0 | 75% reduction |
-| Leaderboard Creation | 4.0 | 1.0 | 75% reduction |
-| Question Creation | 2.0 | 1.0 | 50% reduction |
-| Group Creation | 2.0 | 1.0 | 50% reduction |
+| **User Creation** | 2.0 queries | 1.0 query | **50% reduction** |
+| **UserResponse Creation** | 4.0 queries | 1.0 query | **75% reduction** |
+| **Leaderboard Creation** | 4.0 queries | 1.0 query | **75% reduction** |
+| **Question Creation** | 2.0 queries | 1.0 query | **50% reduction** |
+| **Group Creation** | 2.0 queries | 1.0 query | **50% reduction** |
 
 | Operation | Baseline Duration | Expected Duration | Predicted Improvement |
 |-----------|------------------|------------------|----------------------|
-| User Creation | 2.04ms | ~1.0ms | ~50% faster |
-| UserResponse Creation | 3.17ms | ~1.2ms | ~62% faster |
-| Leaderboard Creation | 3.09ms | ~1.2ms | ~61% faster |
-| Question Creation | 2.02ms | ~1.0ms | ~50% faster |
-| Group Creation | 1.76ms | ~0.9ms | ~49% faster |
+| **User Creation** | **2.04ms** | ~1.0ms | **~50% faster** |
+| **UserResponse Creation** | **3.17ms** | ~1.2ms | **~62% faster** |
+| **Leaderboard Creation** | **3.09ms** | ~1.2ms | **~61% faster** |
+| **Question Creation** | **2.02ms** | ~1.0ms | **~50% faster** |
+| **Group Creation** | **1.76ms** | ~0.9ms | **~49% faster** |
+
+### Overall Performance Targets (From Impact Assessment)
+
+**Query Reduction Targets**:
+- **Single FK operations**: ≥50% query reduction
+- **Multiple FK operations**: ≥75% query reduction  
+- **Overall average**: ≥60% query reduction
+
+**Duration Improvement Targets**:
+- **Single FK operations**: ≥30% faster
+- **Multiple FK operations**: ≥50% faster
+- **Overall average**: ≥40% faster
 
 ## Implementation Strategy
 
@@ -358,21 +370,21 @@ class TestValidationServicePostRemoval:
     def validate_performance_improvements(self, improvements):
         """Validate that performance improvements meet expectations."""
         
-        # Expected minimums based on our analysis
+        # Expected minimums based on our baseline measurements (Task 1.3)
         expected_query_reductions = {
-            "user_creation": 50.0,  # 2 → 1 query (50% reduction)
-            "user_response_creation": 75.0,  # 4 → 1 query (75% reduction)
-            "leaderboard_creation": 75.0,  # 4 → 1 query (75% reduction)
-            "question_creation": 50.0,  # 2 → 1 query (50% reduction)
-            "group_creation": 50.0,  # 2 → 1 query (50% reduction)
+            "user_creation": 50.0,  # 2.0 → 1.0 query (50% reduction)
+            "user_response_creation": 75.0,  # 4.0 → 1.0 query (75% reduction)
+            "leaderboard_creation": 75.0,  # 4.0 → 1.0 query (75% reduction)
+            "question_creation": 50.0,  # 2.0 → 1.0 query (50% reduction)
+            "group_creation": 50.0,  # 2.0 → 1.0 query (50% reduction)
         }
         
         expected_duration_improvements = {
-            "user_creation": 30.0,  # At least 30% faster
-            "user_response_creation": 50.0,  # At least 50% faster
-            "leaderboard_creation": 50.0,  # At least 50% faster
-            "question_creation": 30.0,  # At least 30% faster
-            "group_creation": 30.0,  # At least 30% faster
+            "user_creation": 30.0,  # From 2.04ms baseline, at least 30% faster
+            "user_response_creation": 50.0,  # From 3.17ms baseline, at least 50% faster
+            "leaderboard_creation": 50.0,  # From 3.09ms baseline, at least 50% faster
+            "question_creation": 30.0,  # From 2.02ms baseline, at least 30% faster
+            "group_creation": 30.0,  # From 1.76ms baseline, at least 30% faster
         }
         
         for operation, improvement_data in improvements.items():

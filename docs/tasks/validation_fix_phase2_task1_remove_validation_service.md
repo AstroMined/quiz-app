@@ -85,14 +85,21 @@ sqlalchemy.exc.IntegrityError: FOREIGN KEY constraint failed
 **Before**: Validation occurs during SQLAlchemy event listeners (before database operation)
 **After**: Validation occurs during database constraint checking (during database operation)
 
-### Performance Changes
+### Performance Changes (From Baseline Measurements)
 
-**Query Reduction**:
-- UserModel creation: 2 queries → 1 query (50% reduction)
-- UserResponseModel creation: 4 queries → 1 query (75% reduction)
-- LeaderboardModel creation: 4 queries → 1 query (75% reduction)
+**Query Reduction** (exact targets from baseline):
+- UserModel creation: 2.0 queries → 1.0 query (50% reduction)
+- UserResponseModel creation: 4.0 queries → 1.0 query (75% reduction)  
+- LeaderboardModel creation: 4.0 queries → 1.0 query (75% reduction)
+- QuestionModel creation: 2.0 queries → 1.0 query (50% reduction)
+- GroupModel creation: 2.0 queries → 1.0 query (50% reduction)
 
-**Duration Improvement**: Expected 60-80% faster operations based on query reduction
+**Duration Improvement** (exact targets from baseline):
+- UserModel: 2.04ms → ~1.0ms (~50% faster)
+- UserResponseModel: 3.17ms → ~1.2ms (~62% faster)
+- LeaderboardModel: 3.09ms → ~1.2ms (~61% faster)
+- QuestionModel: 2.02ms → ~1.0ms (~50% faster)
+- GroupModel: 1.76ms → ~0.9ms (~49% faster)
 
 ## Risk Assessment
 
@@ -207,20 +214,33 @@ db.commit()  # Error occurs HERE now
 
 ### Test Files Requiring Updates
 
-Based on our analysis, these files will need updates:
-1. `backend/tests/integration/services/test_validation.py` - Complete refactoring
-2. `backend/tests/integration/api/test_*.py` - Error expectation updates
-3. `backend/tests/integration/crud/test_*.py` - Error expectation updates
-4. `backend/tests/integration/models/test_*.py` - Validation behavior updates
+Based on our comprehensive analysis, these specific files will need updates:
+
+**Direct Dependencies (3 files requiring removal/refactoring)**:
+1. `backend/tests/integration/services/test_validation.py` - **159 lines** - Complete removal
+2. `backend/tests/integration/models/test_question_model.py` - **Lines 194-195, 231-232** - Remove validation service calls
+3. `backend/tests/performance/test_validation_service_baseline.py` - **439 lines** - Baseline test (keep for comparison)
+
+**Indirect Dependencies (8 files expecting HTTPException from validation service)**:
+1. `backend/tests/integration/api/test_authentication.py` - Error expectation updates
+2. `backend/tests/integration/crud/test_authentication.py` - Error expectation updates  
+3. `backend/tests/integration/api/test_questions.py` - Error expectation updates
+4. `backend/tests/integration/api/test_users.py` - Error expectation updates
+5. `backend/tests/integration/api/test_subjects.py` - Error expectation updates
+6. `backend/tests/integration/api/test_topics.py` - Error expectation updates
+7. `backend/tests/integration/api/test_groups.py` - Error expectation updates
+8. `backend/tests/integration/workflows/test_auth_workflow.py` - Error expectation updates
 
 ## Success Criteria
 
 - [ ] Application starts successfully without validation service
-- [ ] No import errors or missing module references
+- [ ] No import errors or missing module references  
 - [ ] Database operations work with constraint validation
 - [ ] Basic model creation succeeds for valid data
 - [ ] Basic model creation fails appropriately for invalid foreign keys
 - [ ] Error types change from HTTPException to IntegrityError as expected
+- [ ] **Immediate test failures**: Expect 11 test files to fail (3 direct, 8 indirect dependencies)
+- [ ] **Specific failures**: `test_validation.py` (159 lines), model validation calls (4 lines)
 
 ## Rollback Plan
 

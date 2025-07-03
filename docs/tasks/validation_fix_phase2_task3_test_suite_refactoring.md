@@ -21,22 +21,27 @@ After removing the validation service anti-pattern, the test suite requires comp
 
 ## Test Files Requiring Updates
 
-### Files with Direct Validation Service Dependencies
+### Files with Direct Validation Service Dependencies (From Impact Assessment)
 
-Based on our investigation, these files contain validation service references:
+Based on our comprehensive investigation, these specific files contain validation service references:
 
-1. **`backend/tests/integration/services/test_validation.py`** - Complete refactoring required
-2. **`backend/tests/performance/test_architecture_performance.py`** - Update validation expectations
-3. **`backend/tests/integration/api/test_authentication.py`** - Error type updates
-4. **`backend/tests/integration/crud/test_authentication.py`** - Error type updates
-5. **`backend/tests/integration/services/test_jwt.py`** - Error expectation updates
-6. **`backend/tests/integration/api/test_questions.py`** - Error type updates
-7. **`backend/tests/integration/workflows/test_auth_workflow.py`** - Error expectation updates
-8. **`backend/tests/integration/models/test_question_model.py`** - Validation behavior updates
-9. **`backend/tests/integration/api/test_users.py`** - Error type updates
-10. **`backend/tests/integration/api/test_subjects.py`** - Error type updates
-11. **`backend/tests/integration/api/test_topics.py`** - Error type updates
-12. **`backend/tests/integration/api/test_groups.py`** - Error type updates
+**Direct Dependencies (3 files requiring removal/refactoring)**:
+1. **`backend/tests/integration/services/test_validation.py`** - **159 lines** - Complete removal required
+2. **`backend/tests/integration/models/test_question_model.py`** - **Lines 194-195, 231-232** - Remove validation service calls
+3. **`backend/tests/performance/test_validation_service_baseline.py`** - **439 lines** - Keep for comparison
+
+**Indirect Dependencies (8 files expecting HTTPException from validation service)**:
+1. **`backend/tests/integration/api/test_authentication.py`** - Error expectation updates
+2. **`backend/tests/integration/crud/test_authentication.py`** - Error expectation updates  
+3. **`backend/tests/integration/api/test_questions.py`** - Error expectation updates
+4. **`backend/tests/integration/api/test_users.py`** - Error expectation updates
+5. **`backend/tests/integration/api/test_subjects.py`** - Error expectation updates
+6. **`backend/tests/integration/api/test_topics.py`** - Error expectation updates
+7. **`backend/tests/integration/api/test_groups.py`** - Error expectation updates
+8. **`backend/tests/integration/workflows/test_auth_workflow.py`** - Error expectation updates
+
+**Additional Files** (may contain "validation" references but likely schema validation):
+- 22 additional test files contain "validation" references but analysis shows these are Pydantic schema validation, not validation service
 
 ### Test Pattern Changes Required
 
@@ -285,32 +290,37 @@ def test_user_model_constraint_enforcement(db_session):
 
 ### Phase 1: Core Infrastructure Tests (2-3 hours)
 
-#### Step 1: Replace Validation Service Tests
-- [ ] Remove `backend/tests/integration/services/test_validation.py`
-- [ ] Create `backend/tests/integration/database/test_database_constraints.py`
-- [ ] Test all foreign key constraints work at database level
-- [ ] Test unique constraints work at database level
-- [ ] Test constraint error messages are appropriate
+#### Step 1: Replace Validation Service Tests (IMMEDIATE REMOVAL)
+- [ ] **Remove** `backend/tests/integration/services/test_validation.py` (159 lines - complete file removal)
+- [ ] **Update** `backend/tests/integration/models/test_question_model.py` (remove lines 194-195, 231-232)
+- [ ] **Create** `backend/tests/integration/database/test_database_constraints.py` (new comprehensive constraint tests)
+- [ ] Test all 38 foreign key constraints work at database level
+- [ ] Test all unique constraints (users.email, users.username, groups.name) work at database level  
+- [ ] Test constraint error messages are appropriate for API layer handling
 
 #### Step 2: Update Database Error Handling Tests
-- [ ] Create tests for new error handling middleware
-- [ ] Test IntegrityError → HTTP 400 transformation
-- [ ] Test error message parsing and formatting
-- [ ] Test error response consistency
+- [ ] Create tests for new error handling middleware (from Task 2.2)
+- [ ] Test IntegrityError → HTTP 400 transformation for all 38 FK constraints
+- [ ] Test error message parsing and formatting for specific constraint patterns
+- [ ] Test error response consistency across all endpoints
 
 ### Phase 2: API Layer Tests (1-2 hours)
 
-#### Step 3: Update API Integration Tests
-- [ ] Update all API tests expecting validation service HTTPExceptions
-- [ ] Change expectations to database error handler responses
-- [ ] Verify HTTP 400 status codes maintained
-- [ ] Verify error response format consistency
+#### Step 3: Update API Integration Tests (SPECIFIC FILES)
+- [ ] **Update** `backend/tests/integration/api/test_authentication.py` - Change HTTPException expectations to new error handler format
+- [ ] **Update** `backend/tests/integration/api/test_questions.py` - Update foreign key error expectations  
+- [ ] **Update** `backend/tests/integration/api/test_users.py` - Update role_id validation error expectations
+- [ ] **Update** `backend/tests/integration/api/test_subjects.py` - Update constraint violation expectations
+- [ ] **Update** `backend/tests/integration/api/test_topics.py` - Update constraint violation expectations
+- [ ] **Update** `backend/tests/integration/api/test_groups.py` - Update creator_id validation expectations
+- [ ] Verify HTTP 400 status codes maintained across all endpoints
+- [ ] Verify error response format consistency matches new error handler (from Task 2.2)
 
-#### Step 4: Update CRUD Integration Tests
-- [ ] Update CRUD tests expecting validation service behavior
-- [ ] Change expectations to IntegrityError from database
-- [ ] Test CRUD operations with valid and invalid data
-- [ ] Verify constraint enforcement at CRUD layer
+#### Step 4: Update CRUD Integration Tests (SPECIFIC FILES)
+- [ ] **Update** `backend/tests/integration/crud/test_authentication.py` - Change expectations to IntegrityError from database
+- [ ] **Update** `backend/tests/integration/workflows/test_auth_workflow.py` - Update workflow error expectations
+- [ ] Test CRUD operations with valid and invalid data for all 38 FK constraints
+- [ ] Verify constraint enforcement at CRUD layer matches database constraint audit
 
 ### Phase 3: Model and Service Tests (1 hour)
 

@@ -258,24 +258,51 @@ add_error_handlers(app)
 
 ## Error Message Mapping
 
-### Common Constraint Violations
+### Common Constraint Violations (From Database Constraint Audit)
 
 | Database Error | User-Friendly Message | HTTP Status | Error Type |
 |---------------|----------------------|-------------|------------|
 | `FOREIGN KEY constraint failed` | `Invalid {field}: {value}` | 400 | `foreign_key_violation` |
 | `UNIQUE constraint failed: users.email` | `A user with this email already exists` | 400 | `unique_violation` |
 | `UNIQUE constraint failed: users.username` | `A user with this username already exists` | 400 | `unique_violation` |
+| `UNIQUE constraint failed: groups.name` | `A group with this name already exists` | 400 | `unique_violation` |
 | `CHECK constraint failed` | `Invalid value for {field}` | 400 | `check_violation` |
+
+### Specific Foreign Key Constraints (38 total identified)
+
+**High-Impact FK Constraints** (frequent operations):
+- `users.role_id` → `roles.id` (RESTRICT - cannot delete role with users)
+- `user_responses.user_id` → `users.id` (CASCADE - cleanup when user deleted)
+- `user_responses.question_id` → `questions.id` (CASCADE - cleanup when question deleted)
+- `user_responses.answer_choice_id` → `answer_choices.id` (SET NULL - preserve response if answer deleted)
+- `leaderboards.user_id` → `users.id` (CASCADE)
+- `leaderboards.group_id` → `groups.id` (CASCADE) 
+- `leaderboards.time_period_id` → `time_periods.id` (RESTRICT)
+
+**Creator FK Constraints** (SET NULL pattern):
+- `questions.creator_id` → `users.id` (SET NULL - preserve content when creator deleted)
+- `groups.creator_id` → `users.id` (SET NULL)
+- `question_sets.creator_id` → `users.id` (SET NULL)
 
 ### Field-Specific Messages
 
-**User-Friendly Field Names**:
+**User-Friendly Field Names** (from constraint audit):
 - `role_id` → "role"
 - `user_id` → "user"
 - `question_id` → "question"
 - `answer_choice_id` → "answer choice"
 - `group_id` → "group"
 - `time_period_id` → "time period"
+- `creator_id` → "creator"
+- `subject_id` → "subject"
+- `topic_id` → "topic"
+- `subtopic_id` → "subtopic"
+- `concept_id` → "concept"
+- `discipline_id` → "discipline"
+- `domain_id` → "domain"
+- `question_set_id` → "question set"
+- `question_tag_id` → "question tag"
+- `permission_id` → "permission"
 
 ## Testing Strategy
 

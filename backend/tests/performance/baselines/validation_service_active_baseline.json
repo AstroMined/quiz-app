@@ -1,6 +1,6 @@
 {
   "baseline_metadata": {
-    "timestamp": "2025-07-03T15:19:31Z",
+    "timestamp": "2025-07-03T18:07:02Z",
     "validation_service_active": true,
     "database_type": "sqlite",
     "python_version": "3.12.10",
@@ -12,17 +12,17 @@
       "validation_service_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 2.0437527168542147,
-        "std_dev": 0.37299114842272996,
-        "min": 1.9643846899271011,
-        "max": 4.616548772901297,
+        "mean": 3.6990354768931866,
+        "std_dev": 0.12746331227884325,
+        "min": 3.627730067819357,
+        "max": 4.462193232029676,
         "count": 50
       },
       "query_stats": {
-        "mean": 2,
+        "mean": 4,
         "std_dev": 0.0,
-        "min": 2,
-        "max": 2,
+        "min": 4,
+        "max": 4,
         "count": 50
       }
     },
@@ -31,17 +31,17 @@
       "validation_service_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 3.1662989780306816,
-        "std_dev": 0.4355115966894829,
-        "min": 3.0733938328921795,
-        "max": 6.178704090416431,
+        "mean": 7.721906127408147,
+        "std_dev": 0.07163666540390184,
+        "min": 7.596332114189863,
+        "max": 7.978721056133509,
         "count": 50
       },
       "query_stats": {
-        "mean": 4,
+        "mean": 10,
         "std_dev": 0.0,
-        "min": 4,
-        "max": 4,
+        "min": 10,
+        "max": 10,
         "count": 50
       }
     },
@@ -50,10 +50,29 @@
       "validation_service_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 3.0880267079919577,
-        "std_dev": 0.41592857284459966,
-        "min": 3.000865690410137,
-        "max": 5.965834949165583,
+        "mean": 6.8586004711687565,
+        "std_dev": 0.09485885321373289,
+        "min": 6.760088261216879,
+        "max": 7.242423016577959,
+        "count": 50
+      },
+      "query_stats": {
+        "mean": 9,
+        "std_dev": 0.0,
+        "min": 9,
+        "max": 9,
+        "count": 50
+      }
+    },
+    "question_creation": {
+      "operation": "question_creation",
+      "validation_service_active": true,
+      "iterations": 50,
+      "duration_stats": {
+        "mean": 3.727647475898266,
+        "std_dev": 0.06183923412407635,
+        "min": 3.665644209831953,
+        "max": 4.026276990771294,
         "count": 50
       },
       "query_stats": {
@@ -64,41 +83,22 @@
         "count": 50
       }
     },
-    "question_creation": {
-      "operation": "question_creation",
-      "validation_service_active": true,
-      "iterations": 50,
-      "duration_stats": {
-        "mean": 2.021803818643093,
-        "std_dev": 0.03823804384578172,
-        "min": 1.990022137761116,
-        "max": 2.2048689424991608,
-        "count": 50
-      },
-      "query_stats": {
-        "mean": 2,
-        "std_dev": 0.0,
-        "min": 2,
-        "max": 2,
-        "count": 50
-      }
-    },
     "group_creation": {
       "operation": "group_creation",
       "validation_service_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 1.7622630670666695,
-        "std_dev": 0.022462421609023245,
-        "min": 1.7161727882921696,
-        "max": 1.830935012549162,
+        "mean": 3.4660298749804497,
+        "std_dev": 0.08072309666614556,
+        "min": 3.400819841772318,
+        "max": 3.7660948000848293,
         "count": 50
       },
       "query_stats": {
-        "mean": 2,
+        "mean": 4,
         "std_dev": 0.0,
-        "min": 2,
-        "max": 2,
+        "min": 4,
+        "max": 4,
         "count": 50
       }
     }
