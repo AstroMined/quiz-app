@@ -7,6 +7,8 @@ from backend.app.models.users import UserModel
 from backend.tests.helpers.performance import assert_api_test_performance
 import time
 
+pytestmark = pytest.mark.performance
+
 
 def test_jwt_functions_with_dependency_injection(db_session, test_model_user):
     """Test JWT functions work correctly with database session dependency injection."""
