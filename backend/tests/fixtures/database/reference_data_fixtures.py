@@ -250,6 +250,7 @@ def session_reference_concepts(session_factory, session_reference_subtopics):
 
 
 @pytest.fixture(scope="session")
+@track_fixture_performance(scope="session")
 def session_reference_content_hierarchy(
     session_reference_domains,
     session_reference_disciplines, 

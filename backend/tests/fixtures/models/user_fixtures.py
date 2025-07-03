@@ -16,6 +16,7 @@ from backend.app.services.permission_generator_service import (
     generate_permissions,
 )
 from backend.app.main import app
+from backend.tests.helpers.fixture_performance import track_fixture_performance
 
 # Global cache for permission data initialization
 _session_permissions_initialized = False
@@ -90,6 +91,7 @@ def test_random_username():
 
 
 @pytest.fixture(scope="function")
+@track_fixture_performance(scope="function")
 def test_model_user(db_session, test_random_username, test_model_role):
     """Create a test user with admin privileges (will be rolled back after test)."""
     email = f"{test_random_username}@example.com"
@@ -123,6 +125,7 @@ def test_model_group(db_session, test_model_user):
 
 
 @pytest.fixture(scope="function")
+@track_fixture_performance(scope="function")
 def test_model_user_with_group(db_session, test_model_user, test_model_group):
     """Create a test user associated with a group (will be rolled back after test)."""
     association = UserToGroupAssociation(

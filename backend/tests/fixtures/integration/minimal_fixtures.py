@@ -9,6 +9,7 @@ from backend.app.models.questions import DifficultyLevel
 from backend.app.schemas.question_sets import QuestionSetCreateSchema
 from backend.app.schemas.question_tags import QuestionTagCreateSchema
 from backend.app.schemas.questions import QuestionCreateSchema
+from backend.tests.helpers.fixture_performance import track_fixture_performance
 
 
 @pytest.fixture(scope="function")
@@ -27,6 +28,7 @@ def minimal_content_data(db_session, session_reference_content_hierarchy):
 
 
 @pytest.fixture(scope="function")
+@track_fixture_performance(scope="function")
 def minimal_question_data(db_session, minimal_content_data, test_model_user_with_group):
     """Create a single question with minimal relationships for lightweight testing."""
     content = minimal_content_data
@@ -107,6 +109,7 @@ def moderate_content_data(db_session, session_reference_content_hierarchy):
 
 
 @pytest.fixture(scope="function")
+@track_fixture_performance(scope="function")
 def moderate_question_data(db_session, moderate_content_data, test_model_user_with_group):
     """Create a small set of questions for relationship testing."""
     content = moderate_content_data

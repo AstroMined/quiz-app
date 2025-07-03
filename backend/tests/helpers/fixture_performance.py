@@ -2,6 +2,7 @@
 
 import time
 import functools
+import inspect
 from typing import Dict, List, Any, Callable
 from dataclasses import dataclass
 
@@ -140,20 +141,63 @@ _fixture_tracker = FixturePerformanceTracker()
 def track_fixture_performance(scope: str = "function"):
     """Decorator to track fixture performance."""
     def decorator(fixture_func: Callable) -> Callable:
-        @functools.wraps(fixture_func)
-        def wrapper(*args, **kwargs):
-            fixture_name = fixture_func.__name__
-            start_time = time.time()
-            
-            try:
-                result = fixture_func(*args, **kwargs)
-                return result
-            finally:
-                end_time = time.time()
-                setup_duration = end_time - start_time
-                _fixture_tracker.record_fixture_setup(fixture_name, setup_duration, scope)
         
-        return wrapper
+        # Check if the fixture function is a generator function
+        if inspect.isgeneratorfunction(fixture_func):
+            @functools.wraps(fixture_func)
+            def generator_wrapper(*args, **kwargs):
+                fixture_name = fixture_func.__name__
+                start_time = time.time()
+                
+                # Get the generator from the original function
+                gen = fixture_func(*args, **kwargs)
+                
+                try:
+                    # Get the yielded value and record timing
+                    value = next(gen)
+                    end_time = time.time()
+                    setup_duration = end_time - start_time
+                    _fixture_tracker.record_fixture_setup(fixture_name, setup_duration, scope)
+                    
+                    # Yield the value to the test
+                    yield value
+                    
+                except StopIteration:
+                    # Handle case where generator doesn't yield anything
+                    end_time = time.time()
+                    setup_duration = end_time - start_time
+                    _fixture_tracker.record_fixture_setup(fixture_name, setup_duration, scope)
+                    
+                finally:
+                    # Complete the generator's finally block
+                    try:
+                        next(gen)
+                    except StopIteration:
+                        pass
+            
+            return generator_wrapper
+        else:
+            @functools.wraps(fixture_func)
+            def regular_wrapper(*args, **kwargs):
+                fixture_name = fixture_func.__name__
+                start_time = time.time()
+                
+                try:
+                    result = fixture_func(*args, **kwargs)
+                    end_time = time.time()
+                    setup_duration = end_time - start_time
+                    _fixture_tracker.record_fixture_setup(fixture_name, setup_duration, scope)
+                    return result
+                    
+                except Exception:
+                    # Still record timing even if there's an error
+                    end_time = time.time()
+                    setup_duration = end_time - start_time
+                    _fixture_tracker.record_fixture_setup(fixture_name, setup_duration, scope)
+                    raise
+            
+            return regular_wrapper
+    
     return decorator
 
 

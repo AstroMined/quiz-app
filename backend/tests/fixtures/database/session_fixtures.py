@@ -11,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 from backend.app.db.base import Base
 from backend.app.main import app
 from backend.app.crud.crud_time_period import init_time_periods_in_db
+from backend.tests.helpers.fixture_performance import track_fixture_performance
 
 # Load the test database URL from pyproject.toml for compatibility
 config_path = os.path.join(
@@ -95,6 +96,7 @@ def base_reference_data(test_engine):
 
 
 @pytest.fixture(scope="function")
+@track_fixture_performance(scope="function")
 def db_session(test_engine, session_factory, base_reference_data):
     """Provide a clean database session using transaction rollback for isolation."""
     # Create a connection and begin a transaction
@@ -130,6 +132,7 @@ class NoCloseSessionWrapper:
 
 
 @pytest.fixture(scope="function")
+@track_fixture_performance(scope="function")
 def client(db_session, test_engine):
     """
     Provide a test client with transaction-scoped database session override.
