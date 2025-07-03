@@ -25,6 +25,9 @@ IN_MEMORY_DATABASE_URL = "sqlite:///:memory:"
 # Global cache for reference data initialization per worker
 _reference_data_initialized = {}
 
+# Global storage for current test database session (thread-local doesn't work with FastAPI TestClient)
+_current_test_session = None
+
 
 def get_worker_id():
     """Get the current pytest-xdist worker ID, or 'main' for non-parallel execution."""
@@ -137,22 +140,20 @@ def client(db_session, test_engine):
     """
     Provide a test client with transaction-scoped database session override.
     
-    CRITICAL FIX: This fixture creates a test-specific FastAPI application instance
-    to ensure that middleware (BlacklistMiddleware, AuthorizationMiddleware) use 
-    the same database session as the test endpoints. This prevents "User not found" 
-    errors that occurred when middleware and endpoints used different database sessions.
+    IMPROVED SOLUTION: This fixture uses the real FastAPI app instance while ensuring
+    middleware and endpoints share the same test database session. This eliminates
+    the need to recreate the app while solving the session mismatch problem.
     
-    The fix works by:
-    1. Creating a test-specific FastAPI app instead of using the main app
-    2. Copying all routes from the main app to the test app  
-    3. Adding middleware with explicit database session injection
-    4. Ensuring all components (endpoints + middleware) use the same test session
+    The approach:
+    1. Uses the real production FastAPI app (maintains all production behaviors)
+    2. Overrides dependency injection for endpoints
+    3. Temporarily overrides middleware database functions during tests
+    4. Restores original middleware functions after tests
     """
-    from fastapi import FastAPI
+    from backend.app.main import app
     from backend.app.db.session import get_db
     from backend.app.middleware.blacklist_middleware import BlacklistMiddleware
     from backend.app.middleware.authorization_middleware import AuthorizationMiddleware
-    from backend.app.middleware.cors_middleware import add_cors_middleware
     from backend.app.services.logging_service import logger
     
     # Create a wrapper that ignores close() calls
@@ -167,31 +168,99 @@ def client(db_session, test_engine):
             # CRITICAL: Don't close the session here - it's transaction-scoped
             pass
     
-    def test_get_db_for_middleware():
-        """Provide the same session for middleware."""
-        return override_get_db()
+def test_get_db_for_middleware():
+    """Global middleware database function that returns the current test session."""
+    global _current_test_session
+    
+    # Get the current test session from global storage
+    if _current_test_session is not None:
+        try:
+            yield _current_test_session
+        finally:
+            # Session cleanup handled by db_session fixture
+            pass
+    else:
+        # Fallback - should not happen in normal test execution
+        from backend.app.db.session import get_db
+        db = next(get_db())
+        try:
+            yield db
+        finally:
+            db.close()
 
+
+@pytest.fixture(scope="function")
+@track_fixture_performance(scope="function")
+def client(db_session, test_engine):
+    """
+    Provide a test client with transaction-scoped database session override.
+    
+    IMPROVED SOLUTION: This fixture uses the real FastAPI app instance while ensuring
+    middleware and endpoints share the same test database session. This eliminates
+    the need to recreate the app while solving the session mismatch problem.
+    
+    The approach:
+    1. Uses the real production FastAPI app (maintains all production behaviors)
+    2. Overrides dependency injection for endpoints
+    3. Uses thread-local storage to provide current test session to middleware
+    4. Dynamically updates middleware to use current test session
+    """
+    from backend.app.main import app
+    from backend.app.db.session import get_db
+    from backend.app.middleware.blacklist_middleware import BlacklistMiddleware
+    from backend.app.middleware.authorization_middleware import AuthorizationMiddleware
+    from backend.app.services.logging_service import logger
+    
+    # Create a wrapper that ignores close() calls
+    wrapped_session = NoCloseSessionWrapper(db_session)
+    
+    def override_get_db():
+        """Override database dependency to use transaction-scoped session."""
+        try:
+            yield wrapped_session
+        finally:
+            # Session cleanup handled by db_session fixture
+            # CRITICAL: Don't close the session here - it's transaction-scoped
+            pass
+
+    # Store the current test session in global storage for middleware access
+    global _current_test_session
+    _current_test_session = wrapped_session
+    
     # Override dependency injection for endpoints
     app.dependency_overrides[get_db] = override_get_db
     
-    # Create a test-specific application with properly injected middleware
-    test_app = FastAPI()
+    # Find and temporarily override middleware database functions (one-time setup)
+    middleware_originals = []
     
-    # Add all the same routes as the main app
-    for route in app.routes:
-        test_app.routes.append(route)
+    for middleware_item in app.user_middleware:
+        if hasattr(middleware_item, 'cls'):
+            middleware_cls = middleware_item.cls
+            if middleware_cls in (BlacklistMiddleware, AuthorizationMiddleware):
+                # Check if middleware has get_db_func parameter
+                if hasattr(middleware_item, 'kwargs') and 'get_db_func' in middleware_item.kwargs:
+                    # Check current function and override if needed
+                    current_func = middleware_item.kwargs['get_db_func']
+                    if current_func != test_get_db_for_middleware:
+                        # Store original function for restoration
+                        middleware_originals.append((middleware_item, current_func))
+                        # Override with global test function
+                        middleware_item.kwargs['get_db_func'] = test_get_db_for_middleware
+                        logger.debug(f"Overrode {middleware_cls.__name__} database function for tests")
     
-    # Add middleware with test database function
-    test_app.add_middleware(AuthorizationMiddleware, get_db_func=test_get_db_for_middleware)
-    test_app.add_middleware(BlacklistMiddleware, get_db_func=test_get_db_for_middleware)
-    add_cors_middleware(test_app)
+    logger.debug(f"Using real FastAPI app with {len(middleware_originals)} middleware overrides")
     
-    # Copy dependency overrides to test app
-    test_app.dependency_overrides = app.dependency_overrides.copy()
-    
-    logger.debug("Created test app with middleware using test database session")
-    
-    with TestClient(test_app) as test_client:
-        yield test_client
+    # Ensure the session stays in global storage during the entire test
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        # Clean up global session after test completes
+        _current_test_session = None
+        
+        # Restore original middleware database functions (only if we overrode them this time)
+        for middleware_item, original_func in middleware_originals:
+            middleware_item.kwargs['get_db_func'] = original_func
+            logger.debug(f"Restored {type(middleware_item.cls).__name__} database function")
     
     app.dependency_overrides.clear()
