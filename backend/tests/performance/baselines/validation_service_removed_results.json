@@ -1,21 +1,21 @@
 {
   "comparison_metadata": {
-    "timestamp": "2025-07-03T23:02:37Z",
-    "validation_service_active": false,
+    "timestamp": "2025-07-04T00:46:43Z",
+    "database_constraints_active": true,
     "database_type": "sqlite",
     "python_version": "3.12.10",
-    "test_environment": "post_removal_measurement"
+    "test_environment": "database_constraints_measurement"
   },
   "operations": {
     "user_creation": {
       "operation": "user_creation",
-      "validation_service_active": false,
+      "database_constraints_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 1.997737567871809,
-        "std_dev": 0.0350309147515986,
-        "min": 1.9633769989013672,
-        "max": 2.149903681129217,
+        "mean": 2.0245187263935804,
+        "std_dev": 0.43160776970909115,
+        "min": 1.9219759851694107,
+        "max": 4.994881805032492,
         "count": 50
       },
       "query_stats": {
@@ -28,13 +28,13 @@
     },
     "user_response_creation": {
       "operation": "user_response_creation",
-      "validation_service_active": false,
+      "database_constraints_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 3.0790939927101135,
-        "std_dev": 0.027118058544620394,
-        "min": 3.0335350893437862,
-        "max": 3.173953853547573,
+        "mean": 3.1057967990636826,
+        "std_dev": 0.1780427774346706,
+        "min": 3.0260710045695305,
+        "max": 3.905172925442457,
         "count": 50
       },
       "query_stats": {
@@ -47,13 +47,13 @@
     },
     "leaderboard_creation": {
       "operation": "leaderboard_creation",
-      "validation_service_active": false,
+      "database_constraints_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 3.1416684854775667,
-        "std_dev": 0.7953741914447853,
-        "min": 2.9819090850651264,
-        "max": 8.646405301988125,
+        "mean": 2.981087891384959,
+        "std_dev": 0.039881203541193254,
+        "min": 2.9370500706136227,
+        "max": 3.157069906592369,
         "count": 50
       },
       "query_stats": {
@@ -66,13 +66,13 @@
     },
     "question_creation": {
       "operation": "question_creation",
-      "validation_service_active": false,
+      "database_constraints_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 2.0012147165834904,
-        "std_dev": 0.06300847828637465,
-        "min": 1.9616708159446716,
-        "max": 2.4253069423139095,
+        "mean": 1.9840816035866737,
+        "std_dev": 0.015364156622417906,
+        "min": 1.9637621007859707,
+        "max": 2.041793894022703,
         "count": 50
       },
       "query_stats": {
@@ -85,13 +85,13 @@
     },
     "group_creation": {
       "operation": "group_creation",
-      "validation_service_active": false,
+      "database_constraints_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 1.7587368749082088,
-        "std_dev": 0.034947744505697806,
-        "min": 1.7189732752740383,
-        "max": 1.9712159410119057,
+        "mean": 1.7397307604551315,
+        "std_dev": 0.021116915404849942,
+        "min": 1.6984748654067516,
+        "max": 1.832611858844757,
         "count": 50
       },
       "query_stats": {

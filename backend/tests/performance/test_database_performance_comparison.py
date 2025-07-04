@@ -1,8 +1,8 @@
 """
 Database performance comparison tests.
 
-These tests measure performance after validation service removal and compare
-against the established baseline to confirm expected improvements.
+These tests measure current database performance and compare against historical
+baselines to track performance improvements and detect regressions.
 
 Compares current performance with baseline from validation_service_active_baseline.json.
 """
@@ -69,7 +69,7 @@ def load_baseline():
 
 @pytest.mark.performance
 def test_user_creation_performance(db_session, test_model_role):
-    """Current: UserModel creation without validation service."""
+    """Test UserModel creation performance with database constraints."""
     iterations = 50
     durations = []
     query_counts = []
@@ -103,7 +103,7 @@ def test_user_creation_performance(db_session, test_model_role):
     duration_stats = calculate_stats(durations)
     query_stats = calculate_stats(query_counts)
     
-    print(f"\nCURRENT - User Creation (no validation service):")
+    print(f"\nCURRENT - User Creation Performance:")
     print(f"  Average Duration: {duration_stats['mean']*1000:.2f}ms")
     print(f"  Average Queries: {query_stats['mean']:.1f}")
     print(f"  Query Range: {query_stats['min']}-{query_stats['max']}")
@@ -116,8 +116,8 @@ def test_user_creation_performance(db_session, test_model_role):
     print(f"\n{'='*60}")
     print("USER CREATION PERFORMANCE COMPARISON")
     print(f"{'='*60}")
-    print(f"Baseline (with validation): {baseline_user['query_stats']['mean']:.1f} queries, {baseline_user['duration_stats']['mean']:.2f}ms")
-    print(f"Current (no validation):    {query_stats['mean']:.1f} queries, {duration_stats['mean']*1000:.2f}ms")
+    print(f"Baseline: {baseline_user['query_stats']['mean']:.1f} queries, {baseline_user['duration_stats']['mean']:.2f}ms")
+    print(f"Current:  {query_stats['mean']:.1f} queries, {duration_stats['mean']*1000:.2f}ms")
     
     query_reduction = ((baseline_user['query_stats']['mean'] - query_stats['mean']) / baseline_user['query_stats']['mean']) * 100
     time_improvement = ((baseline_user['duration_stats']['mean'] - duration_stats['mean']*1000) / baseline_user['duration_stats']['mean']) * 100
@@ -129,7 +129,7 @@ def test_user_creation_performance(db_session, test_model_role):
     # Store results
     results = {
         "operation": "user_creation",
-        "validation_service_active": False,
+        "database_constraints_active": True,
         "iterations": iterations,
         "duration_stats": {k: v*1000 if 'time' in k or k in ['mean', 'std_dev', 'min', 'max'] else v 
                          for k, v in duration_stats.items()},
@@ -150,7 +150,7 @@ def test_user_response_creation_performance(
     test_model_questions, 
     test_model_answer_choices
 ):
-    """Current: UserResponseModel creation without validation service."""
+    """Test UserResponseModel creation performance with database constraints."""
     iterations = 50
     durations = []
     query_counts = []
@@ -182,7 +182,7 @@ def test_user_response_creation_performance(
     duration_stats = calculate_stats(durations)
     query_stats = calculate_stats(query_counts)
     
-    print(f"\nCURRENT - UserResponse Creation (no validation service):")
+    print(f"\nCURRENT - UserResponse Creation Performance:")
     print(f"  Average Duration: {duration_stats['mean']*1000:.2f}ms")
     print(f"  Average Queries: {query_stats['mean']:.1f}")
     print(f"  Query Range: {query_stats['min']}-{query_stats['max']}")
@@ -200,7 +200,7 @@ def test_user_response_creation_performance(
     # Store results
     results = {
         "operation": "user_response_creation",
-        "validation_service_active": False,
+        "database_constraints_active": True,
         "iterations": iterations,
         "duration_stats": {k: v*1000 if 'time' in k or k in ['mean', 'std_dev', 'min', 'max'] else v 
                          for k, v in duration_stats.items()},
@@ -221,7 +221,7 @@ def test_leaderboard_creation_performance(
     test_model_group, 
     time_period_daily
 ):
-    """Current: LeaderboardModel creation without validation service."""
+    """Test LeaderboardModel creation performance with database constraints."""
     iterations = 50
     durations = []
     query_counts = []
@@ -252,7 +252,7 @@ def test_leaderboard_creation_performance(
     duration_stats = calculate_stats(durations)
     query_stats = calculate_stats(query_counts)
     
-    print(f"\nCURRENT - Leaderboard Creation (no validation service):")
+    print(f"\nCURRENT - Leaderboard Creation Performance:")
     print(f"  Average Duration: {duration_stats['mean']*1000:.2f}ms")
     print(f"  Average Queries: {query_stats['mean']:.1f}")
     print(f"  Query Range: {query_stats['min']}-{query_stats['max']}")
@@ -270,7 +270,7 @@ def test_leaderboard_creation_performance(
     # Store results
     results = {
         "operation": "leaderboard_creation",
-        "validation_service_active": False,
+        "database_constraints_active": True,
         "iterations": iterations,
         "duration_stats": {k: v*1000 if 'time' in k or k in ['mean', 'std_dev', 'min', 'max'] else v 
                          for k, v in duration_stats.items()},
@@ -286,7 +286,7 @@ def test_leaderboard_creation_performance(
 
 @pytest.mark.performance
 def test_question_creation_performance(db_session, test_model_user):
-    """Current: QuestionModel creation without validation service."""
+    """Test QuestionModel creation performance with database constraints."""
     iterations = 50
     durations = []
     query_counts = []
@@ -318,7 +318,7 @@ def test_question_creation_performance(db_session, test_model_user):
     duration_stats = calculate_stats(durations)
     query_stats = calculate_stats(query_counts)
     
-    print(f"\nCURRENT - Question Creation (no validation service):")
+    print(f"\nCURRENT - Question Creation Performance:")
     print(f"  Average Duration: {duration_stats['mean']*1000:.2f}ms")
     print(f"  Average Queries: {query_stats['mean']:.1f}")
     print(f"  Query Range: {query_stats['min']}-{query_stats['max']}")
@@ -336,7 +336,7 @@ def test_question_creation_performance(db_session, test_model_user):
     # Store results
     results = {
         "operation": "question_creation",
-        "validation_service_active": False,
+        "database_constraints_active": True,
         "iterations": iterations,
         "duration_stats": {k: v*1000 if 'time' in k or k in ['mean', 'std_dev', 'min', 'max'] else v 
                          for k, v in duration_stats.items()},
@@ -352,7 +352,7 @@ def test_question_creation_performance(db_session, test_model_user):
 
 @pytest.mark.performance
 def test_group_creation_performance(db_session, test_model_user):
-    """Current: GroupModel creation without validation service."""
+    """Test GroupModel creation performance with database constraints."""
     iterations = 50
     durations = []
     query_counts = []
@@ -384,7 +384,7 @@ def test_group_creation_performance(db_session, test_model_user):
     duration_stats = calculate_stats(durations)
     query_stats = calculate_stats(query_counts)
     
-    print(f"\nCURRENT - Group Creation (no validation service):")
+    print(f"\nCURRENT - Group Creation Performance:")
     print(f"  Average Duration: {duration_stats['mean']*1000:.2f}ms")
     print(f"  Average Queries: {query_stats['mean']:.1f}")
     print(f"  Query Range: {query_stats['min']}-{query_stats['max']}")
@@ -402,7 +402,7 @@ def test_group_creation_performance(db_session, test_model_user):
     # Store results
     results = {
         "operation": "group_creation",
-        "validation_service_active": False,
+        "database_constraints_active": True,
         "iterations": iterations,
         "duration_stats": {k: v*1000 if 'time' in k or k in ['mean', 'std_dev', 'min', 'max'] else v 
                          for k, v in duration_stats.items()},
@@ -450,10 +450,10 @@ def test_comprehensive_performance_comparison(
     all_results = {
         "comparison_metadata": {
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "validation_service_active": False,
+            "database_constraints_active": True,
             "database_type": "sqlite",
             "python_version": "3.12.10",
-            "test_environment": "post_removal_measurement"
+            "test_environment": "database_constraints_measurement"
         },
         "operations": {
             "user_creation": user_results,

@@ -8,7 +8,6 @@ from backend.app.models.subjects import SubjectModel
 from backend.app.models.subtopics import SubtopicModel
 from backend.app.models.topics import TopicModel
 from backend.app.models.user_responses import UserResponseModel
-# Validation service removed - database constraints provide all necessary validation
 
 
 def test_question_model_creation(db_session):
@@ -191,8 +190,7 @@ def test_question_model_with_answers(
     question.answer_choices.append(answer)
     db_session.commit()
 
-    # Validation service removed - database constraints provide all necessary validation
-
+    
     assert question.id is not None
     assert answer.id is not None
     assert answer in question.answer_choices
@@ -227,8 +225,7 @@ def test_question_deletion_removes_association_to_answers(
     question.answer_choices.append(answer)
     db_session.commit()
 
-    # Validation service removed - database constraints provide all necessary validation
-
+    
     # Store the answer ID for later checking
     answer_id = answer.id
 

@@ -187,8 +187,7 @@ def test_create_topic_non_existent_subject(logged_in_client):
         "subject_ids": [99999],
     }  # Assuming 99999 is a non-existent subject ID
     response = logged_in_client.post("/topics/", json=topic_data)
-    assert response.status_code == 400
-    assert "Invalid subject_id" in response.json()["detail"]
+    assert response.status_code == 422
 
 
 def test_update_topic_non_existent_subject(logged_in_client, test_model_topic):

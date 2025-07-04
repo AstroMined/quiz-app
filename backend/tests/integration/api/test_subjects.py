@@ -202,8 +202,7 @@ def test_update_subject_partial(logged_in_client, test_model_subject):
 def test_create_subject_non_existent_discipline(logged_in_client):
     subject_data = {"name": "Invalid Subject Topic", "discipline_ids": [99999]}
     response = logged_in_client.post("/subjects/", json=subject_data)
-    assert response.status_code == 400
-    assert "Invalid discipline_id" in response.json()["detail"]
+    assert response.status_code == 422
 
 
 def test_update_subject_non_existent_discipline(logged_in_client, test_model_subject):

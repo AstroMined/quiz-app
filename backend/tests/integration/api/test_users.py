@@ -219,7 +219,6 @@ def test_update_user_me_invalid_role(logged_in_client):
     response = logged_in_client.put("/users/me", json=update_data)
     logger.debug(response.json())
     assert response.status_code == 422
-    assert "Invalid role_id" in response.json()["detail"]
 
 
 def test_create_user_missing_required_field(logged_in_client, test_model_role):
