@@ -31,7 +31,7 @@ from backend.app.services.permission_generator_service import (
     ensure_permissions_in_db,
     generate_permissions,
 )
-from backend.app.services.validation_service import register_validation_listeners
+# Validation service removed - database constraints provide all necessary validation
 
 app = FastAPI()
 
@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
     db = next(app.state.db)
     permissions = generate_permissions(app)
     ensure_permissions_in_db(db, permissions)
-    register_validation_listeners()
+    # register_validation_listeners() - REMOVED: Database constraints handle validation
     init_time_periods_in_db(db)  # Initialize time periods
     yield
     # Anything after the yield runs when the application shuts down

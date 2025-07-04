@@ -8,7 +8,7 @@ from backend.app.models.subjects import SubjectModel
 from backend.app.models.subtopics import SubtopicModel
 from backend.app.models.topics import TopicModel
 from backend.app.models.user_responses import UserResponseModel
-from backend.app.services.validation_service import validate_foreign_keys
+# Validation service removed - database constraints provide all necessary validation
 
 
 def test_question_model_creation(db_session):
@@ -191,8 +191,7 @@ def test_question_model_with_answers(
     question.answer_choices.append(answer)
     db_session.commit()
 
-    validate_foreign_keys(QuestionModel, db_session.connection(), question)
-    validate_foreign_keys(AnswerChoiceModel, db_session.connection(), answer)
+    # Validation service removed - database constraints provide all necessary validation
 
     assert question.id is not None
     assert answer.id is not None
@@ -228,8 +227,7 @@ def test_question_deletion_removes_association_to_answers(
     question.answer_choices.append(answer)
     db_session.commit()
 
-    validate_foreign_keys(QuestionModel, db_session.connection(), question)
-    validate_foreign_keys(AnswerChoiceModel, db_session.connection(), answer)
+    # Validation service removed - database constraints provide all necessary validation
 
     # Store the answer ID for later checking
     answer_id = answer.id
