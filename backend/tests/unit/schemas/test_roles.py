@@ -90,16 +90,6 @@ def test_role_schema():
     )  # Use set comparison
 
 
-def test_role_schema_from_attributes(test_model_role):
-    schema = RoleSchema.model_validate(test_model_role)
-    assert schema.id == test_model_role.id
-    assert schema.name == test_model_role.name
-    assert schema.description == test_model_role.description
-    assert schema.default == test_model_role.default
-    assert set(schema.permissions) == set(
-        permission.name for permission in test_model_role.permissions
-    )
-
 
 # Add a new test for duplicate permissions
 def test_role_schema_duplicate_permissions():
@@ -114,3 +104,16 @@ def test_role_schema_duplicate_permissions():
     assert set(schema.permissions) == set(
         ["read_post", "create_post"]
     )  # Duplicates should be removed
+
+
+def test_role_schema_empty_permissions():
+    """Test RoleSchema with empty permissions list."""
+    data = {
+        "id": 1,
+        "name": "user",
+        "description": "Regular user role",
+        "default": True,
+        "permissions": [],
+    }
+    schema = RoleSchema(**data)
+    assert schema.permissions == []

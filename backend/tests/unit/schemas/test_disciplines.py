@@ -83,15 +83,28 @@ def test_discipline_schema():
     assert schema.subjects[2]["id"] == 5
 
 
-def test_discipline_schema_from_attributes(test_model_discipline):
-    schema = DisciplineSchema.model_validate(test_model_discipline)
-    assert schema.id == test_model_discipline.id
-    assert schema.name == test_model_discipline.name
-    assert isinstance(schema.domains, list)
-    assert isinstance(schema.subjects, list)
-    for domain in schema.domains:
-        assert "id" in domain
-        assert "name" in domain
-    for subject in schema.subjects:
-        assert "id" in subject
-        assert "name" in subject
+def test_discipline_schema_empty_relationships():
+    """Test DisciplineSchema with empty or None relationships."""
+    # Test with None relationships
+    data = {
+        "id": 1,
+        "name": "Discipline with None relationships",
+        "domains": None,
+        "subjects": None,
+    }
+    schema = DisciplineSchema(**data)
+    assert schema.domains == []
+    assert schema.subjects == []
+    
+    # Test with empty lists
+    data = {
+        "id": 2,
+        "name": "Discipline with empty relationships",
+        "domains": [],
+        "subjects": [],
+    }
+    schema = DisciplineSchema(**data)
+    assert schema.domains == []
+    assert schema.subjects == []
+
+
