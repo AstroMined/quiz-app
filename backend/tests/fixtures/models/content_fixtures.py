@@ -11,59 +11,57 @@ from backend.app.models.concepts import ConceptModel
 
 
 @pytest.fixture(scope="function")
-def test_model_domain(db_session):
-    """Create a test domain."""
-    domain = DomainModel(name="Test Domain")
-    db_session.add(domain)
-    db_session.commit()
-    return domain
+def test_model_domain(test_domains):
+    """Get a test domain from reference data."""
+    return test_domains[0]  # Return first domain from reference data
 
 
 @pytest.fixture(scope="function")
-def test_model_discipline(db_session, test_model_domain):
-    """Create a test discipline associated with a domain."""
-    discipline = DisciplineModel(name="Test Discipline")
-    discipline.domains.append(test_model_domain)
-    db_session.add(discipline)
-    db_session.commit()
-    return discipline
+def test_model_discipline(mathematics_discipline):
+    """Get mathematics discipline from reference data."""
+    return mathematics_discipline
 
 
 @pytest.fixture(scope="function")
-def test_model_subject(db_session, test_model_discipline):
-    """Create a test subject associated with a discipline."""
-    subject = SubjectModel(name="Test Subject")
-    subject.disciplines.append(test_model_discipline)
-    db_session.add(subject)
-    db_session.commit()
-    return subject
+def test_model_subject(algebra_subject):
+    """Get algebra subject from reference data."""
+    return algebra_subject
 
 
 @pytest.fixture(scope="function")
 def test_model_topic(db_session, test_model_subject):
     """Create a test topic associated with a subject."""
-    topic = TopicModel(name="Test Topic")
-    topic.subjects.append(test_model_subject)
+    import uuid
+    unique_name = f"test_topic_{str(uuid.uuid4())[:8]}"
+    topic = TopicModel(name=unique_name)
+    
+    # Re-attach the subject to the current session to avoid DetachedInstanceError
+    subject = db_session.merge(test_model_subject)
+    topic.subjects.append(subject)
     db_session.add(topic)
-    db_session.commit()
+    db_session.flush()  # Use flush instead of commit for transaction rollback
     return topic
 
 
 @pytest.fixture(scope="function")
 def test_model_subtopic(db_session, test_model_topic):
     """Create a test subtopic associated with a topic."""
-    subtopic = SubtopicModel(name="Test Subtopic")
+    import uuid
+    unique_name = f"test_subtopic_{str(uuid.uuid4())[:8]}"
+    subtopic = SubtopicModel(name=unique_name)
     subtopic.topics.append(test_model_topic)
     db_session.add(subtopic)
-    db_session.commit()
+    db_session.flush()  # Use flush instead of commit for transaction rollback
     return subtopic
 
 
 @pytest.fixture(scope="function")
 def test_model_concept(db_session, test_model_subtopic):
     """Create a test concept associated with a subtopic."""
-    concept = ConceptModel(name="Test Concept")
+    import uuid
+    unique_name = f"test_concept_{str(uuid.uuid4())[:8]}"
+    concept = ConceptModel(name=unique_name)
     concept.subtopics.append(test_model_subtopic)
     db_session.add(concept)
-    db_session.commit()
+    db_session.flush()  # Use flush instead of commit for transaction rollback
     return concept

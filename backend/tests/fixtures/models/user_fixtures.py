@@ -61,25 +61,15 @@ def test_model_permissions(db_session, session_permissions):
 
 
 @pytest.fixture(scope="function")
-def test_model_role(db_session, test_model_permissions):
-    """Create a test role with all permissions (will be rolled back after test)."""
-    role = RoleModel(name="test_role", description="Test Role", default=False)
-    role.permissions.extend(test_model_permissions)
-    db_session.add(role)
-    db_session.flush()  # Make available within transaction
-    return role
+def test_model_role(admin_role):
+    """Get admin role from reference data for testing (no transaction needed)."""
+    return admin_role
 
 
 @pytest.fixture(scope="function")
-def test_model_default_role(db_session, test_model_permissions):
-    """Create a default test role with all permissions (will be rolled back after test)."""
-    role = RoleModel(
-        name="test_default_role", description="Test Default Role", default=True
-    )
-    role.permissions.extend(test_model_permissions)
-    db_session.add(role)
-    db_session.flush()  # Make available within transaction
-    return role
+def test_model_default_role(default_role):
+    """Get default role from reference data for testing (no transaction needed)."""
+    return default_role
 
 
 @pytest.fixture(scope="function")
@@ -112,10 +102,12 @@ def test_model_user(db_session, test_random_username, test_model_role):
 
 
 @pytest.fixture(scope="function")
-def test_model_group(db_session, test_model_user):
+def test_model_group(db_session, test_model_user, test_random_username):
     """Create a test group (will be rolled back after test)."""
+    # Use random username to ensure unique group names
+    unique_group_name = f"test_group_{test_random_username.split('_')[-1]}"
     group = GroupModel(
-        name="Test Group",
+        name=unique_group_name,
         description="This is a test group",
         creator_id=test_model_user.id,
     )

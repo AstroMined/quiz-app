@@ -28,11 +28,21 @@ def test_complex_fixture_performance(setup_filter_questions_data):
     assert hierarchy["subjects"]["algebra"]["name"] == "Algebra"
 
 
-def test_session_reference_content_reuse(session_reference_content_hierarchy):
+def test_session_reference_content_reuse(test_domains, test_disciplines, test_subjects):
     """Test that session-scoped fixtures are properly reused."""
-    hierarchy = session_reference_content_hierarchy
-    assert hierarchy["domains"]["science"]["name"] == "Science"
-    assert hierarchy["domains"]["mathematics"]["name"] == "Mathematics"
+    stem_domain = next(d for d in test_domains if d.name == "STEM")
+    humanities_domain = next(d for d in test_domains if d.name == "Humanities")
+    mathematics_discipline = next(d for d in test_disciplines if d.name == "Mathematics")
+    physics_discipline = next(d for d in test_disciplines if d.name == "Physics")
+    algebra_subject = next(s for s in test_subjects if s.name == "Algebra")
+    classical_mechanics_subject = next(s for s in test_subjects if s.name == "Classical Mechanics")
+    
+    assert stem_domain.name == "STEM"
+    assert humanities_domain.name == "Humanities"
+    assert mathematics_discipline.name == "Mathematics"
+    assert physics_discipline.name == "Physics"
+    assert algebra_subject.name == "Algebra"
+    assert classical_mechanics_subject.name == "Classical Mechanics"
 
 
 def test_fixture_performance_reporting(fixture_performance_tracker):

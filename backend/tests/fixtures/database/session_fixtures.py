@@ -11,6 +11,11 @@ from sqlalchemy.pool import StaticPool
 from backend.app.db.base import Base
 from backend.app.main import app
 from backend.app.crud.crud_time_period import init_time_periods_in_db
+from backend.app.models.permissions import PermissionModel
+from backend.app.models.roles import RoleModel
+from backend.app.models.domains import DomainModel
+from backend.app.models.disciplines import DisciplineModel
+from backend.app.models.subjects import SubjectModel
 from backend.tests.helpers.fixture_performance import track_fixture_performance
 
 # Load the test database URL from pyproject.toml for compatibility
@@ -27,6 +32,228 @@ _reference_data_initialized = {}
 
 # Global storage for current test database session (thread-local doesn't work with FastAPI TestClient)
 _current_test_session = None
+
+# Global cache for reference data per worker
+_reference_data_cache = {}
+
+
+def create_default_roles(session) -> dict:
+    """
+    Create default roles and permissions required for testing.
+    
+    Adapted from production init_db() function to provide essential
+    reference data for test scenarios.
+    
+    Args:
+        session: SQLAlchemy session for database operations
+        
+    Returns:
+        dict: Dictionary containing created roles keyed by name
+        
+    Raises:
+        RuntimeError: If role creation fails
+    """
+    try:
+        # Create permissions (essential set for testing)
+        permissions_data = [
+            {"name": "read__docs", "description": "Read documentation"},
+            {"name": "read__redoc", "description": "Read Redoc documentation"},
+            {"name": "read__openapi.json", "description": "Read OpenAPI specification"},
+            {"name": "read__", "description": "Read root endpoint"},
+            {"name": "create__login", "description": "Login authentication"},
+            {"name": "create__register_", "description": "User registration"},
+            {"name": "read__users_me", "description": "Read own user profile"},
+            {"name": "update__users_me", "description": "Update own user profile"},
+            {"name": "create__questions", "description": "Create questions"},
+            {"name": "read__questions", "description": "Read questions"},
+            {"name": "update__questions", "description": "Update questions"},
+            {"name": "delete__questions", "description": "Delete questions"},
+            {"name": "create__subjects", "description": "Create subjects"},
+            {"name": "read__subjects", "description": "Read subjects"},
+        ]
+        
+        # Create permission objects
+        permissions = {}
+        for perm_data in permissions_data:
+            # Check if permission already exists
+            existing_perm = session.query(PermissionModel).filter_by(name=perm_data["name"]).first()
+            if existing_perm:
+                permissions[perm_data["name"]] = existing_perm
+            else:
+                perm = PermissionModel(**perm_data)
+                session.add(perm)
+                permissions[perm_data["name"]] = perm
+        
+        session.flush()  # Get IDs for relationships
+        
+        # Create roles with permission assignments
+        user_permission_names = [
+            "read__docs", "read__redoc", "read__openapi.json", "read__",
+            "create__login", "create__register_", "read__users_me", "update__users_me"
+        ]
+        user_permissions = [permissions[name] for name in user_permission_names if name in permissions]
+        
+        admin_permission_names = user_permission_names + [
+            "create__questions", "read__questions", "update__questions",
+            "create__subjects", "read__subjects"
+        ]
+        admin_permissions = [permissions[name] for name in admin_permission_names if name in permissions]
+        
+        # All permissions for superadmin
+        superadmin_permissions = list(permissions.values())
+        
+        # Check for existing roles and create if needed
+        roles = {}
+        
+        # User role (default)
+        existing_user_role = session.query(RoleModel).filter_by(name="user").first()
+        if existing_user_role:
+            roles["user"] = existing_user_role
+        else:
+            user_role = RoleModel(
+                name="user",
+                description="Regular User",
+                permissions=user_permissions,
+                default=True
+            )
+            session.add(user_role)
+            roles["user"] = user_role
+        
+        # Admin role
+        existing_admin_role = session.query(RoleModel).filter_by(name="admin").first()
+        if existing_admin_role:
+            roles["admin"] = existing_admin_role
+        else:
+            admin_role = RoleModel(
+                name="admin",
+                description="Administrator",
+                permissions=admin_permissions,
+                default=False
+            )
+            session.add(admin_role)
+            roles["admin"] = admin_role
+        
+        # Superadmin role
+        existing_superadmin_role = session.query(RoleModel).filter_by(name="superadmin").first()
+        if existing_superadmin_role:
+            roles["superadmin"] = existing_superadmin_role
+        else:
+            superadmin_role = RoleModel(
+                name="superadmin",
+                description="Super Administrator",
+                permissions=superadmin_permissions,
+                default=False
+            )
+            session.add(superadmin_role)
+            roles["superadmin"] = superadmin_role
+        
+        session.commit()
+        return roles
+        
+    except Exception as e:
+        session.rollback()
+        raise RuntimeError(f"Failed to create default roles: {e}")
+
+
+def create_content_hierarchy(session) -> dict:
+    """
+    Create basic content hierarchy for testing.
+    
+    Creates a minimal but complete content hierarchy including domains,
+    disciplines, and subjects with proper many-to-many relationships
+    for test scenarios.
+    
+    Args:
+        session: SQLAlchemy session for database operations
+        
+    Returns:
+        dict: Dictionary containing created content hierarchy data
+        
+    Raises:
+        RuntimeError: If content hierarchy creation fails
+    """
+    try:
+        # Create domains
+        domains = {}
+        domain_data = [
+            {"name": "STEM", "description": "Science, Technology, Engineering, Mathematics"},
+            {"name": "Humanities", "description": "Liberal arts and humanities"},
+            {"name": "Social Sciences", "description": "Social sciences and related fields"}
+        ]
+        
+        for domain_info in domain_data:
+            existing_domain = session.query(DomainModel).filter_by(name=domain_info["name"]).first()
+            if existing_domain:
+                domains[domain_info["name"].lower().replace(" ", "_")] = existing_domain
+            else:
+                domain = DomainModel(name=domain_info["name"])
+                session.add(domain)
+                domains[domain_info["name"].lower().replace(" ", "_")] = domain
+        
+        session.flush()  # Get IDs for relationships
+        
+        # Create disciplines
+        disciplines = {}
+        discipline_data = [
+            {"name": "Mathematics", "domain_key": "stem"},
+            {"name": "Computer Science", "domain_key": "stem"}, 
+            {"name": "Physics", "domain_key": "stem"},
+            {"name": "History", "domain_key": "humanities"},
+            {"name": "Literature", "domain_key": "humanities"},
+            {"name": "Psychology", "domain_key": "social_sciences"}
+        ]
+        
+        for disc_info in discipline_data:
+            existing_discipline = session.query(DisciplineModel).filter_by(name=disc_info["name"]).first()
+            if existing_discipline:
+                disciplines[disc_info["name"].lower().replace(" ", "_")] = existing_discipline
+            else:
+                discipline = DisciplineModel(name=disc_info["name"])
+                # Set up domain relationship
+                if disc_info["domain_key"] in domains:
+                    discipline.domains = [domains[disc_info["domain_key"]]]
+                session.add(discipline)
+                disciplines[disc_info["name"].lower().replace(" ", "_")] = discipline
+        
+        session.flush()  # Get IDs for relationships
+        
+        # Create subjects
+        subjects = {}
+        subject_data = [
+            {"name": "Algebra", "discipline_key": "mathematics"},
+            {"name": "Calculus", "discipline_key": "mathematics"},
+            {"name": "Geometry", "discipline_key": "mathematics"},
+            {"name": "Algorithms", "discipline_key": "computer_science"},
+            {"name": "Data Structures", "discipline_key": "computer_science"},
+            {"name": "Classical Mechanics", "discipline_key": "physics"},
+            {"name": "World War II", "discipline_key": "history"},
+            {"name": "American Literature", "discipline_key": "literature"},
+            {"name": "Cognitive Psychology", "discipline_key": "psychology"}
+        ]
+        
+        for subj_info in subject_data:
+            existing_subject = session.query(SubjectModel).filter_by(name=subj_info["name"]).first()
+            if existing_subject:
+                subjects[subj_info["name"].lower().replace(" ", "_")] = existing_subject
+            else:
+                subject = SubjectModel(name=subj_info["name"])
+                # Set up discipline relationship
+                if subj_info["discipline_key"] in disciplines:
+                    subject.disciplines = [disciplines[subj_info["discipline_key"]]]
+                session.add(subject)
+                subjects[subj_info["name"].lower().replace(" ", "_")] = subject
+        
+        session.commit()
+        
+        return {
+            "domains": domains,
+            "disciplines": disciplines,
+            "subjects": subjects
+        }
+        
+    except Exception as e:
+        session.rollback()
+        raise RuntimeError(f"Failed to create content hierarchy: {e}")
 
 
 def get_worker_id():
@@ -100,8 +327,8 @@ def verify_constraints(test_engine):
 
 @pytest.fixture(scope="session")
 def base_reference_data(test_engine, verify_constraints):
-    """Initialize reference data once per worker test session."""
-    global _reference_data_initialized
+    """Initialize comprehensive reference data once per worker test session."""
+    global _reference_data_initialized, _reference_data_cache
     
     worker_id = get_worker_id()
     
@@ -109,10 +336,23 @@ def base_reference_data(test_engine, verify_constraints):
         SessionLocal = sessionmaker(bind=test_engine)
         session = SessionLocal()
         try:
-            # Initialize time periods and other static data
+            # Initialize all reference data types
+            roles = create_default_roles(session)
+            content_hierarchy = create_content_hierarchy(session)
             init_time_periods_in_db(session)
+            
+            # Store reference data for fixture access
+            _reference_data_cache[worker_id] = {
+                "roles": roles,
+                "content_hierarchy": content_hierarchy
+            }
+            
             session.commit()
             _reference_data_initialized[worker_id] = True
+            
+        except Exception as e:
+            session.rollback()
+            raise RuntimeError(f"Failed to initialize reference data: {e}")
         finally:
             session.close()
     
@@ -285,3 +525,117 @@ def client(db_session, test_engine):
             logger.debug(f"Restored {type(middleware_item.cls).__name__} database function")
     
     app.dependency_overrides.clear()
+
+
+# Reference Data Access Fixtures
+
+@pytest.fixture(scope="session")
+def default_role(base_reference_data, test_engine):
+    """Get the default user role for testing."""
+    SessionLocal = sessionmaker(bind=test_engine)
+    session = SessionLocal()
+    try:
+        role = session.query(RoleModel).filter_by(default=True).first()
+        if not role:
+            raise RuntimeError("Default role not found - reference data not initialized")
+        return role
+    finally:
+        session.close()
+
+
+@pytest.fixture(scope="session") 
+def admin_role(base_reference_data, test_engine):
+    """Get the admin role for testing."""
+    SessionLocal = sessionmaker(bind=test_engine)
+    session = SessionLocal() 
+    try:
+        role = session.query(RoleModel).filter_by(name="admin").first()
+        if not role:
+            raise RuntimeError("Admin role not found - reference data not initialized")
+        return role
+    finally:
+        session.close()
+
+
+@pytest.fixture(scope="session")
+def superadmin_role(base_reference_data, test_engine):
+    """Get the superadmin role for testing."""
+    SessionLocal = sessionmaker(bind=test_engine)
+    session = SessionLocal()
+    try:
+        role = session.query(RoleModel).filter_by(name="superadmin").first()
+        if not role:
+            raise RuntimeError("Superadmin role not found - reference data not initialized")
+        return role
+    finally:
+        session.close()
+
+
+@pytest.fixture(scope="session")
+def test_disciplines(base_reference_data, test_engine):
+    """Get test disciplines for content organization tests."""
+    SessionLocal = sessionmaker(bind=test_engine)
+    session = SessionLocal()
+    try:
+        disciplines = session.query(DisciplineModel).all()
+        if not disciplines:
+            raise RuntimeError("Disciplines not found - reference data not initialized")
+        return disciplines
+    finally:
+        session.close()
+
+
+@pytest.fixture(scope="session")
+def test_subjects(base_reference_data, test_engine):
+    """Get test subjects for content organization tests."""
+    SessionLocal = sessionmaker(bind=test_engine)
+    session = SessionLocal()
+    try:
+        subjects = session.query(SubjectModel).all()
+        if not subjects:
+            raise RuntimeError("Subjects not found - reference data not initialized")
+        return subjects
+    finally:
+        session.close()
+
+
+@pytest.fixture(scope="session")
+def test_domains(base_reference_data, test_engine):
+    """Get test domains for content organization tests."""
+    SessionLocal = sessionmaker(bind=test_engine)
+    session = SessionLocal()
+    try:
+        domains = session.query(DomainModel).all()
+        if not domains:
+            raise RuntimeError("Domains not found - reference data not initialized")
+        return domains
+    finally:
+        session.close()
+
+
+@pytest.fixture(scope="session")
+def mathematics_discipline(base_reference_data, test_engine):
+    """Get the Mathematics discipline for specific tests."""
+    SessionLocal = sessionmaker(bind=test_engine)
+    session = SessionLocal()
+    try:
+        discipline = session.query(DisciplineModel).filter_by(name="Mathematics").first()
+        if not discipline:
+            raise RuntimeError("Mathematics discipline not found - reference data not initialized")
+        return discipline
+    finally:
+        session.close()
+
+
+@pytest.fixture(scope="session")
+def algebra_subject(base_reference_data, test_engine):
+    """Get the Algebra subject for specific tests."""
+    SessionLocal = sessionmaker(bind=test_engine)
+    session = SessionLocal()
+    try:
+        subject = session.query(SubjectModel).filter_by(name="Algebra").first()
+        if not subject:
+            raise RuntimeError("Algebra subject not found - reference data not initialized")
+        return subject
+    finally:
+        session.close()

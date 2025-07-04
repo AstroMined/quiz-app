@@ -22,7 +22,6 @@ os.environ["ENVIRONMENT"] = "test"
 # Register all fixture modules as pytest plugins
 pytest_plugins = [
     "backend.tests.fixtures.database.session_fixtures",
-    "backend.tests.fixtures.database.reference_data_fixtures",
     "backend.tests.fixtures.models.user_fixtures",
     "backend.tests.fixtures.models.content_fixtures", 
     "backend.tests.fixtures.models.quiz_fixtures",
