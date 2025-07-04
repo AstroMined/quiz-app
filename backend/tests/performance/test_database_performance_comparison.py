@@ -4,7 +4,7 @@ Database performance comparison tests.
 These tests measure current database performance and compare against historical
 baselines to track performance improvements and detect regressions.
 
-Compares current performance with baseline from validation_service_active_baseline.json.
+Compares current performance with baseline from performance_baseline_legacy.json.
 """
 
 import time
@@ -62,7 +62,7 @@ def calculate_stats(values):
 
 def load_baseline():
     """Load baseline performance data for comparison."""
-    baseline_file = Path("backend/tests/performance/baselines/validation_service_active_baseline.json")
+    baseline_file = Path("backend/tests/performance/baselines/performance_baseline_legacy.json")
     with open(baseline_file, 'r') as f:
         return json.load(f)
 
@@ -468,7 +468,7 @@ def test_comprehensive_performance_comparison(
     results_dir = Path("backend/tests/performance/baselines")
     results_dir.mkdir(parents=True, exist_ok=True)
     
-    results_file = results_dir / "validation_service_removed_results.json"
+    results_file = results_dir / "performance_baseline_current.json"
     with open(results_file, 'w') as f:
         json.dump(all_results, f, indent=2)
     
@@ -509,7 +509,7 @@ def test_comprehensive_performance_comparison(
     print(f"{'='*60}")
     
     print(f"\nResults saved to: {results_file}")
-    print(f"Baseline data from: backend/tests/performance/baselines/validation_service_active_baseline.json")
+    print(f"Baseline data from: backend/tests/performance/baselines/performance_baseline_legacy.json")
     
     # Overall validation - ensure we have improvements
     total_operations = len(all_results["operations"])
