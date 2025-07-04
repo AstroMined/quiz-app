@@ -4,7 +4,7 @@ import os
 import toml
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -60,10 +60,18 @@ def test_engine():
         database_url,
         connect_args={
             "check_same_thread": False,
+            "isolation_level": None,
         },
         poolclass=StaticPool,
         echo=False
     )
+    
+    # Enable foreign key constraints for all connections
+    @event.listens_for(engine, "connect")
+    def enable_foreign_keys(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
     
     # Create all tables once per worker session
     Base.metadata.create_all(bind=engine)
@@ -78,7 +86,20 @@ def session_factory(test_engine):
 
 
 @pytest.fixture(scope="session")
-def base_reference_data(test_engine):
+def verify_constraints(test_engine):
+    """Verify that foreign key constraints are properly enabled."""
+    from sqlalchemy import text
+    
+    with test_engine.connect() as conn:
+        result = conn.execute(text("PRAGMA foreign_keys"))
+        fk_enabled = result.fetchone()[0]
+        assert fk_enabled == 1, "Foreign key constraints must be enabled for proper testing"
+    
+    return True
+
+
+@pytest.fixture(scope="session")
+def base_reference_data(test_engine, verify_constraints):
     """Initialize reference data once per worker test session."""
     global _reference_data_initialized
     
