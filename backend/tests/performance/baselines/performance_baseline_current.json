@@ -1,6 +1,6 @@
 {
   "comparison_metadata": {
-    "timestamp": "2025-07-04T11:19:53Z",
+    "timestamp": "2025-07-04T15:33:01Z",
     "database_constraints_active": true,
     "database_type": "sqlite",
     "python_version": "3.12.10",
@@ -12,17 +12,17 @@
       "database_constraints_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 2.0627978444099426,
-        "std_dev": 0.3046599468567494,
-        "min": 1.960874069482088,
-        "max": 3.60783189535141,
+        "mean": 1.9987156055867672,
+        "std_dev": 2.239665129166305,
+        "min": 1.0376549325883389,
+        "max": 13.227966614067554,
         "count": 50
       },
       "query_stats": {
-        "mean": 2,
+        "mean": 1,
         "std_dev": 0.0,
-        "min": 2,
-        "max": 2,
+        "min": 1,
+        "max": 1,
         "count": 50
       }
     },
@@ -31,10 +31,10 @@
       "database_constraints_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 3.1488851364701986,
-        "std_dev": 0.3065817198619735,
-        "min": 3.072496969252825,
-        "max": 5.247888620942831,
+        "mean": 2.904639905318618,
+        "std_dev": 0.595539066429015,
+        "min": 2.694393042474985,
+        "max": 6.303742993623018,
         "count": 50
       },
       "query_stats": {
@@ -50,10 +50,10 @@
       "database_constraints_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 3.076044227927923,
-        "std_dev": 0.28873607129604767,
-        "min": 3.0098389834165573,
-        "max": 5.053731147199869,
+        "mean": 3.2175788283348083,
+        "std_dev": 1.6928884849475332,
+        "min": 2.6155109517276287,
+        "max": 13.275675009936094,
         "count": 50
       },
       "query_stats": {
@@ -69,10 +69,10 @@
       "database_constraints_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 2.0407200790941715,
-        "std_dev": 0.1629399505086784,
-        "min": 1.9911928102374077,
-        "max": 3.1529180705547333,
+        "mean": 1.8221068102866411,
+        "std_dev": 0.08691992899124361,
+        "min": 1.7148400656878948,
+        "max": 2.069686073809862,
         "count": 50
       },
       "query_stats": {
@@ -88,10 +88,10 @@
       "database_constraints_active": true,
       "iterations": 50,
       "duration_stats": {
-        "mean": 1.7637901846319437,
-        "std_dev": 0.04393886947143385,
-        "min": 1.7142551951110363,
-        "max": 2.047059126198292,
+        "mean": 1.495578782632947,
+        "std_dev": 0.12195182615284761,
+        "min": 1.4317892491817474,
+        "max": 2.318217884749174,
         "count": 50
       },
       "query_stats": {
