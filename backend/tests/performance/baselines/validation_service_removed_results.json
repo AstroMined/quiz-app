@@ -1,0 +1,106 @@
+{
+  "comparison_metadata": {
+    "timestamp": "2025-07-03T23:02:37Z",
+    "validation_service_active": false,
+    "database_type": "sqlite",
+    "python_version": "3.12.10",
+    "test_environment": "post_removal_measurement"
+  },
+  "operations": {
+    "user_creation": {
+      "operation": "user_creation",
+      "validation_service_active": false,
+      "iterations": 50,
+      "duration_stats": {
+        "mean": 1.997737567871809,
+        "std_dev": 0.0350309147515986,
+        "min": 1.9633769989013672,
+        "max": 2.149903681129217,
+        "count": 50
+      },
+      "query_stats": {
+        "mean": 2,
+        "std_dev": 0.0,
+        "min": 2,
+        "max": 2,
+        "count": 50
+      }
+    },
+    "user_response_creation": {
+      "operation": "user_response_creation",
+      "validation_service_active": false,
+      "iterations": 50,
+      "duration_stats": {
+        "mean": 3.0790939927101135,
+        "std_dev": 0.027118058544620394,
+        "min": 3.0335350893437862,
+        "max": 3.173953853547573,
+        "count": 50
+      },
+      "query_stats": {
+        "mean": 4,
+        "std_dev": 0.0,
+        "min": 4,
+        "max": 4,
+        "count": 50
+      }
+    },
+    "leaderboard_creation": {
+      "operation": "leaderboard_creation",
+      "validation_service_active": false,
+      "iterations": 50,
+      "duration_stats": {
+        "mean": 3.1416684854775667,
+        "std_dev": 0.7953741914447853,
+        "min": 2.9819090850651264,
+        "max": 8.646405301988125,
+        "count": 50
+      },
+      "query_stats": {
+        "mean": 4,
+        "std_dev": 0.0,
+        "min": 4,
+        "max": 4,
+        "count": 50
+      }
+    },
+    "question_creation": {
+      "operation": "question_creation",
+      "validation_service_active": false,
+      "iterations": 50,
+      "duration_stats": {
+        "mean": 2.0012147165834904,
+        "std_dev": 0.06300847828637465,
+        "min": 1.9616708159446716,
+        "max": 2.4253069423139095,
+        "count": 50
+      },
+      "query_stats": {
+        "mean": 2,
+        "std_dev": 0.0,
+        "min": 2,
+        "max": 2,
+        "count": 50
+      }
+    },
+    "group_creation": {
+      "operation": "group_creation",
+      "validation_service_active": false,
+      "iterations": 50,
+      "duration_stats": {
+        "mean": 1.7587368749082088,
+        "std_dev": 0.034947744505697806,
+        "min": 1.7189732752740383,
+        "max": 1.9712159410119057,
+        "count": 50
+      },
+      "query_stats": {
+        "mean": 2,
+        "std_dev": 0.0,
+        "min": 2,
+        "max": 2,
+        "count": 50
+      }
+    }
+  }
+}

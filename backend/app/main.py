@@ -31,6 +31,7 @@ from backend.app.services.permission_generator_service import (
     ensure_permissions_in_db,
     generate_permissions,
 )
+from backend.app.api.error_handlers import add_error_handlers
 # Validation service removed - database constraints provide all necessary validation
 
 app = FastAPI()
@@ -55,6 +56,9 @@ app.router.lifespan_context = lifespan
 app.add_middleware(AuthorizationMiddleware, get_db_func=get_db)
 app.add_middleware(BlacklistMiddleware, get_db_func=get_db)
 add_cors_middleware(app)
+
+# Add database error handlers
+add_error_handlers(app)
 
 # Use the aliased name for the router
 app.include_router(answer_choices_router.router, tags=["Answer Choices"])
