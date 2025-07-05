@@ -31,13 +31,11 @@ def test_create_question(db_session, test_schema_question):
 
 
 def test_create_question_with_answers(db_session, test_schema_question_with_answers):
-    # Ensure no questions exist before creating a new one
-    existing_questions = read_questions_from_db(db_session)
-    assert len(existing_questions) == 0
-
-    # Ensure no answer choices exist before creating a new question
-    existing_answer_choices = read_answer_choices_from_db(db_session)
-    assert len(existing_answer_choices) == 0
+    # Count existing questions and answer choices before creating new ones
+    initial_questions = read_questions_from_db(db_session)
+    initial_answer_choices = read_answer_choices_from_db(db_session)
+    initial_question_count = len(initial_questions)
+    initial_answer_choice_count = len(initial_answer_choices)
 
     question_data = test_schema_question_with_answers.model_dump()
     created_question = create_question_in_db(db_session, question_data)
@@ -64,7 +62,7 @@ def test_create_question_with_answers(db_session, test_schema_question_with_answ
     )
 
     new_answer_choices = read_answer_choices_from_db(db_session)
-    assert len(new_answer_choices) == len(
+    assert len(new_answer_choices) == initial_answer_choice_count + len(
         test_schema_question_with_answers.answer_choices
     )
     question_answer_choices = read_answer_choices_for_question_from_db(
@@ -73,10 +71,11 @@ def test_create_question_with_answers(db_session, test_schema_question_with_answ
     for ac in question_answer_choices:
         assert created_question.id in [q.id for q in ac.questions]
 
-    # Read all associations in QuestionToAnswerAssociation table
+    # Read associations for our specific question only
     question_to_answer_associations = db_session.query(
         QuestionToAnswerAssociation
-    ).all()
+    ).filter_by(question_id=created_question.id).all()
+    # Verify all associations are for our question
     for qta in question_to_answer_associations:
         assert qta.question_id == created_question.id
     assert created_question.text == test_schema_question_with_answers.text

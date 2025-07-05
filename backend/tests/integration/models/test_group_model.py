@@ -61,8 +61,10 @@ def test_group_model_unique_constraint(db_session, test_model_user):
 
 
 def test_group_user_relationship(db_session, test_model_user):
+    import uuid
+    unique_name = f"Test Group {str(uuid.uuid4())[:8]}"
     group = GroupModel(
-        name="Test Group",
+        name=unique_name,
         description="This is a test group",
         creator_id=test_model_user.id,
     )
@@ -108,8 +110,10 @@ def test_group_question_set_relationship(
 
 
 def test_group_leaderboard_relationship(db_session, test_model_user):
+    import uuid
+    unique_name = f"Test Group {str(uuid.uuid4())[:8]}"
     group = GroupModel(
-        name="Test Group",
+        name=unique_name,
         description="This is a test group",
         creator_id=test_model_user.id,
     )
@@ -127,8 +131,10 @@ def test_group_leaderboard_relationship(db_session, test_model_user):
 
 
 def test_group_model_repr(db_session, test_model_user):
+    import uuid
+    unique_name = f"Test Group {str(uuid.uuid4())[:8]}"
     group = GroupModel(
-        name="Test Group",
+        name=unique_name,
         description="This is a test group",
         creator_id=test_model_user.id,
     )
@@ -137,5 +143,5 @@ def test_group_model_repr(db_session, test_model_user):
 
     assert (
         repr(group)
-        == f"<GroupModel(id={group.id}, name='Test Group', creator_id={test_model_user.id}, is_active={test_model_user.is_active})>"
+        == f"<GroupModel(id={group.id}, name='{unique_name}', creator_id={test_model_user.id}, is_active={test_model_user.is_active})>"
     )

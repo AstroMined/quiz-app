@@ -54,10 +54,10 @@ def test_update_role(db_session, test_role_data):
 
 
 def test_delete_role(db_session, test_role_data):
-    # Create a default role first
-    default_role_data = {**test_role_data, "name": "Default Role", "default": True}
-    created_default_role = create_role_in_db(db_session, default_role_data)
-    assert created_default_role.default is True
+    # Get existing default role from session-scoped fixtures
+    default_role = read_default_role_from_db(db_session)
+    assert default_role is not None, "Default role should exist from session fixtures"
+    assert default_role.default is True
 
     # Now create and delete the test role
     role = create_role_in_db(db_session, test_role_data)
@@ -142,9 +142,10 @@ def test_delete_nonexistent_role(db_session):
 
 
 def test_create_role_with_default_true(db_session, test_role_data):
+    # Test that we cannot create a second default role when one already exists
     role_data = {**test_role_data, "default": True}
-    role = create_role_in_db(db_session, role_data)
-    assert role.default is True
+    with pytest.raises(IntegrityError, match="A default role already exists"):
+        create_role_in_db(db_session, role_data)
 
 
 def test_update_role_default_status(db_session, test_role_data):
@@ -155,21 +156,24 @@ def test_update_role_default_status(db_session, test_role_data):
 
 
 def test_read_default_role(db_session, test_role_data):
-    default_role_data = {**test_role_data, "default": True}
-    created_default_role = create_role_in_db(db_session, default_role_data)
-    assert created_default_role.default is True
-    read_role = read_role_from_db(db_session, created_default_role.id)
-    assert read_role.default is True
+    # Test reading the existing default role from session fixtures
     default_role = read_default_role_from_db(db_session)
     assert default_role is not None
     assert default_role.default is True
+    assert default_role.name == "user"  # From session fixtures
 
 
 def test_create_multiple_default_roles(db_session, test_role_data):
+    # Test that we cannot create additional default roles when one already exists
     role_data1 = {**test_role_data, "name": "Default Role 1", "default": True}
     role_data2 = {**test_role_data, "name": "Default Role 2", "default": True}
-    create_role_in_db(db_session, role_data1)
-    with pytest.raises(IntegrityError):
+    
+    # First attempt should fail since a default role already exists from session fixtures
+    with pytest.raises(IntegrityError, match="A default role already exists"):
+        create_role_in_db(db_session, role_data1)
+    
+    # Second attempt should also fail for the same reason
+    with pytest.raises(IntegrityError, match="A default role already exists"):
         create_role_in_db(db_session, role_data2)
 
 
@@ -196,10 +200,10 @@ def test_read_roles_pagination(db_session, test_role_data):
 def test_delete_role_cascade(
     db_session, test_role_data, test_schema_permission, test_user_data
 ):
-    # Create a default role first
-    default_role_data = {**test_role_data, "name": "Default Role", "default": True}
-    created_default_role = create_role_in_db(db_session, default_role_data)
-    assert created_default_role.default is True
+    # Use existing default role from session fixtures
+    default_role = read_default_role_from_db(db_session)
+    assert default_role is not None, "Default role should exist from session fixtures"
+    assert default_role.default is True
 
     user_role_data = {**test_role_data, "name": "User Role", "default": False}
     user_role = create_role_in_db(db_session, user_role_data)

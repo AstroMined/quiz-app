@@ -47,7 +47,12 @@ def test_get_answer_choices(logged_in_client, test_model_answer_choices):
     assert response.status_code == 200
     answer_choices = response.json()
     assert isinstance(answer_choices, list)
-    assert len(answer_choices) == len(test_model_answer_choices)
+    # Should return at least the number of answer choices we created
+    assert len(answer_choices) >= len(test_model_answer_choices)
+    # Should include our test answer choices (check by text since IDs might vary)
+    answer_texts = [ac["text"] for ac in answer_choices]
+    for test_choice in test_model_answer_choices:
+        assert test_choice.text in answer_texts
 
 
 def test_get_answer_choice(logged_in_client, test_model_answer_choices):

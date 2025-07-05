@@ -19,8 +19,9 @@ from backend.app.services.logging_service import logger
 
 
 def test_create_revoked_token_in_db(db_session, test_model_user):
-    jti = "test_jti"
-    token = "test_token"
+    import uuid
+    jti = f"test_jti_{str(uuid.uuid4())[:8]}"
+    token = f"test_token_{str(uuid.uuid4())[:8]}"
     expires_at = int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
 
     revoked_token = create_revoked_token_in_db(
@@ -36,8 +37,9 @@ def test_create_revoked_token_in_db(db_session, test_model_user):
 
 
 def test_read_revoked_token_from_db(db_session, test_model_user):
-    jti = "test_jti"
-    token = "test_token"
+    import uuid
+    jti = f"test_jti_{str(uuid.uuid4())[:8]}"
+    token = f"test_token_{str(uuid.uuid4())[:8]}"
     expires_at = int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
 
     create_revoked_token_in_db(db_session, jti, token, test_model_user.id, expires_at)

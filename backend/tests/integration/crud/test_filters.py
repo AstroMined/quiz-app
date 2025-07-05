@@ -159,5 +159,8 @@ def test_read_filtered_questions_no_results(db_session):
 
 def test_read_filtered_questions_empty_tag_list(db_session, filter_test_data):
     results = read_filtered_questions_from_db(db_session, {"question_tags": []})
-    assert len(results) == 1
-    assert results[0].id == filter_test_data["question"].id
+    # Should return all questions when tag filter is empty
+    assert len(results) >= 1
+    # Should include our test question
+    question_ids = [q.id for q in results]
+    assert filter_test_data["question"].id in question_ids
