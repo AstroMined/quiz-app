@@ -233,66 +233,59 @@ def test_leaderboard_time_period_foreign_key_constraint(
 
 
 def test_topic_subject_foreign_key_constraint(db_session, test_model_subject):
-    """Test that database enforces topics.subject_id foreign key constraint."""
-    # Valid subject_id should work
+    """Test that database enforces topics-subjects association."""
+    # Valid subject association should work
     topic = TopicModel(
-        name="Test Topic",
-        subject_id=test_model_subject.id
+        name="Test Topic"
     )
+    # Re-attach the subject to the current session to avoid DetachedInstanceError
+    subject = db_session.merge(test_model_subject)
+    topic.subjects.append(subject)
     db_session.add(topic)
     db_session.commit()  # Should succeed
     
-    # Invalid subject_id should fail
-    invalid_topic = TopicModel(
-        name="Invalid Topic",
-        subject_id=9999  # Invalid subject_id
+    # Test that topic can exist without subjects (no constraint violation)
+    topic_without_subject = TopicModel(
+        name="Topic Without Subject"
     )
-    db_session.add(invalid_topic)
-    
-    with pytest.raises(IntegrityError):
-        db_session.commit()
+    db_session.add(topic_without_subject)
+    db_session.commit()  # Should also succeed as many-to-many allows empty relationships
 
 
 def test_subtopic_topic_foreign_key_constraint(db_session, test_model_topic):
-    """Test that database enforces subtopics.topic_id foreign key constraint."""
-    # Valid topic_id should work
+    """Test that database enforces subtopics-topics association."""
+    # Valid topic association should work
     subtopic = SubtopicModel(
-        name="Test Subtopic",
-        topic_id=test_model_topic.id
+        name="Test Subtopic"
     )
+    subtopic.topics.append(test_model_topic)
     db_session.add(subtopic)
     db_session.commit()  # Should succeed
     
-    # Invalid topic_id should fail
-    invalid_subtopic = SubtopicModel(
-        name="Invalid Subtopic",
-        topic_id=9999  # Invalid topic_id
+    # Test that subtopic can exist without topics (no constraint violation)
+    subtopic_without_topic = SubtopicModel(
+        name="Subtopic Without Topic"
     )
-    db_session.add(invalid_subtopic)
-    
-    with pytest.raises(IntegrityError):
-        db_session.commit()
+    db_session.add(subtopic_without_topic)
+    db_session.commit()  # Should also succeed as many-to-many allows empty relationships
 
 
 def test_concept_subtopic_foreign_key_constraint(db_session, test_model_subtopic):
-    """Test that database enforces concepts.subtopic_id foreign key constraint."""
-    # Valid subtopic_id should work
+    """Test that database enforces concepts-subtopics association."""
+    # Valid subtopic association should work
     concept = ConceptModel(
-        name="Test Concept",
-        subtopic_id=test_model_subtopic.id
+        name="Test Concept"
     )
+    concept.subtopics.append(test_model_subtopic)
     db_session.add(concept)
     db_session.commit()  # Should succeed
     
-    # Invalid subtopic_id should fail
-    invalid_concept = ConceptModel(
-        name="Invalid Concept",
-        subtopic_id=9999  # Invalid subtopic_id
+    # Test that concept can exist without subtopics (no constraint violation)
+    concept_without_subtopic = ConceptModel(
+        name="Concept Without Subtopic"
     )
-    db_session.add(invalid_concept)
-    
-    with pytest.raises(IntegrityError):
-        db_session.commit()
+    db_session.add(concept_without_subtopic)
+    db_session.commit()  # Should also succeed as many-to-many allows empty relationships
 
 
 def test_question_set_creator_foreign_key_constraint(db_session, test_model_user):

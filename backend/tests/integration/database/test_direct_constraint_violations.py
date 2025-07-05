@@ -34,7 +34,7 @@ def test_user_foreign_key_constraint_violation(db_session):
     assert "FOREIGN KEY constraint failed" in error_str
 
 
-def test_user_unique_constraint_violation_email(db_session, test_role):
+def test_user_unique_constraint_violation_email(db_session, test_model_role):
     """Test that duplicate email triggers unique constraint violation."""
     
     # Create first user
@@ -42,7 +42,7 @@ def test_user_unique_constraint_violation_email(db_session, test_role):
         username="user1",
         email="test@example.com",
         hashed_password="hash1",
-        role_id=test_role.id
+        role_id=test_model_role.id
     )
     db_session.add(user1)
     db_session.commit()
@@ -52,7 +52,7 @@ def test_user_unique_constraint_violation_email(db_session, test_role):
         username="user2",
         email="test@example.com",  # Duplicate email
         hashed_password="hash2", 
-        role_id=test_role.id
+        role_id=test_model_role.id
     )
     
     with pytest.raises(IntegrityError) as exc_info:
@@ -65,7 +65,7 @@ def test_user_unique_constraint_violation_email(db_session, test_role):
     assert "users.email" in error_str
 
 
-def test_user_unique_constraint_violation_username(db_session, test_role):
+def test_user_unique_constraint_violation_username(db_session, test_model_role):
     """Test that duplicate username triggers unique constraint violation."""
     
     # Create first user
@@ -73,7 +73,7 @@ def test_user_unique_constraint_violation_username(db_session, test_role):
         username="testuser",
         email="email1@example.com",
         hashed_password="hash1",
-        role_id=test_role.id
+        role_id=test_model_role.id
     )
     db_session.add(user1)
     db_session.commit()
@@ -83,7 +83,7 @@ def test_user_unique_constraint_violation_username(db_session, test_role):
         username="testuser",  # Duplicate username
         email="email2@example.com",
         hashed_password="hash2",
-        role_id=test_role.id
+        role_id=test_model_role.id
     )
     
     with pytest.raises(IntegrityError) as exc_info:
@@ -96,14 +96,14 @@ def test_user_unique_constraint_violation_username(db_session, test_role):
     assert "users.username" in error_str
 
 
-def test_user_response_foreign_key_constraint_user_id(db_session, test_questions, test_answer_choices):
+def test_user_response_foreign_key_constraint_user_id(db_session, test_model_questions, test_model_answer_choices):
     """Test that invalid user_id in user response triggers foreign key constraint."""
     
     # Create user response with invalid user_id
     invalid_response = UserResponseModel(
         user_id=99999,  # Invalid foreign key
-        question_id=test_questions[0].id,
-        answer_choice_id=test_answer_choices[0].id,
+        question_id=test_model_questions[0].id,
+        answer_choice_id=test_model_answer_choices[0].id,
         is_correct=True,
         response_time=30
     )
@@ -117,14 +117,14 @@ def test_user_response_foreign_key_constraint_user_id(db_session, test_questions
     assert "FOREIGN KEY constraint failed" in error_str
 
 
-def test_user_response_foreign_key_constraint_question_id(db_session, test_user, test_answer_choices):
+def test_user_response_foreign_key_constraint_question_id(db_session, test_model_user, test_model_answer_choices):
     """Test that invalid question_id in user response triggers foreign key constraint."""
     
     # Create user response with invalid question_id
     invalid_response = UserResponseModel(
-        user_id=test_user.id,
+        user_id=test_model_user.id,
         question_id=99999,  # Invalid foreign key
-        answer_choice_id=test_answer_choices[0].id,
+        answer_choice_id=test_model_answer_choices[0].id,
         is_correct=True,
         response_time=30
     )
@@ -138,13 +138,13 @@ def test_user_response_foreign_key_constraint_question_id(db_session, test_user,
     assert "FOREIGN KEY constraint failed" in error_str
 
 
-def test_user_response_foreign_key_constraint_answer_choice_id(db_session, test_user, test_questions):
+def test_user_response_foreign_key_constraint_answer_choice_id(db_session, test_model_user, test_model_questions):
     """Test that invalid answer_choice_id in user response triggers foreign key constraint."""
     
     # Create user response with invalid answer_choice_id
     invalid_response = UserResponseModel(
-        user_id=test_user.id,
-        question_id=test_questions[0].id,
+        user_id=test_model_user.id,
+        question_id=test_model_questions[0].id,
         answer_choice_id=99999,  # Invalid foreign key
         is_correct=True,
         response_time=30
@@ -159,7 +159,7 @@ def test_user_response_foreign_key_constraint_answer_choice_id(db_session, test_
     assert "FOREIGN KEY constraint failed" in error_str
 
 
-def test_leaderboard_foreign_key_constraint_user_id(db_session, test_group, time_period_daily):
+def test_leaderboard_foreign_key_constraint_user_id(db_session, test_model_group, time_period_daily):
     """Test that invalid user_id in leaderboard triggers foreign key constraint."""
     
     # Create leaderboard entry with invalid user_id
@@ -167,7 +167,7 @@ def test_leaderboard_foreign_key_constraint_user_id(db_session, test_group, time
         user_id=99999,  # Invalid foreign key
         score=100,
         time_period_id=time_period_daily.id,
-        group_id=test_group.id
+        group_id=test_model_group.id
     )
     
     with pytest.raises(IntegrityError) as exc_info:
@@ -179,12 +179,12 @@ def test_leaderboard_foreign_key_constraint_user_id(db_session, test_group, time
     assert "FOREIGN KEY constraint failed" in error_str
 
 
-def test_leaderboard_foreign_key_constraint_group_id(db_session, test_user, time_period_daily):
+def test_leaderboard_foreign_key_constraint_group_id(db_session, test_model_user, time_period_daily):
     """Test that invalid group_id in leaderboard triggers foreign key constraint."""
     
     # Create leaderboard entry with invalid group_id
     invalid_leaderboard = LeaderboardModel(
-        user_id=test_user.id,
+        user_id=test_model_user.id,
         score=100,
         time_period_id=time_period_daily.id,
         group_id=99999  # Invalid foreign key
@@ -199,15 +199,15 @@ def test_leaderboard_foreign_key_constraint_group_id(db_session, test_user, time
     assert "FOREIGN KEY constraint failed" in error_str
 
 
-def test_leaderboard_foreign_key_constraint_time_period_id(db_session, test_user, test_group):
+def test_leaderboard_foreign_key_constraint_time_period_id(db_session, test_model_user, test_model_group):
     """Test that invalid time_period_id in leaderboard triggers foreign key constraint."""
     
     # Create leaderboard entry with invalid time_period_id
     invalid_leaderboard = LeaderboardModel(
-        user_id=test_user.id,
+        user_id=test_model_user.id,
         score=100,
         time_period_id=99999,  # Invalid foreign key
-        group_id=test_group.id
+        group_id=test_model_group.id
     )
     
     with pytest.raises(IntegrityError) as exc_info:
@@ -257,14 +257,14 @@ def test_group_foreign_key_constraint_creator_id(db_session):
     assert "FOREIGN KEY constraint failed" in error_str
 
 
-def test_group_unique_constraint_violation_name(db_session, test_user):
+def test_group_unique_constraint_violation_name(db_session, test_model_user):
     """Test that duplicate group name triggers unique constraint violation."""
     
     # Create first group
     group1 = GroupModel(
         name="Test Group",
         description="First description",
-        creator_id=test_user.id
+        creator_id=test_model_user.id
     )
     db_session.add(group1)
     db_session.commit()
@@ -273,7 +273,7 @@ def test_group_unique_constraint_violation_name(db_session, test_user):
     group2 = GroupModel(
         name="Test Group",  # Duplicate name
         description="Second description",
-        creator_id=test_user.id
+        creator_id=test_model_user.id
     )
     
     with pytest.raises(IntegrityError) as exc_info:
@@ -286,43 +286,50 @@ def test_group_unique_constraint_violation_name(db_session, test_user):
     assert "groups.name" in error_str
 
 
-def test_constraint_violation_rollback_behavior(db_session, test_role):
+def test_constraint_violation_rollback_behavior(db_session, test_model_role):
     """Test that constraint violations properly rollback transactions."""
     
     # Get initial user count
     initial_count = db_session.query(UserModel).count()
     
-    # Create valid user first
-    valid_user = UserModel(
-        username="validuser",
-        email="valid@example.com",
-        hashed_password="validhash",
-        role_id=test_role.id
-    )
-    db_session.add(valid_user)
+    # Explicitly begin a savepoint to test rollback behavior
+    savepoint = db_session.begin_nested()
     
-    # Try to create invalid user in same transaction
-    invalid_user = UserModel(
-        username="invaliduser",
-        email="invalid@example.com",
-        hashed_password="invalidhash",
-        role_id=99999  # Invalid foreign key
-    )
-    db_session.add(invalid_user)
-    
-    # Transaction should fail and rollback
-    with pytest.raises(IntegrityError):
-        db_session.commit()
-    
-    # Rollback the failed transaction
-    db_session.rollback()
+    try:
+        # Create valid user first
+        valid_user = UserModel(
+            username="validuser",
+            email="valid@example.com",
+            hashed_password="validhash",
+            role_id=test_model_role.id
+        )
+        db_session.add(valid_user)
+        
+        # Try to create invalid user in same transaction
+        invalid_user = UserModel(
+            username="invaliduser",
+            email="invalid@example.com",
+            hashed_password="invalidhash",
+            role_id=99999  # Invalid foreign key
+        )
+        db_session.add(invalid_user)
+        
+        # This should fail and trigger an IntegrityError
+        db_session.flush()  # Force evaluation of constraints
+        
+        # If we get here, the test failed
+        pytest.fail("Expected IntegrityError was not raised")
+        
+    except IntegrityError:
+        # Expected behavior - rollback the savepoint
+        savepoint.rollback()
     
     # Verify no users were added due to rollback
     final_count = db_session.query(UserModel).count()
     assert final_count == initial_count, "Transaction should have been rolled back completely"
 
 
-def test_constraint_performance_impact(db_session, test_role, performance_tracker):
+def test_constraint_performance_impact(db_session, test_model_role, performance_tracker):
     """Test that constraint violations don't significantly impact performance."""
     import time
     

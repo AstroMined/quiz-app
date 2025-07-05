@@ -118,7 +118,7 @@ def test_content_hierarchy_relationships(base_reference_data, test_engine):
         session.close()
 
 
-def test_reference_data_access_fixtures(default_role, admin_role, superadmin_role, 
+def test_reference_data_access_fixtures(db_session, default_role, admin_role, superadmin_role, 
                                        test_disciplines, test_subjects, test_domains,
                                        mathematics_discipline, algebra_subject):
     """Verify reference data access fixtures work correctly."""
@@ -143,10 +143,12 @@ def test_reference_data_access_fixtures(default_role, admin_role, superadmin_rol
     assert test_domains is not None, "test_domains fixture should return domains"
     assert len(test_domains) >= 2, f"Should have at least 2 domains, got {len(test_domains)}"
     
-    # Test specific fixtures
+    # Test specific fixtures - merge into current session to avoid DetachedInstanceError
+    mathematics_discipline = db_session.merge(mathematics_discipline)
     assert mathematics_discipline is not None, "mathematics_discipline fixture should return Mathematics"
     assert mathematics_discipline.name == "Mathematics", f"Should be 'Mathematics', got '{mathematics_discipline.name}'"
     
+    algebra_subject = db_session.merge(algebra_subject)
     assert algebra_subject is not None, "algebra_subject fixture should return Algebra"
     assert algebra_subject.name == "Algebra", f"Should be 'Algebra', got '{algebra_subject.name}'"
 
