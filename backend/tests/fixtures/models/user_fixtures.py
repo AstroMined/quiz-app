@@ -24,9 +24,11 @@ _session_permissions_initialized = False
 
 @pytest.fixture(scope="function")
 def test_permission(db_session):
-    """Create a single test permission."""
+    """Create a single test permission with unique name."""
+    import uuid
+    unique_name = f"test_permission_{str(uuid.uuid4())[:8]}"
     permission = PermissionModel(
-        name="test_permission", description="A test permission"
+        name=unique_name, description="A test permission"
     )
     db_session.add(permission)
     db_session.commit()
@@ -61,15 +63,23 @@ def test_model_permissions(db_session, session_permissions):
 
 
 @pytest.fixture(scope="function")
-def test_model_role(admin_role):
-    """Get admin role from reference data for testing (no transaction needed)."""
-    return admin_role
+def test_model_role(db_session, admin_role):
+    """Get admin role from reference data for testing, properly attached to current session."""
+    # Merge the role into the current session to avoid DetachedInstanceError
+    merged_role = db_session.merge(admin_role)
+    # Refresh to ensure relationships are properly loaded
+    db_session.refresh(merged_role)
+    return merged_role
 
 
 @pytest.fixture(scope="function")
-def test_model_default_role(default_role):
-    """Get default role from reference data for testing (no transaction needed)."""
-    return default_role
+def test_model_default_role(db_session, default_role):
+    """Get default role from reference data for testing, properly attached to current session."""
+    # Merge the role into the current session to avoid DetachedInstanceError
+    merged_role = db_session.merge(default_role)
+    # Refresh to ensure relationships are properly loaded
+    db_session.refresh(merged_role)
+    return merged_role
 
 
 @pytest.fixture(scope="function")

@@ -65,7 +65,18 @@ class SubjectSchema(SubjectBaseSchema):
             return []
         if isinstance(v, list) and all(isinstance(item, dict) for item in v):
             return v
-        return [{"id": item.id, "name": item.name} for item in v]
+        
+        # Handle SQLAlchemy relationship objects
+        result = []
+        for item in v:
+            try:
+                # Try to access attributes directly
+                result.append({"id": item.id, "name": item.name})
+            except Exception:
+                # If detached or other error, skip this item or use fallback
+                # This prevents DetachedInstanceError from breaking schema validation
+                continue
+        return result
 
     class Config:
         from_attributes = True

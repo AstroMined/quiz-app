@@ -135,12 +135,24 @@ def test_user_response_relationship(db_session, test_model_user):
         text="What is the capital of France?", difficulty=DifficultyLevel.EASY
     )
     db_session.add(question)
-    db_session.commit()
+    db_session.flush()  # Flush to get the question ID
+    
+    # Create an answer choice and associate it with the question
+    answer_choice = AnswerChoiceModel(
+        text="Paris", 
+        is_correct=True
+    )
+    db_session.add(answer_choice)
+    db_session.flush()  # Flush to get the answer choice ID
+    
+    # Associate the answer choice with the question
+    question.answer_choices.append(answer_choice)
+    db_session.flush()
 
     user_response = UserResponseModel(
         user_id=test_model_user.id,
         question_id=question.id,
-        answer_choice_id=1,  # Assuming an answer choice with id 1 exists
+        answer_choice_id=answer_choice.id,
         is_correct=True,
     )
     db_session.add(user_response)

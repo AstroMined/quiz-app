@@ -9,21 +9,25 @@ from backend.app.models.topics import TopicModel
 
 
 def test_subject_creation(db_session):
-    subject = SubjectModel(name="Mathematics")
+    import uuid
+    unique_name = f"Mathematics_{str(uuid.uuid4())[:8]}"
+    subject = SubjectModel(name=unique_name)
     db_session.add(subject)
     db_session.commit()
 
     assert subject.id is not None
-    assert subject.name == "Mathematics"
+    assert subject.name == unique_name
 
 
 def test_subject_unique_name(db_session):
-    subject1 = SubjectModel(name="Physics")
+    import uuid
+    unique_name = f"Physics_{str(uuid.uuid4())[:8]}"
+    subject1 = SubjectModel(name=unique_name)
     db_session.add(subject1)
     db_session.commit()
 
     with pytest.raises(IntegrityError):
-        subject2 = SubjectModel(name="Physics")
+        subject2 = SubjectModel(name=unique_name)  # Same unique name should fail
         db_session.add(subject2)
         db_session.commit()
     db_session.rollback()

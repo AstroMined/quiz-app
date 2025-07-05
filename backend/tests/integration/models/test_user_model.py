@@ -9,24 +9,24 @@ from backend.app.models.roles import RoleModel
 from backend.app.models.users import UserModel
 
 
-def test_user_model_creation(db_session, test_model_permissions):
-    # Create a role first
-    role = RoleModel(name="user", description="Regular user")
-    db_session.add(role)
-    db_session.commit()
+def test_user_model_creation(db_session, test_model_permissions, test_model_default_role):
+    # Use existing default role instead of creating a new one
+    import uuid
+    unique_username = f"testuser_{str(uuid.uuid4())[:8]}"
+    unique_email = f"testuser_{str(uuid.uuid4())[:8]}@example.com"
 
     user = UserModel(
-        username="testuser",
-        email="testuser@example.com",
+        username=unique_username,
+        email=unique_email,
         hashed_password="hashed_password",
-        role_id=role.id,
+        role_id=test_model_default_role.id,
     )
     db_session.add(user)
     db_session.commit()
 
     assert user.id is not None
-    assert user.username == "testuser"
-    assert user.email == "testuser@example.com"
+    assert user.username == unique_username
+    assert user.email == unique_email
     assert user.hashed_password == "hashed_password"
     assert user.is_active == True
     assert user.is_admin == False
@@ -103,18 +103,18 @@ def test_user_model_unique_constraints(db_session):
 
 
 def test_user_model_relationships(
-    db_session, test_model_group, test_model_question_set
+    db_session, test_model_group, test_model_question_set, test_model_default_role
 ):
-    # Create a role first
-    role = RoleModel(name="user", description="Regular user")
-    db_session.add(role)
-    db_session.commit()
+    # Use existing default role instead of creating a new one
+    import uuid
+    unique_username = f"testuser_{str(uuid.uuid4())[:8]}"
+    unique_email = f"testuser_{str(uuid.uuid4())[:8]}@example.com"
 
     user = UserModel(
-        username="testuser",
-        email="testuser@example.com",
+        username=unique_username,
+        email=unique_email,
         hashed_password="hashed_password",
-        role_id=role.id,
+        role_id=test_model_default_role.id,
     )
     db_session.add(user)
     db_session.commit()
@@ -125,34 +125,34 @@ def test_user_model_relationships(
     assert test_model_group in user.groups
 
     # Test created_groups relationship
-    created_group = GroupModel(name="Created Group", creator=user)
+    unique_group_name = f"Created Group {str(uuid.uuid4())[:8]}"
+    created_group = GroupModel(name=unique_group_name, creator=user)
     db_session.add(created_group)
     db_session.commit()
     assert created_group in user.created_groups
 
     # Test created_question_sets relationship
-    created_question_set = QuestionSetModel(name="Created Question Set", creator=user)
+    unique_qs_name = f"Created Question Set {str(uuid.uuid4())[:8]}"
+    created_question_set = QuestionSetModel(name=unique_qs_name, creator=user)
     db_session.add(created_question_set)
     db_session.commit()
     assert created_question_set in user.created_question_sets
 
 
-def test_user_model_repr(db_session):
-    # Create a role first
-    role = RoleModel(name="user", description="Regular user")
-    db_session.add(role)
-    db_session.commit()
+def test_user_model_repr(db_session, test_model_default_role):
+    # Use existing default role instead of creating a new one
+    import uuid
+    unique_username = f"testuser_{str(uuid.uuid4())[:8]}"
+    unique_email = f"testuser_{str(uuid.uuid4())[:8]}@example.com"
 
     user = UserModel(
-        username="testuser",
-        email="testuser@example.com",
+        username=unique_username,
+        email=unique_email,
         hashed_password="hashed_password",
-        role_id=role.id,
+        role_id=test_model_default_role.id,
     )
     db_session.add(user)
     db_session.commit()
 
-    assert (
-        repr(user)
-        == f"<User(id={user.id}, username='testuser', email='testuser@example.com', role_id='1')>"
-    )
+    expected_repr = f"<User(id={user.id}, username='{unique_username}', email='{unique_email}', role_id='{test_model_default_role.id}')>"
+    assert repr(user) == expected_repr

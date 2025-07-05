@@ -11,21 +11,35 @@ from backend.app.models.concepts import ConceptModel
 
 
 @pytest.fixture(scope="function")
-def test_model_domain(test_domains):
-    """Get a test domain from reference data."""
-    return test_domains[0]  # Return first domain from reference data
+def test_model_domain(db_session, test_domains):
+    """Get a test domain from reference data, properly attached to current session."""
+    # Get the first domain from reference data
+    domain = test_domains[0]
+    # Merge the domain into the current session to avoid DetachedInstanceError
+    merged_domain = db_session.merge(domain)
+    # Refresh to ensure relationships are properly loaded
+    db_session.refresh(merged_domain)
+    return merged_domain
 
 
 @pytest.fixture(scope="function")
-def test_model_discipline(mathematics_discipline):
-    """Get mathematics discipline from reference data."""
-    return mathematics_discipline
+def test_model_discipline(db_session, mathematics_discipline):
+    """Get mathematics discipline from reference data, properly attached to current session."""
+    # Merge the discipline into the current session to avoid DetachedInstanceError
+    merged_discipline = db_session.merge(mathematics_discipline)
+    # Refresh to ensure relationships are properly loaded
+    db_session.refresh(merged_discipline)
+    return merged_discipline
 
 
 @pytest.fixture(scope="function")
-def test_model_subject(algebra_subject):
-    """Get algebra subject from reference data."""
-    return algebra_subject
+def test_model_subject(db_session, algebra_subject):
+    """Get algebra subject from reference data, properly attached to current session."""
+    # Merge the subject into the current session to avoid DetachedInstanceError
+    merged_subject = db_session.merge(algebra_subject)
+    # Refresh to ensure relationships are properly loaded
+    db_session.refresh(merged_subject)
+    return merged_subject
 
 
 @pytest.fixture(scope="function")

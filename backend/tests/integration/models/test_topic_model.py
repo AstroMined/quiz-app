@@ -9,17 +9,22 @@ from backend.app.models.topics import TopicModel
 
 
 def test_topic_creation(db_session):
-    topic = TopicModel(name="Algebra")
+    import uuid
+    unique_name = f"Algebra_{str(uuid.uuid4())[:8]}"
+    topic = TopicModel(name=unique_name)
     db_session.add(topic)
     db_session.commit()
 
     assert topic.id is not None
-    assert topic.name == "Algebra"
+    assert topic.name == unique_name
 
 
 def test_topic_subject_relationship(db_session):
-    topic = TopicModel(name="Geometry")
-    subject = SubjectModel(name="Mathematics")
+    import uuid
+    unique_topic_name = f"Geometry_{str(uuid.uuid4())[:8]}"
+    unique_subject_name = f"Mathematics_{str(uuid.uuid4())[:8]}"
+    topic = TopicModel(name=unique_topic_name)
+    subject = SubjectModel(name=unique_subject_name)
     topic.subjects.append(subject)
     db_session.add_all([topic, subject])
     db_session.commit()
