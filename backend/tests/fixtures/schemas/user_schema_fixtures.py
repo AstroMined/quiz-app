@@ -1,6 +1,7 @@
 # filename: backend/tests/fixtures/schemas/user_schema_fixtures.py
 
 import pytest
+import uuid
 from datetime import datetime, timezone
 
 from backend.app.schemas.user import UserCreateSchema
@@ -14,9 +15,10 @@ from backend.app.schemas.user_responses import UserResponseCreateSchema
 @pytest.fixture(scope="function")
 def test_schema_user(test_model_role):
     """Create a test user creation schema."""
+    unique_id = str(uuid.uuid4())[:8]
     return UserCreateSchema(
-        username="testuser",
-        email="testuser@example.com",
+        username=f"testuser_{unique_id}",
+        email=f"testuser_{unique_id}@example.com",
         password="TestPassword123!",
         role_id=test_model_role.id,
     )
@@ -25,8 +27,9 @@ def test_schema_user(test_model_role):
 @pytest.fixture(scope="function")
 def test_schema_group(test_model_user):
     """Create a test group creation schema."""
+    unique_name = f"test_group_{str(uuid.uuid4())[:8]}"
     return GroupCreateSchema(
-        name="test_schema Group",
+        name=unique_name,
         description="This is a test group",
         creator_id=test_model_user.id,
     )
@@ -35,8 +38,9 @@ def test_schema_group(test_model_user):
 @pytest.fixture(scope="function")
 def test_schema_role(test_model_permissions):
     """Create a test role creation schema."""
+    unique_name = f"test_role_{str(uuid.uuid4())[:8]}"
     role_data = {
-        "name": "test_schema Role",
+        "name": unique_name,
         "description": "This is a test role",
         "permissions": [permission.name for permission in test_model_permissions],
     }
@@ -46,8 +50,9 @@ def test_schema_role(test_model_permissions):
 @pytest.fixture(scope="function")
 def test_schema_permission():
     """Create a test permission creation schema."""
+    unique_name = f"test_permission_{str(uuid.uuid4())[:8]}"
     return PermissionCreateSchema(
-        name="test_schema_permission", description="This is a test permission"
+        name=unique_name, description="This is a test permission"
     )
 
 

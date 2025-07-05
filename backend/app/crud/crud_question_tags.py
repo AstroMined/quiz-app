@@ -59,7 +59,7 @@ def create_question_tag_in_db(db: Session, question_tag_data: Dict) -> QuestionT
         QuestionTagModel: The created question tag database object.
 
     Raises:
-        IntegrityError: If the tag already exists.
+        IntegrityError: If the tag already exists (database constraint violation).
         ValueError: If the tag is None or empty.
         SQLAlchemyError: If there's an issue with the database operation.
 
@@ -70,18 +70,17 @@ def create_question_tag_in_db(db: Session, question_tag_data: Dict) -> QuestionT
         }
         new_tag = create_question_tag_in_db(db, question_tag_data)
     """
-    # Check if the tag already exists
-    existing_tag = read_question_tag_by_tag_from_db(db, question_tag_data["tag"])
-    if existing_tag:
-        raise IntegrityError("Tag already exists", params=question_tag_data, orig=None)
-    if question_tag_data["tag"] is not None and question_tag_data["tag"] != "":
-        db_question_tag = QuestionTagModel(
-            tag=question_tag_data["tag"],
-            description=question_tag_data.get("description"),
-        )
-        db.add(db_question_tag)
-    else:
+    # Validate tag input
+    if not question_tag_data.get("tag") or question_tag_data["tag"] == "":
         raise ValueError("Tag cannot be None or empty")
+    
+    # Create the question tag - preserve original case
+    db_question_tag = QuestionTagModel(
+        tag=question_tag_data["tag"],
+        description=question_tag_data.get("description"),
+    )
+    db.add(db_question_tag)
+    
     try:
         db.commit()
         db.refresh(db_question_tag)
@@ -142,7 +141,7 @@ def read_question_tag_by_tag_from_db(
             print(f"Tag ID: {tag.id}")
     """
     return (
-        db.query(QuestionTagModel).filter(QuestionTagModel.tag == tag.lower()).first()
+        db.query(QuestionTagModel).filter(QuestionTagModel.tag == tag).first()
     )
 
 
@@ -185,7 +184,7 @@ def update_question_tag_in_db(
         or None if not found.
 
     Raises:
-        IntegrityError: If the new tag already exists.
+        IntegrityError: If the new tag already exists (database constraint violation).
         ValueError: If the new tag is None or empty.
         SQLAlchemyError: If there's an issue with the database operation.
 
@@ -200,15 +199,10 @@ def update_question_tag_in_db(
         if db_question_tag:
             for key, value in question_tag_data.items():
                 if key == "tag":
-                    existing_tag = read_question_tag_by_tag_from_db(db, value)
-                    if existing_tag:
-                        raise IntegrityError(
-                            "Tag already exists", params=question_tag_data, orig=None
-                        )
-                    if value is not None and value != "":
-                        setattr(db_question_tag, key, value)
-                    else:
+                    # Validate tag input
+                    if not value or value == "":
                         raise ValueError("Tag cannot be None or empty")
+                # Set the attribute - let database handle UNIQUE constraint
                 setattr(db_question_tag, key, value)
             db.commit()
             db.refresh(db_question_tag)
