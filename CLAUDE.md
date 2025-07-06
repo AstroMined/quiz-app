@@ -476,3 +476,184 @@ Only when preparing a release from `dev` to `main`:
    git tag -a vX.Y.Z -m "Version X.Y.Z"
    git push origin vX.Y.Z
    ```
+
+## Claude-Flow Integration
+
+Claude-flow provides multi-agent orchestration capabilities that can significantly accelerate development workflows. Since you already have Claude Max subscription and are working locally, there are no additional costs or security concerns.
+
+### Core Commands
+
+#### System Management
+- `./claude-flow start [--ui] [--port 3000]`: Start orchestration system with optional web UI
+- `./claude-flow status`: Show comprehensive system status
+- `./claude-flow monitor`: Real-time system monitoring dashboard
+
+#### Agent Management
+- `./claude-flow agent spawn <type> [--name <name>]`: Create AI agents (researcher, coder, analyst, etc.)
+- `./claude-flow agent list`: List all active agents
+- `./claude-flow spawn <type>`: Quick agent spawning
+
+#### Memory Management
+- `./claude-flow memory store <key> <data>`: Store persistent data across sessions
+- `./claude-flow memory get <key>`: Retrieve stored information
+- `./claude-flow memory list`: List all memory keys
+- `./claude-flow memory export <file>`: Export memory to file
+
+#### SPARC Development Modes
+- `./claude-flow sparc "<task>"`: Run orchestrator mode (default)
+- `./claude-flow sparc run <mode> "<task>"`: Run specific SPARC mode
+- `./claude-flow sparc tdd "<feature>"`: Test-driven development mode (perfect for our workflow)
+- `./claude-flow sparc modes`: List all 17 available SPARC modes
+
+Available modes: orchestrator, coder, researcher, tdd, architect, reviewer, debugger, tester, analyzer, optimizer, documenter, designer, innovator, swarm-coordinator, memory-manager, batch-executor, workflow-manager
+
+#### Swarm Coordination
+- `./claude-flow swarm "<objective>" [options]`: Multi-agent swarm coordination
+- `--strategy`: research, development, analysis, testing, optimization, maintenance
+- `--mode`: centralized, distributed, hierarchical, mesh, hybrid
+- `--max-agents <n>`: Maximum number of agents (default: 5)
+- `--parallel`: Enable parallel execution
+- `--monitor`: Real-time monitoring
+
+### Quiz-App Specific Workflows
+
+#### Feature Development
+```bash
+# Develop new quiz feature with TDD approach
+./claude-flow sparc tdd "Real-time quiz leaderboard with WebSocket support"
+
+# Complex feature with multiple agents
+./claude-flow swarm "Implement quiz analytics dashboard with performance metrics" --strategy development --mode hierarchical --max-agents 6 --monitor
+
+# Store architecture decisions for team coordination
+./claude-flow memory store "leaderboard_architecture" "WebSocket + SQLAlchemy + Redis caching design"
+```
+
+#### Testing and Quality
+```bash
+# Generate comprehensive test suites
+./claude-flow sparc run tester "Create performance tests for quiz response handling"
+
+# Code analysis and optimization
+./claude-flow sparc run analyzer "Identify bottlenecks in UV-based Python test execution"
+
+# Security review
+./claude-flow sparc run reviewer "Security audit of JWT authentication system"
+```
+
+#### Database and Migrations
+```bash
+# Complex database changes
+./claude-flow swarm "Design and implement quiz categories with hierarchical structure" --strategy development --mode centralized
+
+# Performance optimization
+./claude-flow sparc run optimizer "Optimize SQLAlchemy queries for large question sets"
+```
+
+#### Documentation and Maintenance
+```bash
+# Generate comprehensive documentation
+./claude-flow sparc run documenter "Create API documentation for all quiz endpoints"
+
+# Dependency updates with testing
+./claude-flow swarm "Update Python dependencies and verify UV compatibility" --strategy maintenance --mode centralized --monitor
+```
+
+### Integration with Existing Workflow
+
+#### Memory-Driven Development
+Store project context for consistent agent coordination:
+
+```bash
+# Store current architecture
+./claude-flow memory store "quiz_architecture" "FastAPI + SQLAlchemy + UV + Python 3.12 + function-style tests"
+
+# Store testing preferences
+./claude-flow memory store "test_strategy" "Function-style pytest, no mocking, real objects, UV test runner"
+
+# All agents can reference this context
+./claude-flow sparc run coder "Implement quiz timer feature using quiz_architecture and test_strategy from memory"
+```
+
+#### Multi-Stage Development
+```bash
+# Stage 1: Research and design
+./claude-flow sparc run researcher "Research best practices for real-time quiz systems"
+./claude-flow sparc run architect "Design WebSocket integration with FastAPI"
+
+# Stage 2: TDD implementation (our preferred approach)
+./claude-flow sparc tdd "Real-time quiz session management"
+
+# Stage 3: Testing and integration
+./claude-flow sparc run tester "Integration tests for WebSocket quiz functionality"
+./claude-flow sparc run reviewer "Code review and quality check"
+```
+
+### Best Practices for Quiz-App
+
+1. **Use TDD Mode**: Perfect match for our function-style testing preference
+   ```bash
+   ./claude-flow sparc tdd "User quiz performance tracking"
+   ```
+
+2. **Store Architecture Decisions**: Keep agents aligned with our patterns
+   ```bash
+   ./claude-flow memory store "coding_standards" "UV commands, Python 3.12, no class-style tests"
+   ```
+
+3. **Leverage Memory for Context**: Store business logic for consistent implementation
+   ```bash
+   ./claude-flow memory store "quiz_scoring" "Points based on difficulty and response time"
+   ```
+
+4. **Use Swarm for Complex Features**: Multi-agent coordination for full-stack features
+   ```bash
+   ./claude-flow swarm "Complete quiz analytics feature with backend API, database models, and comprehensive tests" --strategy development --parallel
+   ```
+
+### Task Coordination Patterns
+
+#### Advanced TodoWrite Integration
+```javascript
+TodoWrite([
+  {
+    id: "quiz_timer_backend",
+    content: "Implement quiz timer logic in backend with SQLAlchemy models",
+    status: "pending", 
+    priority: "high",
+    dependencies: [],
+    estimatedTime: "90min",
+    assignedAgent: "backend_developer"
+  },
+  {
+    id: "quiz_timer_tests",
+    content: "Create function-style pytest tests for timer functionality",
+    status: "pending",
+    priority: "high", 
+    dependencies: ["quiz_timer_backend"],
+    estimatedTime: "60min",
+    assignedAgent: "test_specialist"
+  }
+]);
+```
+
+#### Task and Memory Integration
+```javascript
+// Store quiz domain knowledge
+Task("Domain Expert", "Research quiz timing best practices and store findings in Memory");
+
+// Implement using stored knowledge
+Task("Backend Developer", "Implement quiz timer using domain research from Memory");
+Task("Test Engineer", "Create comprehensive timer tests following test_strategy from Memory");
+```
+
+### Important Notes for Claude-Flow
+
+- **Always use UV commands**: Ensure agents use `uv run pytest`, `uv run uvicorn`, etc.
+- **Function-style tests**: Remind agents about our no-class-style testing preference
+- **Real objects**: Emphasize no mocking, test with real database objects
+- **Memory coordination**: Store important decisions and patterns for agent consistency
+- **Monitor resource usage**: Multi-agent operations can be CPU intensive
+- **Review generated code**: Always review AI-generated code before committing
+
+This integration maintains our existing development patterns while adding powerful multi-agent orchestration capabilities.
