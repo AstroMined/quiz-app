@@ -1,6 +1,7 @@
 # filename: backend/tests/models/test_group_model.py
 
 import pytest
+import uuid
 from sqlalchemy.exc import IntegrityError
 
 from backend.app.models.groups import GroupModel
@@ -13,7 +14,7 @@ from backend.app.models.users import UserModel
 
 def test_group_model_creation(db_session, test_model_user):
     group = GroupModel(
-        name="Test Group",
+        name=f"Test_Group_{str(uuid.uuid4())[:8]}",
         description="This is a test group",
         creator_id=test_model_user.id,
     )
@@ -21,7 +22,7 @@ def test_group_model_creation(db_session, test_model_user):
     db_session.commit()
 
     assert group.id is not None
-    assert group.name == "Test Group"
+    assert group.name.startswith("Test_Group_")
     assert group.description == "This is a test group"
     assert group.creator_id == test_model_user.id
 
@@ -80,7 +81,7 @@ def test_group_user_relationship(db_session, test_model_user):
 
 def test_group_creator_relationship(db_session, test_model_user):
     group = GroupModel(
-        name="Test Group",
+        name=f"Test_Group_{str(uuid.uuid4())[:8]}",
         description="This is a test group",
         creator_id=test_model_user.id,
     )
@@ -95,7 +96,7 @@ def test_group_question_set_relationship(
     db_session, test_model_user, test_model_question_set
 ):
     group = GroupModel(
-        name="test_group_question_set_relationship Test Group",
+        name=f"test_group_question_set_relationship_Test_Group_{str(uuid.uuid4())[:8]}",
         description="This is a group for the test_group_question_set_relationship test",
         creator_id=test_model_user.id,
     )

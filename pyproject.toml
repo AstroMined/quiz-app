@@ -75,7 +75,6 @@ addopts = [
     "--tb=short",  # Shorter traceback format
     "--disable-warnings",
     "-q",  # Quiet mode for faster output
-    "--durations=10",  # Show 10 slowest tests
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",

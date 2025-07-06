@@ -1,5 +1,7 @@
 # filename: backend/tests/test_services/test_authorization_service.py
 
+import uuid
+
 from backend.app.models.permissions import PermissionModel
 from backend.app.models.roles import RoleModel
 from backend.app.models.users import UserModel
@@ -21,9 +23,11 @@ def test_get_user_permissions(db_session):
     db_session.commit()
 
     # Create a user with the test role
+    unique_username = f"testuser_{str(uuid.uuid4())[:8]}"
+    unique_email = f"testuser_{str(uuid.uuid4())[:8]}@example.com"
     user = UserModel(
-        username="testuser", 
-        email="testuser@example.com", 
+        username=unique_username, 
+        email=unique_email, 
         hashed_password="hashed_password_123",
         role_id=role.id
     )

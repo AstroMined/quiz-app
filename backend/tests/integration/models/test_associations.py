@@ -1,6 +1,7 @@
 # filename: backend/tests/models/test_associations.py
 
 import pytest
+import uuid
 from sqlalchemy.exc import IntegrityError
 
 from backend.app.models.concepts import ConceptModel
@@ -27,7 +28,7 @@ def test_user_to_group_association(db_session, test_model_user, test_model_group
 
 def test_question_to_subject_association(db_session):
     question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
-    subject = SubjectModel(name="Test Subject")
+    subject = SubjectModel(name=f"Test_Subject_{str(uuid.uuid4())[:8]}")
     question.subjects.append(subject)
     db_session.add_all([question, subject])
     db_session.commit()
@@ -38,7 +39,7 @@ def test_question_to_subject_association(db_session):
 
 def test_question_to_topic_association(db_session):
     question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
-    topic = TopicModel(name="Test Topic")
+    topic = TopicModel(name=f"Test_Topic_{str(uuid.uuid4())[:8]}")
     question.topics.append(topic)
     db_session.add_all([question, topic])
     db_session.commit()
@@ -49,7 +50,7 @@ def test_question_to_topic_association(db_session):
 
 def test_question_to_subtopic_association(db_session):
     question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
-    subtopic = SubtopicModel(name="Test Subtopic")
+    subtopic = SubtopicModel(name=f"Test_Subtopic_{str(uuid.uuid4())[:8]}")
     question.subtopics.append(subtopic)
     db_session.add_all([question, subtopic])
     db_session.commit()
@@ -60,7 +61,7 @@ def test_question_to_subtopic_association(db_session):
 
 def test_question_to_concept_association(db_session):
     question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
-    concept = ConceptModel(name="Test Concept")
+    concept = ConceptModel(name=f"Test_Concept_{str(uuid.uuid4())[:8]}")
     question.concepts.append(concept)
     db_session.add_all([question, concept])
     db_session.commit()
@@ -85,7 +86,7 @@ def test_model_question_set_to_question_association(
 ):
     question = QuestionModel(text="Test Question", difficulty=DifficultyLevel.EASY)
     question_set = QuestionSetModel(
-        name="Test Set", creator_id=test_model_user_with_group.id
+        name=f"Test_Set_{str(uuid.uuid4())[:8]}", creator_id=test_model_user_with_group.id
     )
     question_set.questions.append(question)
     db_session.add_all([question, question_set])
@@ -114,8 +115,8 @@ def test_role_to_permission_association(db_session, test_model_role, test_permis
 
 
 def test_discipline_subject_association(db_session):
-    discipline = DisciplineModel(name="Science")
-    subject = SubjectModel(name="Physics")
+    discipline = DisciplineModel(name=f"Science_{str(uuid.uuid4())[:8]}")
+    subject = SubjectModel(name=f"Physics_{str(uuid.uuid4())[:8]}")
     discipline.subjects.append(subject)
     db_session.add_all([discipline, subject])
     db_session.commit()
@@ -125,8 +126,8 @@ def test_discipline_subject_association(db_session):
 
 
 def test_subject_topic_association(db_session):
-    subject = SubjectModel(name="Mathematics")
-    topic = TopicModel(name="Algebra")
+    subject = SubjectModel(name=f"Mathematics_{str(uuid.uuid4())[:8]}")
+    topic = TopicModel(name=f"Algebra_{str(uuid.uuid4())[:8]}")
     subject.topics.append(topic)
     db_session.add_all([subject, topic])
     db_session.commit()
@@ -136,8 +137,8 @@ def test_subject_topic_association(db_session):
 
 
 def test_topic_subtopic_association(db_session):
-    topic = TopicModel(name="Geometry")
-    subtopic = SubtopicModel(name="Triangles")
+    topic = TopicModel(name=f"Geometry_{str(uuid.uuid4())[:8]}")
+    subtopic = SubtopicModel(name=f"Triangles_{str(uuid.uuid4())[:8]}")
     topic.subtopics.append(subtopic)
     db_session.add_all([topic, subtopic])
     db_session.commit()
@@ -147,8 +148,8 @@ def test_topic_subtopic_association(db_session):
 
 
 def test_subtopic_concept_association(db_session):
-    subtopic = SubtopicModel(name="Calculus")
-    concept = ConceptModel(name="Derivatives")
+    subtopic = SubtopicModel(name=f"Calculus_{str(uuid.uuid4())[:8]}")
+    concept = ConceptModel(name=f"Derivatives_{str(uuid.uuid4())[:8]}")
     subtopic.concepts.append(concept)
     db_session.add_all([subtopic, concept])
     db_session.commit()
@@ -159,10 +160,10 @@ def test_subtopic_concept_association(db_session):
 
 def test_question_associations(db_session):
     question = QuestionModel(text="What is 2+2?", difficulty=DifficultyLevel.EASY)
-    subject = SubjectModel(name="Math")
-    topic = TopicModel(name="Arithmetic")
-    subtopic = SubtopicModel(name="Addition")
-    concept = ConceptModel(name="Basic Addition")
+    subject = SubjectModel(name=f"Math_{str(uuid.uuid4())[:8]}")
+    topic = TopicModel(name=f"Arithmetic_{str(uuid.uuid4())[:8]}")
+    subtopic = SubtopicModel(name=f"Addition_{str(uuid.uuid4())[:8]}")
+    concept = ConceptModel(name=f"Basic_Addition_{str(uuid.uuid4())[:8]}")
 
     question.subjects.append(subject)
     question.topics.append(topic)
@@ -184,9 +185,9 @@ def test_question_associations(db_session):
 
 
 def test_multiple_associations(db_session):
-    subject1 = SubjectModel(name="Physics")
-    subject2 = SubjectModel(name="Engineering")
-    topic = TopicModel(name="Mechanics")
+    subject1 = SubjectModel(name=f"Physics_{str(uuid.uuid4())[:8]}")
+    subject2 = SubjectModel(name=f"Engineering_{str(uuid.uuid4())[:8]}")
+    topic = TopicModel(name=f"Mechanics_{str(uuid.uuid4())[:8]}")
 
     topic.subjects.extend([subject1, subject2])
     db_session.add_all([subject1, subject2, topic])

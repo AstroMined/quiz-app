@@ -1,6 +1,7 @@
 # filename: backend/tests/test_crud/test_crud_leaderboard.py
 
 from datetime import datetime, timedelta, timezone
+import uuid
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
@@ -195,9 +196,11 @@ def test_read_leaderboard_entries_ordering(
     db_session, test_schema_leaderboard, test_user_data
 ):
     user1 = create_user_in_db(db_session, test_user_data)
+    unique_username = f"testuser2_{str(uuid.uuid4())[:8]}"
+    unique_email = f"testuser2_{str(uuid.uuid4())[:8]}@example.com"
     user2 = create_user_in_db(
         db_session,
-        {**test_user_data, "username": "testuser2", "email": "testuser2@example.com"},
+        {**test_user_data, "username": unique_username, "email": unique_email},
     )
 
     leaderboard_data1 = test_schema_leaderboard.model_dump()
@@ -214,8 +217,11 @@ def test_read_leaderboard_entries_ordering(
     entries = read_leaderboard_entries_from_db(
         db_session, time_period_id=test_schema_leaderboard.time_period_id
     )
-    assert len(entries) == 2
-    assert entries[0].score > entries[1].score
+    # Filter results to only our test users to avoid contamination from other tests
+    test_user_ids = {user1.id, user2.id}
+    test_entries = [entry for entry in entries if entry.user_id in test_user_ids]
+    assert len(test_entries) == 2
+    assert test_entries[0].score > test_entries[1].score
 
 
 def test_read_leaderboard_entries_with_limit(
@@ -236,12 +242,16 @@ def test_read_leaderboard_entries_with_limit(
     entries_without_limit = read_leaderboard_entries_from_db(
         db_session, time_period_id=test_schema_leaderboard.time_period_id
     )
-    assert len(entries_without_limit) == 5
+    # Filter results to only our test user to avoid contamination from other tests
+    test_entries_without_limit = [entry for entry in entries_without_limit if entry.user_id == user.id]
+    assert len(test_entries_without_limit) == 5
 
     entries_with_limit = read_leaderboard_entries_from_db(
         db_session, time_period_id=test_schema_leaderboard.time_period_id, limit=3
     )
-    assert len(entries_with_limit) == 3
+    # Filter results to only our test user to avoid contamination from other tests
+    test_entries_with_limit = [entry for entry in entries_with_limit if entry.user_id == user.id]
+    assert len(test_entries_with_limit) == 3
 
 
 def test_read_leaderboard_entries_for_nonexistent_group(db_session):

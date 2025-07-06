@@ -1,6 +1,7 @@
 # filename: backend/tests/test_services/test_authentication_service.py
 
 import pytest
+import uuid
 
 from backend.app.core.security import get_password_hash
 from backend.app.models.users import UserModel
@@ -42,10 +43,12 @@ def test_authenticate_user(db_session, test_model_role):
 
 def test_revoke_all_user_tokens(db_session, test_model_role):
     # Create a test user
+    unique_username = f"testuser_{str(uuid.uuid4())[:8]}"
+    unique_email = f"testuser_{str(uuid.uuid4())[:8]}@example.com"
     hashed_password = get_password_hash("testpassword")
     user = UserModel(
-        username="testuser",
-        email="testuser@example.com",
+        username=unique_username,
+        email=unique_email,
         hashed_password=hashed_password,
         role_id=test_model_role.id,
     )

@@ -1,6 +1,7 @@
 # filename: backend/tests/test_crud/test_crud_questions.py
 
 import pytest
+import uuid
 from sqlalchemy.exc import IntegrityError
 
 from backend.app.crud.crud_answer_choices import (
@@ -191,7 +192,8 @@ def test_delete_nonexistent_question(db_session):
 def test_create_question_with_multiple_subjects(
     db_session, test_schema_question, test_model_subject
 ):
-    new_subject = create_subject_in_db(db_session, {"name": "New Subject"})
+    unique_subject_name = f"new_subject_{str(uuid.uuid4())[:8]}"
+    new_subject = create_subject_in_db(db_session, {"name": unique_subject_name})
     question_data = test_schema_question.model_dump()
     question_data["subject_ids"] = [test_model_subject.id, new_subject.id]
     question = create_question_in_db(db_session, question_data)
@@ -360,7 +362,8 @@ def test_update_question_partial(
     question = create_question_in_db(db_session, test_schema_question.model_dump())
     initial_difficulty = question.difficulty
     initial_subject_count = len(question.subjects)
-    new_subject = create_subject_in_db(db_session, {"name": "New Subject"})
+    unique_subject_name = f"new_subject_{str(uuid.uuid4())[:8]}"
+    new_subject = create_subject_in_db(db_session, {"name": unique_subject_name})
 
     # Partial update: only change text and add a subject
     partial_update_data = {
