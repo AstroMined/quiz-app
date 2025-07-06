@@ -343,6 +343,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ```
 
+## Git Workflow and Branch Strategy
+
+### Branch Structure
+
+This project follows a **three-branch strategy** for proper release management:
+
+- **`main`**: Production-ready code with tagged releases
+- **`dev`**: Integration branch for completed features  
+- **`feature/*`**: Individual feature/fix development branches
+
+### Workflow Overview
+
+```
+feature/name → dev → main
+     ↓         ↓      ↓
+   development  integration  release
+```
+
+**✅ Established as of v0.2.0**: Proper git hygiene workflow is now in place with branch protection rules.
+
+### Branch Protection Rules
+
+- **`main` branch**: Protected with PR requirements, status checks, and review approval
+- **`dev` branch**: Protected with PR requirements and status checks
+- **Direct pushes**: Not allowed to main or dev branches
+
 ## End Coding Session Protocol
 
 When completing a coding session, follow this procedure based on the current branch:
@@ -406,10 +432,22 @@ git push  # or git push -u origin feature-branch-name for first push
 
 When merging a feature branch into `dev` via a Pull Request:
 
-1. Create a PR from your feature branch to `dev`
-2. Review the code changes
-3. Merge the feature branch into `dev`
-4. No version updates or CHANGELOG changes yet
+1. **Create PR from feature branch to `dev`**
+   - Use GitHub web interface: feature branch → `dev`
+   - Fill out PR template with description of changes
+   - Request review if working in team
+
+2. **Review and Merge**
+   - Ensure all status checks pass
+   - Review code changes
+   - Merge the feature branch into `dev`
+   - **❌ NO version updates or CHANGELOG changes at this stage**
+
+3. **Cleanup**
+   - Delete the feature branch after successful merge
+   - Pull latest `dev` changes locally
+
+**Purpose**: `dev` serves as integration branch where features are combined and tested together before release.
 
 ### For Main Branch Releases
 
